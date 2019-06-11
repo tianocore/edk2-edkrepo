@@ -1,0 +1,50 @@
+EDK II Maintainers
+==================
+
+This file provides information about the primary maintainers for
+EdkRepo.
+
+In general, you should not privately email the maintainer. You should
+email the edk2-devel list, but you can also Cc the maintainer.
+
+Descriptions of section entries:
+
+  L: Mailing list that is relevant to this area (default is edk2-devel)
+     Patches and questions should be sent to the email list.
+  M: Cc address for patches and questions (ie, the package maintainer)
+  R: Package Reviewer: Cc address for patches and questions. Reviewers help
+     maintainers review code, but don't have push access. A designated Package
+     Reviewer is reasonably familiar with the Package (or some modules
+     thereof), and/or provides testing or regression testing for the Package
+     (or some modules thereof), in certain platforms and environments.
+  W: Web-page with status/info
+  T: SCM tree type and location.  Type is one of: git, svn.
+  S: Status, one of the following:
+     Supported:  Someone is actually paid to look after this.
+     Maintained: Someone actually looks after it.
+     Odd Fixes:  It has a maintainer but they don't have time to do
+                 much other than throw the odd patch in. See below.
+     Orphan:     No current maintainer [but maybe you could take the
+                 role as you write your new code].
+     Obsolete:   Old code. Something tagged obsolete generally means
+                 it has been replaced by a better system and you
+                 should be using that.
+
+EDK II
+------
+W: https://github.com/tianocore/tianocore.github.io/wiki/EDK-II
+L: https://edk2.groups.io/g/devel/
+T: git - https://github.com/tianocore/edk2-staging.git
+
+Responsible Disclosure, Reporting Security Issues
+-------------------------------------------------
+W: https://github.com/tianocore/tianocore.github.io/wiki/Security
+
+Tools
+-----
+
+EdkRepo
+W: https://github.com/tianocore/edk2-staging/tree/EdkRepo
+M: Nate DeSimone <nathaniel.l.desimone@intel.com>
+M: Ashley DeSimone <ashley.e.desimone@intel.com>
+R: Puja Pandya <puja.pandya@intel.com>
