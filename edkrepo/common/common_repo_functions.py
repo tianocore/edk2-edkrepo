@@ -1,0 +1,718 @@
+#!/usr/bin/env python3
+#
+## @file
+# common_repo_functions.py
+#
+# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+import collections
+import os
+import shutil
+import sys
+import unicodedata
+import urllib.request
+import subprocess
+
+import git
+from git import Repo
+import colorama
+
+from edkrepo.config.config_factory import get_edkrepo_global_data_directory
+from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
+from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
+from edkrepo.common.edkrepo_exception import EdkrepoVerificationException
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.progress_handler import GitProgressHandler
+from edkrepo.common.humble import MISSING_BRANCH_COMMIT
+from edkrepo.common.humble import UNCOMMITED_CHANGES, CHECKOUT_UNCOMMITED_CHANGES
+from edkrepo.common.humble import CHECKING_OUT_COMMIT, CHECKING_CONNECTION
+from edkrepo.common.humble import CHECKING_OUT_BRANCH
+from edkrepo.common.humble import VERIFY_ERROR_HEADER
+from edkrepo.common.humble import VERIFY_EXCEPTION_MSG
+from edkrepo.common.humble import INDEX_DUPLICATE_NAMES
+from edkrepo.common.humble import LOAD_MANIFEST_FAILED
+from edkrepo.common.humble import MANIFEST_NAME_INCONSISTENT
+from edkrepo.common.humble import CHECKOUT_NO_REMOTE
+from edkrepo.common.humble import SPARSE_CHECKOUT
+from edkrepo.common.humble import SPARSE_RESET
+from edkrepo.common.humble import CHECKING_OUT_COMBO
+from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
+from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESFULL
+from edkrepo.common.humble import GEN_A_NOT_IN_B, GEN_FOUND_MULT_A_IN_B
+from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
+from edkrepo.common.humble import ADD_PRIMARY_REMOTE, REMOVE_PRIMARY_REMOTE
+from edkrepo.common.humble import FETCH_PRIMARY_REMOTE, MIRROR_PRIMARY_SHA, TAG_AND_BRANCH_SPECIFIED
+from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR, SUBMODULE_FAILURE
+from edkrepo.common.humble import MANIFEST_REPO_DIRTY, MANIFEST_REPO_MOVED, CLONING_MANIFEST_REPO, SYNCING_MANIFEST_REPO
+from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
+from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
+from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
+from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL, MANIFEST_REPO_NOT_CONFIG_BRANCH
+from edkrepo.common.humble import MANIFEST_REPO_CHECKOUT_CONFIG_BRANCH
+from edkrepo.common.pathfix import get_actual_path
+from project_utils.sparse import BuildInfo, process_sparse_checkout
+from edkrepo.config.config_factory import get_workspace_path
+from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException, EdkrepoWarningException
+from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoHookNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException
+from edkrepo.common.ui_functions import init_color_console
+from edkrepo_manifest_parser import edk_manifest
+from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
+from edkrepo_manifest_parser.edk_manifest_validation import get_manifest_validation_status
+from edkrepo_manifest_parser.edk_manifest_validation import print_manifest_errors
+from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestfiles
+
+CLEAR_LINE = '\x1b[K'
+DEFAULT_REMOTE_NAME = 'origin'
+PRIMARY_REMOTE_NAME = 'primary'
+
+def pull_latest_manifest_repo(args, config, reset_hard=False):
+    repo_url = config['cfg_file'].manifest_repo_url
+    branch = config['cfg_file'].manifest_repo_branch
+    local_path = config['cfg_file'].manifest_repo_local_path
+    init_color_console(False)
+    if not (os.path.isabs(local_path)):
+        #since only a relative path was specified it must be joined to the Edkrepo Application Data Directory
+        local_path = os.path.join(get_edkrepo_global_data_directory(), local_path)
+    if not os.path.exists(local_path):
+        print (CLONING_MANIFEST_REPO.format(local_path, repo_url))
+        repo = Repo.clone_from(repo_url, local_path, progress=GitProgressHandler(), branch=branch)
+    else:
+        repo = Repo(local_path)
+        if repo_url in repo.remotes['origin'].urls:
+            if repo.is_dirty(untracked_files=True) and not reset_hard:
+                raise EdkrepoWarningException(MANIFEST_REPO_DIRTY)
+            elif repo.is_dirty(untracked_files=True) and reset_hard:
+                repo.git.reset('--hard')
+            print (SYNCING_MANIFEST_REPO)
+            if repo.active_branch.name != branch:
+                print(MANIFEST_REPO_NOT_CONFIG_BRANCH.format(repo.active_branch.name))
+                print(MANIFEST_REPO_CHECKOUT_CONFIG_BRANCH.format(branch))
+                repo.git.checkout(branch)
+            repo.remotes.origin.pull()
+        else:
+            new_path = generate_name_for_obsolete_backup(local_path)
+            new_path = os.path.join(os.path.dirname(local_path), new_path)
+            print(MANIFEST_REPO_MOVED.format(new_path))
+            shutil.move(local_path, new_path)
+            print (CLONING_MANIFEST_REPO.format(local_path, repo_url))
+            repo = Repo.clone_from(repo_url, local_path, progress=GitProgressHandler(), branch=branch)
+
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, skip_submodule, manifest):
+    for repo_to_clone in repos_to_clone:
+        local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
+        local_repo_url = repo_to_clone.remote_url
+        print ("Cloning from: " + str(local_repo_url))
+        repo = Repo.clone_from(local_repo_url, local_repo_path, progress=GitProgressHandler())
+        #Fetch notes
+        repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
+
+        # Add the primary remote so that a reference to the latest code is available when
+        # using a mirror.
+        if add_primary_repo_remote(repo, repo_to_clone, args.verbose):
+            fetch_from_primary_repo(repo, repo_to_clone, args.verbose)
+
+        # Handle branch/commit/tag checkout if needed. If a combination of these are specified the
+        # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked
+        # out
+        if repo_to_clone.commit:
+            if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
+                print(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
+            repo.git.checkout(repo_to_clone.commit)
+        elif repo_to_clone.tag and repo_to_clone.commit is None:
+            if args.verbose and repo_to_clone.branch:
+                print(TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
+            repo.git.checkout(repo_to_clone.tag)
+        elif repo_to_clone.branch and (repo_to_clone.commit is None and repo_to_clone.tag is None):
+            if repo_to_clone.branch not in repo.remotes['origin'].refs:
+                raise EdkrepoManifestInvalidException('The specified remote branch does not exist')
+            branch_name = repo_to_clone.branch
+            local_branch = repo.create_head(branch_name, repo.remotes['origin'].refs[branch_name])
+            repo.heads[local_branch.name].set_tracking_branch(repo.remotes['origin'].refs[branch_name])
+            repo.heads[local_branch.name].checkout()
+        else:
+            raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+
+        if not skip_submodule:
+            if repo_to_clone.enable_submodule:
+                maintain_submodules(repo_to_clone, repo, args.verbose)
+
+        # Install git hooks
+        install_hooks(project_client_side_hooks, local_repo_path, repo_to_clone, config)
+
+        # Add the commit template if it exists.
+        update_repo_commit_template(workspace_dir, repo, repo_to_clone, config)
+
+        # Check to see if mirror is in sync with primary repo
+        if not in_sync_with_primary(repo, repo_to_clone, args.verbose):
+            print(MIRROR_BEHIND_PRIMARY_REPO)
+
+def write_included_config(remotes, submodule_alt_remotes, repo_directory):
+    included_configs = []
+    for remote in remotes:
+        included_config_name = os.path.join(repo_directory, INCLUDED_FILE_NAME.format(remote.name))
+        included_config_name = get_actual_path(included_config_name)
+        remote_alts = [submodule for submodule in submodule_alt_remotes if submodule.remote_name == remote.name]
+        if remote_alts:
+            with open(included_config_name, mode='w') as f:
+                for alt in remote_alts:
+                    url = f.write(INCLUDED_URL_LINE.format(alt.alternate_url))
+                    instead_of = f.write(INCLUDED_INSTEAD_OF_LINE.format(alt.original_url))
+                    if url == 0 or instead_of == 0:
+                        raise EdkrepoGitConfigSetupException(ERROR_WRITING_INCLUDE.format(remote.name))
+            included_configs.append((remote.name, included_config_name))
+    return included_configs
+
+def remove_included_config(remotes, submodule_alt_remotes, repo_directory):
+    includes_to_remove = []
+    for remote in remotes:
+        include_to_remove = os.path.join(repo_directory, INCLUDED_FILE_NAME.format(remote.name))
+        remote_alts = [submodule for submodule in submodule_alt_remotes if submodule.remote_name == remote.name]
+        if remote_alts:
+            includes_to_remove.append(include_to_remove)
+    for include_to_remove in includes_to_remove:
+        if os.path.isfile(include_to_remove):
+            os.remove(include_to_remove)
+
+def write_conditional_include(workspace_path, repo_sources, included_configs):
+    gitconfigpath = os.path.normpath(os.path.expanduser("~/.gitconfig"))
+    for source in repo_sources:
+        for included_config in included_configs:
+            if included_config[0] == source.remote_name:
+                gitdir = str(os.path.normpath(os.path.join(workspace_path, source.root)))
+                gitdir = get_actual_path(gitdir)
+                gitdir = gitdir.replace('\\', '/')
+                if sys.platform == "win32":
+                    gitdir = '/{}'.format(gitdir)
+                    path = '/{}'.format(included_config[1])
+                else:
+                    path = included_config[1]
+                path = path.replace('\\', '/')
+                section = 'includeIf "gitdir:{}/"'.format(gitdir)
+                with git.GitConfigParser(gitconfigpath, read_only=False) as gitglobalconfig:
+                    gitglobalconfig.add_section(section)
+                    gitglobalconfig.set(section, 'path', path)
+
+def maintain_submodules(repo_sources, repo, verbose = False):
+    try:
+        output_data = repo.git.execute(['git', 'submodule', 'init'], with_extended_output=True, with_stdout=True)
+        if verbose:
+            print(output_data[0])
+        print(output_data[1])
+        if verbose:
+            print(output_data[2])
+        print()
+        output_data = repo.git.execute(['git', 'submodule', 'sync', '--recursive'], with_extended_output=True, with_stdout=True)
+        if verbose:
+            print(output_data[0])
+        print(output_data[1])
+        if verbose:
+            print(output_data[2])
+        print()
+        output_data = repo.git.execute(['git', 'submodule', 'update', '--recursive'], with_extended_output=True, with_stdout=True)
+        if verbose:
+            print(output_data[0])
+        print(output_data[1])
+        if verbose:
+            print(output_data[2])
+        print()
+    except:
+        raise EdkrepoGitException(SUBMODULE_FAILURE.format(repo_sources.remote_name))
+
+def install_hooks(hooks, local_repo_path, repo_for_install, config):
+    # Determine the which hooks are for the repo in question and which are from a URL based source or are in a global
+    # manifest repo relative path
+    hooks_url = []
+    hooks_path = []
+    for hook in hooks:
+        if repo_for_install.remote_url == hook.remote_url:
+            if str(hook.source).startswith('http'):
+                hooks_url.append(hook)
+            else:
+                hooks_path.append(hook)
+
+    # Download and install any URL sourced hooks
+    for hook in hooks_url:
+        if hook.dest_file:
+            destination_path = os.path.join(local_repo_path, os.path.dirname(str(hook.dest_path)))
+            hook_file_name = os.path.join(destination_path, str(hook.dest_name))
+        else:
+            destination = os.path.join(local_repo_path, hook.dest_path)
+            hook_file_name = os.path.join(destination, hook.source.split('/')[-1])
+        if not os.path.exists(destination):
+            os.makedirs(destination)
+        with urllib.request.urlopen(hook.source) as response, open(hook_file_name, 'wb') as out_file:
+            data = response.read()
+            out_file.write(data)
+
+    # Copy any global manifest repository relative path source based hooks
+    for hook in hooks_path:
+        global_manifest_directory = config['cfg_file'].manifest_repo_abs_local_path
+        man_dir_rel_hook_path = os.path.join(global_manifest_directory, hook.source)
+        if not os.path.exists(man_dir_rel_hook_path):
+            raise EdkrepoHookNotFoundException(HOOK_NOT_FOUND_ERROR.format(hook.source, repo_for_install.root))
+        if hook.dest_file:
+            destination_path = os.path.join(local_repo_path, os.path.dirname(str(hook.dest_path)))
+            hook_file_name = os.path.join(destination_path, str(hook.dest_file))
+        else:
+            destination_path = os.path.join(local_repo_path, hook.dest_path)
+            hook_file_name = os.path.join(destination_path, (os.path.basename(str(hook.source))))
+        if not os.path.exists(destination_path):
+            os.makedirs(destination_path)
+        shutil.copy(man_dir_rel_hook_path, hook_file_name)
+        if os.name == 'posix':
+            # Need to make sure the script is executable or it will not run on Linux
+            os.chmod(hook_file_name, os.stat(hook_file_name).st_mode | 0o111)
+
+def uninstall_hooks(hooks, local_repo_path, repo_for_uninstall):
+    for hook in hooks:
+        if repo_for_uninstall.remote_url == hook.remote_url:
+            if str(hook.source).startswith('http'):
+                if hook.dest_file:
+                    destination_path = os.path.join(local_repo_path, os.path.dirname(str(hook.dest_path)))
+                    hook_file = os.path.join(destination_path, str(hook.dest_file))
+                else:
+                    destination = os.path.join(local_repo_path, hook.dest_path)
+                    hook_file = os.path.join(destination, hook.source.split('/')[-1])
+            else:
+                if os.path.basename(str(hook.source)) == 'hook-dispatcher':
+                    destination_path = os.path.join(local_repo_path, os.path.dirname(str(hook.dest_path)))
+                    hook_file = os.path.join(destination_path, (os.path.basename(str(hook.dest_path))))
+                else:
+                    destination = os.path.join(local_repo_path, hook.dest_path)
+                    hook_file = os.path.join(destination, (os.path.basename(str(hook.source))))
+            os.remove(hook_file)
+
+def update_hooks (hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo, config):
+    if hooks_add:
+        install_hooks(hooks_add, local_repo_path, repo, config)
+    if hooks_update:
+        install_hooks(hooks_update, local_repo_path, repo, config)
+    if hooks_uninstall:
+        uninstall_hooks(hooks_uninstall, local_repo_path, repo)
+
+def sparse_checkout_enabled(workspace_dir, repo_list):
+    repo_dirs = [os.path.join(workspace_dir, os.path.normpath(x.root)) for x in repo_list]
+    if repo_dirs:
+        build_info = BuildInfo(repo_dirs)
+        if build_info.find_sparse_checkout():
+            return True
+    return False
+
+
+def get_sparse_folder_list(repo):
+    with repo.config_reader() as cr:
+        if cr.has_option(section='core', option='sparsecheckout'):
+            if not cr.get_value(section='core', option='sparsecheckout'):
+                return None
+    sparse_file_name = os.path.join('.git', 'info', 'sparse-checkout')
+    sparse_file = os.path.normpath(os.path.join(repo.working_tree_dir, sparse_file_name))
+    if not os.path.isfile(sparse_file):
+        return []
+    with open(sparse_file) as f:
+        sparse_list = f.readlines()
+    sparse_list = [x[1:].strip() for x in sparse_list]
+    try:
+        sparse_list.remove('*.*')
+    except ValueError:
+        pass
+    try:
+        sparse_list.remove('*')
+    except ValueError:
+        pass
+    return sparse_list
+
+
+def reset_sparse_checkout(workspace_dir, repo_list, disable=False):
+    # Determine what repositories are targeted for sparse checkout
+    repo_dirs = [workspace_dir]
+    repo_dirs.extend([os.path.join(workspace_dir, os.path.normpath(x.root)) for x in repo_list])
+    if repo_dirs:
+        # Create sparse checkout object without DSC information and reset
+        build_info = BuildInfo(repo_dirs)
+        build_info.reset_sparse_checkout(disable)
+
+
+def sparse_checkout(workspace_dir, repo_list, manifest):
+    current_combo = manifest.general_config.current_combo
+    try:
+        process_sparse_checkout(workspace_dir, repo_list, current_combo, manifest)
+    except RuntimeError as msg:
+        print(msg)
+
+
+def check_dirty_repos(manifest, workspace_path):
+    repos = manifest.get_repo_sources(manifest.general_config.current_combo)
+    for repo_to_check in repos:
+        local_repo_path = os.path.join(workspace_path, repo_to_check.root)
+        repo = Repo(local_repo_path)
+        if repo.is_dirty(untracked_files=True):
+            raise EdkrepoUncommitedChangesException(UNCOMMITED_CHANGES.format(repo_to_check.root))
+
+
+def check_branches(sources, workspace_path):
+    # check that the branches listed in the combination exist
+    for repo_to_check in sources:
+        repo = Repo(os.path.join(workspace_path, repo_to_check.root))
+        if not repo_to_check.branch:
+            continue
+        if repo_to_check.branch not in repo.remotes['origin'].refs:
+            raise EdkrepoManifestInvalidException(
+                CHECKOUT_NO_REMOTE.format(repo_to_check.root))
+
+
+def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest):
+    if not override:
+        try:
+            check_dirty_repos(manifest, workspace_path)
+        except EdkrepoUncommitedChangesException:
+            raise EdkrepoUncommitedChangesException(CHECKOUT_UNCOMMITED_CHANGES)
+    check_branches(repos_to_checkout, workspace_path)
+    for repo_to_checkout in repos_to_checkout:
+        if verbose:
+            if repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
+                print(CHECKING_OUT_BRANCH.format(repo_to_checkout.branch, repo_to_checkout.root))
+            elif repo_to_checkout.commit is not None:
+                print(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
+        local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
+        repo = Repo(local_repo_path)
+        # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
+        # the source section for the manifest the order of priority is the followiwng 1)commit
+        # 2) tag 3)branch with the highest priority attribute provided beinng checked out
+        if repo_to_checkout.commit:
+            if verbose and (repo_to_checkout.branch or repo_to_checkout.tag):
+                print(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root))
+            if override:
+                repo.git.checkout(repo_to_checkout.commit, '--force')
+            else:
+                repo.git.checkout(repo_to_checkout.commit)
+        elif repo_to_checkout.tag and repo_to_checkout.commit is None:
+            if verbose and (repo_to_checkout.branch):
+                print(TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root))
+            if override:
+                repo.git.checkout(repo_to_checkout.tag, '--force')
+            else:
+                repo.git.checkout(repo_to_checkout.tag)
+        elif repo_to_checkout.branch and (repo_to_checkout.commit is None and repo_to_checkout.tag is None):
+            branch_name = repo_to_checkout.branch
+            if branch_name in repo.heads:
+                local_branch = repo.heads[branch_name]
+            else:
+                local_branch = repo.create_head(branch_name, repo.remotes['origin'].refs[branch_name])
+            #check to see if the branch being checked out has a tracking branch if not set one up
+            if repo.heads[local_branch.name].tracking_branch() is None:
+                repo.heads[local_branch.name].set_tracking_branch(repo.remotes['origin'].refs[branch_name])
+            if override:
+                repo.heads[local_branch.name].checkout(force=True)
+            else:
+                repo.heads[local_branch.name].checkout()
+        else:
+            raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+
+        if repo_to_checkout.enable_submodule:
+            maintain_submodules(repo_to_checkout, repo, verbose)
+
+
+
+def generate_name_for_obsolete_backup(absolute_path):
+    if not os.path.exists(absolute_path):
+        raise ValueError("{} does not exist".format(absolute_path))
+    original_name = os.path.basename(absolute_path)
+    dir_name = os.path.dirname(absolute_path)
+    unique_name = ""
+    unique_name_found = False
+    index = 1
+    while not unique_name_found:
+        if index == 1:
+            unique_name = "{}_old".format(original_name)
+        else:
+            unique_name = "{}_old{}".format(original_name, index)
+        if not os.path.exists(os.path.join(dir_name, unique_name)):
+            unique_name_found = True
+        index += 1
+    return unique_name
+
+
+def verify_manifest_data(global_manifest_directory, config, verbose=False, verify_all=False, verify_proj=None, verify_archived=False):
+    # Validate the project individual project selected
+    if verify_proj:
+        print(VERIFY_PROJ.format(verify_proj))
+        ci_index_path = os.path.join(config['cfg_file'].manifest_repo_abs_local_path, 'CiIndex.xml')
+        ci_index = CiIndexXml(ci_index_path)
+        try:
+            proj_path = find_project_in_index(verify_proj, ci_index, config['cfg_file'].manifest_repo_abs_local_path, VERIFY_PROJ_NOT_IN_INDEX.format(verify_proj))
+        except EdkrepoInvalidParametersException:
+            raise
+        if proj_path:
+            proj_val_data = validate_manifestfiles([proj_path])
+            proj_val_error = get_manifest_validation_status(proj_val_data)
+            if proj_val_error:
+                if verbose:
+                    print_manifest_errors(proj_val_data)
+                raise EdkrepoManifestInvalidException(VERIFY_PROJ_FAIL.format(verify_proj))
+
+    # Validate the entire global manifest repository.
+    if verify_all:
+        print(VERIFY_GLOBAL)
+        if verify_archived:
+            print(VERIFY_ARCHIVED)
+        # Attempt to make sure the manifest data is good
+        manifestfile_validation_data = validate_manifestrepo(global_manifest_directory, verify_archived)
+        manifest_repo_error = get_manifest_validation_status(manifestfile_validation_data)
+        # Display errors
+        if manifest_repo_error:
+            print(VERIFY_GLOBAL_FAIL)
+            if verbose:
+                print_manifest_errors(manifestfile_validation_data)
+
+def sort_commits(manifest, workspace_path, max_commits=None):
+    colorama.init()
+    repo_sources_to_log = manifest.get_repo_sources(manifest.general_config.current_combo)
+
+    commit_dictionary = {}
+    for repo_to_log in repo_sources_to_log:
+        local_repo_path = os.path.join(workspace_path, repo_to_log.root)
+        repo = Repo(local_repo_path)
+        print("Processing {} log...".format(repo_to_log.root), end='\r')
+        if max_commits:
+            commit_generator = repo.iter_commits(max_count=max_commits)
+        else:
+            commit_generator = repo.iter_commits()
+        for commit in commit_generator:
+            commit_dictionary[commit] = commit.committed_date
+        print(CLEAR_LINE, end='')
+
+    sorted_commit_list = sorted(commit_dictionary, key=commit_dictionary.get, reverse=True)
+    if max_commits:
+        sorted_commit_list = sorted_commit_list[:max_commits]
+    return sorted_commit_list
+
+
+def combination_is_in_manifest(combination, manifest):
+    combination_names = [c.name for c in manifest.combinations]
+    return combination in combination_names
+
+
+def get_target_sources(combination_or_sha, manifest, workspace_path, log=None):
+    if combination_is_in_manifest(combination_or_sha, manifest):
+        return manifest.get_repo_sources(combination_or_sha)
+
+    current_combo = manifest.general_config.current_combo
+    # look for a pin file that is named combination_or_sha.xml
+    pin_filename = os.path.join(
+        workspace_path,
+        'repo',
+        combination_or_sha+'.xml')
+    if os.path.exists(pin_filename):
+        return ManifestXml(pin_filename).get_repo_sources(current_combo)
+
+    print ("Search repositories for '{}'".format(combination_or_sha))
+    commit_map = {
+        x.root : None
+        for x in manifest.get_repo_sources(current_combo)
+    }
+    found = False
+    if not log:
+        log = sort_commits(manifest, workspace_path)
+    for commit in log:
+        root = os.path.basename(commit.repo.working_dir)
+        if combination_or_sha == commit.hexsha:
+            found = True
+            commit_map[root] = commit.hexsha
+            continue
+        if not found:
+            continue
+        if not commit_map[root]:
+            commit_map[root] = commit.hexsha
+    if not found:
+        raise EdkrepoInvalidParametersException(CHECKOUT_INVALID_COMBO)
+
+    # Create a new pin file
+    old_sources = manifest.get_repo_sources(current_combo)
+    new_sources = []
+    for repo_source in old_sources:
+        new_sources.append(
+            repo_source._replace(commit=commit_map[repo_source.root]))
+    manifest.generate_pin_xml(
+        combination_or_sha,
+        current_combo,
+        new_sources,
+        filename=pin_filename)
+
+    return ManifestXml(pin_filename).get_repo_sources(current_combo)
+
+
+def checkout(combination_or_sha, verbose=False, override=False, log=None):
+    workspace_path = get_workspace_path()
+    manifest = get_workspace_manifest()
+
+    # Create combo_or_sha so we have original input and do not introduce any
+    # unintended behavior by messing with parameters.
+    combo_or_sha = combination_or_sha
+    try:
+        # Try to handle normalize combo name to match the manifest file.
+        combo_or_sha = case_insensitive_single_match(combo_or_sha, [x.name for x in manifest.combinations])
+    except:
+        # No match so leave it alone.  It must be a SHA1 or a bad combo name.
+        pass
+
+    repo_sources = get_target_sources(
+        combo_or_sha,
+        manifest,
+        workspace_path,
+        log=log)
+    initial_repo_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
+
+    # Disable sparse checkout
+    current_repos = initial_repo_sources
+    sparse_enabled = sparse_checkout_enabled(workspace_path, initial_repo_sources)
+    # Sparse checkout only needs to be recomputed if
+    # the dynamic sparse list is being used instead of the static sparse list
+    if sparse_enabled:
+        sparse_settings = manifest.sparse_settings
+        if sparse_settings is not None:
+            sparse_enabled = False
+    if sparse_enabled:
+        print(SPARSE_RESET)
+        reset_sparse_checkout(workspace_path, current_repos)
+
+    print(CHECKING_OUT_COMBO.format(combo_or_sha))
+
+    try:
+        checkout_repos(verbose, override, repo_sources, workspace_path, manifest)
+        current_repos = repo_sources
+        # Update the current checkout combo in the manifest only if this
+        # combination exists in the manifest
+        if combination_is_in_manifest(combo_or_sha, manifest):
+            manifest.write_current_combo(combo_or_sha)
+    except:
+        print (CHECKOUT_COMBO_UNSUCCESFULL.format(combo_or_sha))
+        # Return to the initial combo, since there was an issue with cheking out the selected combo
+        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
+    finally:
+        if sparse_enabled:
+            print(SPARSE_CHECKOUT)
+            sparse_checkout(workspace_path, current_repos, manifest)
+
+
+def case_insensitive_equal(str1, str2):
+    return unicodedata.normalize("NFKD", str1.casefold()) == unicodedata.normalize("NFKD", str2.casefold())
+
+
+def case_insensitive_single_match(str1, str_list):
+    matches = [x for x in str_list if case_insensitive_equal(str1, x)]
+    if len(matches) == 0:
+        raise EdkrepoNotFoundException(GEN_A_NOT_IN_B.format(str1, str_list))
+    elif len(matches) > 1:
+        raise EdkrepoFoundMultipleException(GEN_FOUND_MULT_A_IN_B.format(str1, str_list))
+    return matches[0]
+
+def get_latest_sha(repo, branch, remote_or_url='origin'):
+    try:
+        (latest_sha, ref) = repo.git.ls_remote(remote_or_url, 'refs/heads/{}'.format(branch)).split()
+    except:
+        latest_sha = None
+    return latest_sha
+
+def update_repo_commit_template(workspace_dir, repo, repo_info, config):
+    # Open the local manifest and get any templates
+    manifest = edk_manifest.ManifestXml(os.path.join(workspace_dir, 'repo', 'Manifest.xml'))
+    templates = manifest.commit_templates
+
+    # Need to know where the global manifest directory is located at this point
+    global_manifest_directory = os.path.join(get_edkrepo_global_data_directory(),
+                                             config['cfg_file'].manifest_repo_local_path)
+
+    # Apply the template based on current manifest
+    with repo.config_writer() as cw:
+        if cw.has_option(section='commit', option='template'):
+            current_template = cw.get_value(section='commit', option='template').replace('"', '')
+            if not current_template.startswith(os.path.normpath(global_manifest_directory).replace('\\', '/')):
+                print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
+                return
+
+        if repo_info.remote_name in templates:
+            template_path = os.path.normpath(os.path.join(global_manifest_directory, templates[repo_info.remote_name]))
+            if not os.path.isfile(template_path):
+                print(COMMIT_TEMPLATE_NOT_FOUND.format(template_path))
+                return
+            template_path = template_path.replace('\\', '/')    # Convert to git approved path
+            cw.set_value(section='commit', option='template', value='"{}"'.format(template_path))
+        else:
+            if cw.has_option(section='commit', option='template'):
+                cw.remove_option(section='commit', option='template')
+
+def update_editor_config(config):
+    return
+
+def has_primary_repo_remote(repo, verbose=False):
+    """
+    Checks to see if the repo has a primary remote.
+    """
+    return False
+
+def add_primary_repo_remote(repo, repo_data, verbose=False):
+    """
+    Adds a primary remote if a mirror is being used.
+    Returns:
+      True - Primary remote added
+      False - Primary remote not added
+    """
+    return True
+
+def fetch_from_primary_repo(repo, repo_data, verbose=False):
+    """
+    Performs a fetch from the primary remote.
+    """
+    return
+
+def in_sync_with_primary(repo, repo_data, verbose=False):
+    """
+    Checks to see if the current branch of the mirror is in sync with the
+    primary repo branch.
+    """
+    return True
+
+def check_single_remote_connection(remote_url):
+    """
+    Checks the connection to a single remote using git ls-remote rmemote_url -q invoked via subprocess
+    instead of gitpython to ensure that ssh errors are caught and handled properly on both git bash
+    and windows command line"""
+    print(CHECKING_CONNECTION.format(remote_url))
+    check_output = subprocess.Popen('git ls-remote {} -q'.format(remote_url))
+    check_output.communicate()
+
+def find_project_in_index(project, ci_index_file, global_manifest_dir, except_message):
+    """
+    Finds a project in the CiIndexFile and returns the path to it within the global manifest repository.
+    Raises and EdkrepoInvalidParametersException if not found"""
+    try:
+        proj_name = case_insensitive_single_match(project, ci_index_file.project_list)
+    except:
+        proj_name = None
+    if proj_name:
+        ci_index_xml_rel_path = os.path.normpath(ci_index_file.get_project_xml(proj_name))
+        global_manifest_path = os.path.join(global_manifest_dir, ci_index_xml_rel_path)
+    elif os.path.isabs(project):
+        global_manifest_path = project
+    else:
+        if os.path.isfile(os.path.join(os.getcwd(), project)):
+            global_manifest_path = os.path.join(os.getcwd(), project)
+        elif os.path.isfile(os.path.join(global_manifest_dir, project)):
+            global_manifest_path = os.path.join(global_manifest_dir, project)
+        elif not os.path.dirname(project):
+            for dirpath, dirname, filenames in os.walk(global_manifest_dir):
+                if project in filenames:
+                    global_manifest_path = os.path.join(dirpath, project)
+                    break
+            else:
+                raise EdkrepoInvalidParametersException(except_message)
+        else:
+            raise EdkrepoInvalidParametersException(except_message)
+
+    return global_manifest_path
