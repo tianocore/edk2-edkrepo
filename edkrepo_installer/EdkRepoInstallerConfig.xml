@@ -1,0 +1,17 @@
+<!--
+@file
+  EdkRepoInstallerConfig.xml
+
+@copyright
+  Copyright 2017 - 2019 Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+-->
+<EdkRepoInstaller>
+  <Python MinVersion="3.6.0">
+    <Wheel Name="smmap2" Path="smmap2-2.0.5-py2.py3-none-any.whl" Version="2.0.5" UninstallAllOtherCopies="false" />
+    <Wheel Name="gitdb2" Path="gitdb2-2.0.5-py2.py3-none-any.whl" Version="2.0.5" UninstallAllOtherCopies="false" />
+    <Wheel Name="GitPython" Path="GitPython-2.1.11-py2.py3-none-any.whl" Version="2.1.11" UninstallAllOtherCopies="false" />
+    <Wheel Name="colorama" Path="colorama-0.4.1-py2.py3-none-any.whl" Version="0.4.1" UninstallAllOtherCopies="false" />
+    <Wheel Name="edkrepo" Path="edkrepo-0.1.0-py3-none-any.whl" Version="0.1.0" UninstallAllOtherCopies="true" />
+  </Python>
+</EdkRepoInstaller>

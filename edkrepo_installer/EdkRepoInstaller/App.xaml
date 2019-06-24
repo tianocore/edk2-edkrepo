@@ -1,0 +1,16 @@
+﻿<Application x:Class="TianoCore.EdkRepoInstaller.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Startup="Application_Startup">
+    <!--
+    @file
+      App.xaml
+
+    @copyright
+      Copyright 2017 - 2019 Intel Corporation. All rights reserved.<BR>
+      SPDX-License-Identifier: BSD-2-Clause-Patent
+    -->
+    <Application.Resources>
+
+    </Application.Resources>
+</Application>

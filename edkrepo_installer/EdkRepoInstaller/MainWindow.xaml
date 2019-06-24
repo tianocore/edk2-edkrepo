@@ -1,0 +1,17 @@
+﻿<Window x:Class="TianoCore.EdkRepoInstaller.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="EdkRepo Installer" Height="398" Width="509" ResizeMode="CanMinimize" Icon="SetupIcon.ico" WindowStartupLocation="CenterScreen">
+    <!--
+    @file
+      MainWindow.xaml
+
+    @copyright
+      Copyright 2016 - 2019 Intel Corporation. All rights reserved.<BR>
+      SPDX-License-Identifier: BSD-2-Clause-Patent
+    -->
+    <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Name="RootGrid">
+        <Button x:Name="cmdInstall" Height="21" Width="104" Margin="0,0,31,16" Content="Install" IsDefault="True" Click="cmdInstall_Click" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        <Button x:Name="cmdCancel" Height="21" Width="72" Margin="0,0,138,16" HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Cancel" Click="cmdCancel_Click"/>
+    </Grid>
+</Window>
