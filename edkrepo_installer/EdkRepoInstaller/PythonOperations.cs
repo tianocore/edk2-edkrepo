@@ -600,17 +600,48 @@ namespace TianoCore.EdkRepoInstaller
             return PythonPackages;
         }
 
+        private static string SanitizePipOutput(string PipOutput)
+        {
+            StringBuilder Sanitized = new StringBuilder();
+            IEnumerable<string> PipLines = PipOutput.SplitLines();
+            foreach(string line in PipLines)
+            {
+                if(line.StartsWith("DEPRECATION:"))
+                {
+                    continue;
+                }
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+                Sanitized.Append(line.Trim());
+                Sanitized.Append("\r\n");
+            }
+            return Sanitized.ToString().Trim();
+        }
+
         public static List<PythonPackage> GetInstalledPythonPackages(string PythonPath)
         {
             List<PythonPackage> PythonPackages = new List<PythonPackage>();
             SilentProcess.StdoutDataCapture dataCapture = new SilentProcess.StdoutDataCapture();
             SilentProcess process = SilentProcess.StartConsoleProcessSilently(PythonPath, "-m pip list --format=\"json\" --no-index", dataCapture.DataReceivedHandler);
             process.WaitForExit();
+            bool TryLegacy = true;
             if (process.ExitCode == 0)
             {
-                PythonPackages = ParseJsonPipList(dataCapture.GetData());
+                try
+                {
+                    PythonPackages = ParseJsonPipList(SanitizePipOutput(dataCapture.GetData()));
+                    TryLegacy = false;
+                }
+                catch(Exception e)
+                {
+                    InstallLogger.Log("Error occurred while trying to parse pip JSON:");
+                    InstallLogger.Log(e.ToString());
+                    InstallLogger.Log("Falling back to legacy mode");
+                }
             }
-            else
+            if(TryLegacy)
             {
                 //
                 // Older versions of pip don't support the --format flag, parse the legacy format
@@ -620,7 +651,7 @@ namespace TianoCore.EdkRepoInstaller
                 process.WaitForExit();
                 if (process.ExitCode == 0)
                 {
-                    PythonPackages = ParseLegacyPipList(dataCapture.GetData());
+                    PythonPackages = ParseLegacyPipList(SanitizePipOutput(dataCapture.GetData()));
                 }
             }
             return PythonPackages;
