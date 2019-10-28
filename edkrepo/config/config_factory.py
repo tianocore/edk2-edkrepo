@@ -125,10 +125,15 @@ class GlobalConfig(BaseConfig):
                 CfgProp('git-ver', 'minimum', 'minimum_req_git_ver', None, True),
                 CfgProp('git-ver', 'recommended', 'rec_git_ver', None, True),
                 CfgProp('command-packages', 'packages', 'command_packages', None, True),
-                CfgProp('preferred-command-package', 'preferred-package', 'pref_pkg', None, True)]
+                CfgProp('preferred-command-package', 'preferred-package', 'pref_pkg', None, True),
+                CfgProp('preferred-entry-point', 'entry-point', 'pref_entry_point', None, True)]
         if not os.path.isfile(self.filename):
             raise EdkrepoGlobalConfigNotFoundException("edkrepo global config file {} does not exist".format(self.filename))
         super().__init__(self.filename, True)
+
+    @property
+    def preferred_entry(self):
+        return (self.pref_entry_point.split(':')[0], self.pref_entry_point.split(':')[1])
 
     @property
     def command_packages_list(self):

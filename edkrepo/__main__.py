@@ -24,11 +24,11 @@ for directory in sitepackages:
         break
 else:
     imp.reload(edkrepo)
-import edkrepo.edkrepo_cli
+import edkrepo.edkrepo_entry_point
 
 if __name__ == '__main__':
     try:
-        sys.exit(edkrepo.edkrepo_cli.main())
+        sys.exit(edkrepo.edkrepo_entry_point.main())
     except Exception as e:
         traceback.print_exc()
         sys.exit(1)

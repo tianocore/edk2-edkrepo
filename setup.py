@@ -18,7 +18,7 @@ setup(name='edkrepo',
       include_package_data=True,
       entry_points={
           'console_scripts': [
-              'edkrepo = edkrepo.edkrepo_cli:main'
+              'edkrepo = edkrepo.edkrepo_entry_point:main'
               ]
           }
       )

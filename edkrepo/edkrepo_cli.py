@@ -23,61 +23,6 @@ import importlib.util
 
 from git.exc import GitCommandError
 
-#Prefer the site-packages version of edkrepo
-sitepackages = site.getsitepackages()
-sys.path = sitepackages + sys.path
-import edkrepo
-edkrepo_site_dir = None
-edkrepo_package_path = os.path.dirname(os.path.dirname(edkrepo.__file__))
-for directory in sitepackages:
-    if edkrepo_package_path == directory:
-        edkrepo_site_dir = edkrepo_package_path
-        break
-else:
-    imp.reload(edkrepo)
-    edkrepo_package_path = os.path.dirname(os.path.dirname(edkrepo.__file__))
-    for directory in sitepackages:
-        if edkrepo_package_path == directory:
-            edkrepo_site_dir = edkrepo_package_path
-            break
-if edkrepo_site_dir is None:
-    print('Running EdkRepo from local source')
-
-#Determine if this module is being imported by the launcher script
-run_via_launcher_script = False
-importer = ""
-importer_file = ""
-f = inspect.currentframe().f_back
-while f is not None:
-    if f.f_globals.get('__name__').find('importlib') == -1:
-        importer = f.f_globals.get('__name__')
-        importer_file = f.f_globals.get('__file__')
-        if importer_file is None:
-            importer_file = ""
-        break
-    f = f.f_back
-if importer == "__main__":
-    if os.path.basename(importer_file).lower() == "__main__.py":
-        if os.path.basename(os.path.dirname(importer_file)).lower().find('edkrepo') != -1:
-            run_via_launcher_script = True
-    elif os.path.basename(importer_file).lower().find('edkrepo') != -1:
-        run_via_launcher_script = True
-
-if __name__ == "__main__" or run_via_launcher_script:
-    #If this module is the entrypoint, we need to make
-    #sure that the site-packages version is being executed
-    if edkrepo_site_dir is not None and os.path.commonprefix([edkrepo_site_dir, __file__]) != edkrepo_site_dir:
-        edkrepo_cli_file_name = os.path.join(edkrepo_site_dir, 'edkrepo', 'edkrepo_cli.py')
-        if os.path.isfile(edkrepo_cli_file_name):
-                spec = importlib.util.spec_from_file_location('edkrepo.edkrepo_cli', edkrepo_cli_file_name)
-                edkrepo_cli = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(edkrepo_cli)
-                try:
-                    sys.exit(edkrepo_cli.main())
-                except Exception as e:
-                    traceback.print_exc()
-                    sys.exit(1)
-
 from edkrepo.commands import command_factory
 from edkrepo.config import config_factory
 from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoGlobalConfigNotFoundException
