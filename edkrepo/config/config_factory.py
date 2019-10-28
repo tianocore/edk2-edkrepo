@@ -123,10 +123,20 @@ class GlobalConfig(BaseConfig):
                 CfgProp('sparsecheckout', 'always_exclude', 'sparsecheckout_always_exclude', None, True),
                 CfgProp('f2f-cherry-pick', 'ignored_folder_substrings', 'f2f_cp_ignored_folder_substrings'),
                 CfgProp('git-ver', 'minimum', 'minimum_req_git_ver', None, True),
-                CfgProp('git-ver', 'recommended', 'rec_git_ver', None, True)]
+                CfgProp('git-ver', 'recommended', 'rec_git_ver', None, True),
+                CfgProp('command-packages', 'packages', 'command_packages', None, True),
+                CfgProp('preferred-command-package', 'preferred-package', 'pref_pkg', None, True)]
         if not os.path.isfile(self.filename):
             raise EdkrepoGlobalConfigNotFoundException("edkrepo global config file {} does not exist".format(self.filename))
         super().__init__(self.filename, True)
+
+    @property
+    def command_packages_list(self):
+        initial_list = self.command_packages.split('|')
+        pkg_list = []
+        for pkg in initial_list:
+            pkg_list.append(pkg.strip())
+        return pkg_list
 
     @property
     def manifest_repo_abs_local_path(self):
