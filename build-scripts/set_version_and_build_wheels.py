@@ -195,16 +195,23 @@ def make_selfextract_version_script(version):
         ver.write('chcp 437\n')
     print("VersionInfo script written to set_version.bat\n")
 
-def build_wheels():
+def build_wheels(extension_pkgs):
     dir_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
     file_path = os.path.join(dir_path, "setup.py")
     if ostype == WIN:
         check_call("py {} \"{}\" bdist_wheel".format(PYTHON_VERSION, file_path), shell=True, cwd=dir_path)
     else:
         check_call('python3 "{}" bdist_wheel'.format(file_path), shell=True, cwd=dir_path)
+    for pkg in extension_pkgs:
+        ext_dir_path = os.path.abspath(pkg)
+        ext_file_path = os.path.join(ext_dir_path, 'setup.py')
+        if ostype == WIN:
+            check_call("py {} \"{}\" bdist_wheel".format(PYTHON_VERSION, ext_file_path), shell=True, cwd=ext_dir_path)
+        else:
+            check_call('python3 "{}" bdist_wheel'.format(ext_file_path), shell=True, cwd=ext_dir_path)
     print("Wheels built successfully")
 
-def copy_wheels_and_set_xml(package_version):
+def copy_wheels_and_set_xml(package_version, extension_pkgs):
     dir_path = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "dist")
     dest_path = os.path.join(dir_path, "self_extract")
     if ostype == LINUX:
@@ -218,6 +225,14 @@ def copy_wheels_and_set_xml(package_version):
             if data:
                 wheels.append((data.group(1), file_name))
                 _copy_file(os.path.join(dir_path, file_name), os.path.join(dest_path, file_name))
+    for pkg in extension_pkgs:
+        ext_dir_path = os.path.join(os.path.abspath(pkg), 'dist')
+        for file_name in os.listdir(ext_dir_path):
+            if fnmatch.fnmatch(file_name, "*.whl"):
+                data = wheel_package.match(file_name)
+                if data:
+                    wheels.append((data.group(1), file_name))
+                    _copy_file(os.path.join(ext_dir_path, file_name), os.path.join(dest_path, file_name))
     _set_version_number_and_wheels_cr_tools_installer_config(package_version, wheels)
 
 def create_final_copy_script(version):
@@ -251,6 +266,7 @@ def make_version_cfg_file(version):
             install_cfg.write(f)
 
 def main():
+    extension_pkgs = []
     print("Building Python packages and generating new version number...")
     (version, package_version) = get_current_version_number()
     set_version_number_setup_py(package_version)
@@ -259,8 +275,8 @@ def main():
         set_version_number_setup_launcher_rc(version)
         make_selfextract_version_script(version)
     print("Version number generated and set successfully")
-    build_wheels()
-    copy_wheels_and_set_xml(package_version)
+    build_wheels(extension_pkgs)
+    copy_wheels_and_set_xml(package_version, extension_pkgs)
     make_version_cfg_file(version)
     create_final_copy_script(version)
 
