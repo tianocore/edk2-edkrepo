@@ -214,7 +214,15 @@ namespace TianoCore.EdkRepoInstaller
 
         private bool FoundVendorCustomizedEdkRepoAlreadyInstalled(out RegistryKey FoundVendorUninstallKey)
         {
-            string ProductCode = InstallerStrings.ProductCode;
+            string ProductCode = null;
+            if (VendorCustomizer.Instance != null)
+            {
+                ProductCode = VendorCustomizer.Instance.ProductCode;
+            }
+            else
+            {
+                ProductCode = InstallerStrings.ProductCode;
+            }
             RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
             RegistryKey winUninstallRegistryKey = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", true);
             foreach (string VendorCustomizerProductCode in InstallerStrings.KnownVendorProductCodes)
