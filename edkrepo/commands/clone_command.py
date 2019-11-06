@@ -10,14 +10,9 @@
 import os
 import shutil
 
-
-# Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument
-from edkrepo.common.argument_strings import PROJECT_OR_MANIFEST_DESCRIPTION, PROJECT_OR_MANIFEST_HELP
-from edkrepo.common.argument_strings import COMBINATION_DESCRIPTION, COMBINATION_HELP, WORKSPACE_DESCRIPTION
-from edkrepo.common.argument_strings import WORKSPACE_HELP, CLONE_COMMAND_DESCRIPTION
-from edkrepo.common.argument_strings import SPARSE_HELP, SPARSE_DESCRIPTION, NO_SPARSE_DESCRIPTION, NO_SPARSE_HELP
+import edkrepo.commands.arguments.clone_args as arguments
 from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, clone_repos, sparse_checkout, verify_manifest_data
 from edkrepo.common.common_repo_functions import case_insensitive_single_match, update_editor_config
 from edkrepo.common.common_repo_functions import write_included_config, write_conditional_include
@@ -35,37 +30,32 @@ class CloneCommand(EdkrepoCommand):
     def get_metadata(self):
         metadata = {}
         metadata['name'] = 'clone'
-        metadata['help-text'] = CLONE_COMMAND_DESCRIPTION
+        metadata['help-text'] = arguments.COMMAND_DESCRIPTION
         args = []
         metadata['arguments'] = args
         args.append({'name': 'Workspace',
                      'positional': True,
                      'position': 0,
                      'required': True,
-                     'description': WORKSPACE_DESCRIPTION,
-                     'help-text': WORKSPACE_HELP})
+                     'help-text': arguments.WORKSPACE_HELP})
         args.append({'name': 'ProjectNameOrManifestFile',
                      'positional': True,
                      'position': 1,
                      'required': True,
-                     'description': PROJECT_OR_MANIFEST_DESCRIPTION,
-                     'help-text': PROJECT_OR_MANIFEST_HELP})
+                     'help-text': arguments.PROJECT_MANIFEST_HELP})
         args.append({'name': 'Combination',
                      'positional': True,
                      'position': 2,
                      'required': False,
-                     'description': COMBINATION_DESCRIPTION,
-                     'help-text': COMBINATION_HELP})
+                     'help-text': arguments.COMBINATION_HELP})
         args.append({'name': 'sparse',
                      'positional': False,
                      'required': False,
-                     'description': SPARSE_DESCRIPTION,
-                     'help-text': SPARSE_HELP})
+                     'help-text': arguments.SPARSE_HELP})
         args.append({'name': 'nosparse',
                      'positional': False,
                      'required': False,
-                     'description': NO_SPARSE_DESCRIPTION,
-                     'help-text': NO_SPARSE_HELP})
+                     'help-text': arguments.NO_SPARSE_HELP})
         args.append(SubmoduleSkipArgument)
         return metadata
 
