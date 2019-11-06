@@ -12,11 +12,10 @@ import os
 
 from colorama import Fore
 
-# Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import ColorArgument
+import edkrepo.commands.arguments.manifest_args as arguments
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
-from edkrepo.common.argument_strings import MANIFEST_COMMAND_DESCRIPTION, ARCHIVED_HELP, MANIFEST_VERBOSE_HELP
 from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, verify_manifest_data
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo.config.config_factory import get_workspace_manifest
@@ -30,14 +29,14 @@ class ManifestCommand(EdkrepoCommand):
     def get_metadata(self):
         metadata = {}
         metadata['name'] = 'manifest'
-        metadata['help-text'] = MANIFEST_COMMAND_DESCRIPTION
+        metadata['help-text'] = arguments.COMMAND_DESCRIPTION
         args = []
         metadata['arguments'] = args
         args.append({'name': 'archived',
                      'short-name': 'a',
                      'positional': False,
                      'required': False,
-                     'help-text': ARCHIVED_HELP})
+                     'help-text': arguments.ARCHIVED_HELP})
         args.append(ColorArgument)
         return metadata
 
