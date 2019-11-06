@@ -7,9 +7,7 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-# Our modules
-from edkrepo.common.argument_strings import VERBOSE_DESCRIPTION, VERBOSE_HELP, DRY_RUN_DESCRIPTION, DRY_RUN_HELP, COLOR_HELP
-from edkrepo.common.argument_strings import OVERRIDE_HELP, SUBMODULE_SKIP_HELP
+import edkrepo.commands.arguments.edkrepo_cmd_args as arguments
 
 
 class EdkrepoCommand(object):
@@ -25,30 +23,28 @@ VerboseArgument = {'name': 'verbose',
                    'short-name': 'v',
                    'positional': False,
                    'required': False,
-                   'description': VERBOSE_DESCRIPTION ,
-                   'help-text': VERBOSE_HELP}
+                   'help-text': arguments.VERBOSE_HELP}
 
 
 DryRunArgument = {'name': 'dry-run',
                   'positional': False,
                   'required': False,
-                  'description': DRY_RUN_DESCRIPTION,
-                  'help-text': DRY_RUN_HELP}
+                  'help-text': arguments.DRY_RUN_HELP}
 
 OverrideArgument = {'name': 'override',
                     'short-name': 'o',
                     'positional': False,
                     'required': False,
-                    'help-text': OVERRIDE_HELP}
+                    'help-text': arguments.OVERRIDE_HELP}
 
 ColorArgument = {'name' : 'color',
                  'short-name': 'c',
                  'positional' : False,
                  'required' : False,
-                 'help-text' : COLOR_HELP}
+                 'help-text' : arguments.COLOR_HELP}
 
 SubmoduleSkipArgument = {'name': 'skip-submodule',
                          'short-name' : 's',
                          'positional' : False,
                          'required' : False,
-                         'help-text' : SUBMODULE_SKIP_HELP}
+                         'help-text' : arguments.SUBMODULE_SKIP_HELP}
