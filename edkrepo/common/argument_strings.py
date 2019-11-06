@@ -41,7 +41,3 @@ UPDATE_LOCAL_MANIFEST_DESCRIPTION = 'Updates the global manifest repository and 
 UPDATE_LOCAL_MANIFEST_HELP = 'Updates the local manifest file found in the <workspace>/repo directory prior to performing sync operations.'
 SYNC_OVERRIDE_HELP = 'Without this flag sync operations will not be completed if the updated manifest adds/removes repositories or if there are local commits on the target branch.'
 
-#Args for sparse_command.py
-SPARSE_COMMAND_DESCRIPTION = 'Displays the current sparse checkout status and allows for changing the sparse checkout state.'
-SPARSE_ENABLE_HELP = 'Enables sparse checkout if supported by the manifest.'
-SPARSE_DISABLE_HELP = 'Disables sparse checkout if enabled.'

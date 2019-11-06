@@ -8,7 +8,7 @@
 #
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.common.argument_strings import SPARSE_COMMAND_DESCRIPTION, SPARSE_ENABLE_HELP, SPARSE_DISABLE_HELP
+import edkrepo.commands.arguments.sparse_args as arguments
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, sparse_checkout, reset_sparse_checkout
 from edkrepo.common.common_repo_functions import check_dirty_repos
@@ -24,17 +24,17 @@ class SparseCommand(EdkrepoCommand):
     def get_metadata(self):
         metadata = {}
         metadata['name'] = 'sparse'
-        metadata['help-text'] = SPARSE_COMMAND_DESCRIPTION
+        metadata['help-text'] = arguments.COMMAND_DESCRIPTION
         args = []
         metadata['arguments'] = args
         args.append({'name': 'enable',
                      'positional': False,
                      'required': False,
-                     'help-text': SPARSE_ENABLE_HELP})
+                     'help-text': arguments.ENABLE_HELP})
         args.append({'name': 'disable',
                      'positional': False,
                      'required': False,
-                     'help-text': SPARSE_DISABLE_HELP})
+                     'help-text': arguments.DISABLE_HELP})
         return metadata
 
     def run_command(self, args, config):
