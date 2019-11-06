@@ -33,11 +33,6 @@ SPARSE_HELP = 'Enables a sparse checkout based on the contents of the DSC file(s
 NO_SPARSE_DESCRIPTION = 'Disables sparse checkout support.'
 NO_SPARSE_HELP = 'Disables sparse checkout if enabled by default in the manifest.\n'
 
-#Args for send_review_command.py
-BRANCH_DESCRIPTION = 'Branch description'
-BRANCH_HELP = 'Branch help'
-DRY_RUN_HELP = 'Lists the reviewers, target branch, and affected files but does not send a review.'
-
 #Args for sync_command.py
 SYNC_COMMAND_DESCRIPTION = 'Updates the local copy of the current combination\'s target branches with the latest changes from the server. Does not update local branches.'
 FETCH_DESCRIPTION = 'Downloads the changes from the remote server to the local workspace with out performing a merge'
