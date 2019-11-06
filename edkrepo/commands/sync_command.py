@@ -19,11 +19,10 @@ from git import Repo
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import DryRunArgument, SubmoduleSkipArgument
+import edkrepo.commands.arguments.sync_args as arguments
 from edkrepo.common.progress_handler import GitProgressHandler
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoManifestNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
-from edkrepo.common.argument_strings import SYNC_COMMAND_DESCRIPTION, FETCH_DESCRIPTION, FETCH_HELP, SYNC_OVERRIDE_HELP
-from edkrepo.common.argument_strings import UPDATE_LOCAL_MANIFEST_HELP, UPDATE_LOCAL_MANIFEST_DESCRIPTION
 from edkrepo.common.humble import SYNC_UNCOMMITED_CHANGES, SYNC_MANIFEST_NOT_FOUND, SYNC_URL_CHANGE, SYNC_COMBO_CHANGE
 from edkrepo.common.humble import SYNC_SOURCE_MOVE_WARNING, SYNC_REMOVE_WARNING, SYNC_REMOVE_LIST_END_FORMATTING
 from edkrepo.common.humble import SYNC_MANIFEST_DIFF_WARNING, SYNC_MANIFEST_UPDATE
@@ -54,24 +53,22 @@ class SyncCommand(EdkrepoCommand):
     def get_metadata(self):
         metadata = {}
         metadata['name'] = 'sync'
-        metadata['help-text'] = SYNC_COMMAND_DESCRIPTION
+        metadata['help-text'] = arguments.COMMAND_DESCRIPTION
         args = []
         metadata['arguments'] = args
         args.append({'name' : 'fetch',
                      'positional' : False,
                      'required' : False,
-                     'description': FETCH_DESCRIPTION,
-                     'help-text' : FETCH_HELP})
+                     'help-text': arguments.FETCH_HELP})
         args.append({'name' : 'update-local-manifest',
                      'short-name': 'u',
                      'required' : False,
-                     'description' : UPDATE_LOCAL_MANIFEST_DESCRIPTION,
-                     'help-text' : UPDATE_LOCAL_MANIFEST_HELP})
+                     'help-text' : arguments.UPDATE_LOCAL_MANIFEST_HELP})
         args.append({'name' : 'override',
                      'short-name': 'o',
                      'positional' : False,
                      'required' : False,
-                     'help-text' : SYNC_OVERRIDE_HELP})
+                     'help-text' : arguments.OVERRIDE_HELP})
         args.append(SubmoduleSkipArgument)
         return metadata
 

@@ -33,11 +33,3 @@ SPARSE_HELP = 'Enables a sparse checkout based on the contents of the DSC file(s
 NO_SPARSE_DESCRIPTION = 'Disables sparse checkout support.'
 NO_SPARSE_HELP = 'Disables sparse checkout if enabled by default in the manifest.\n'
 
-#Args for sync_command.py
-SYNC_COMMAND_DESCRIPTION = 'Updates the local copy of the current combination\'s target branches with the latest changes from the server. Does not update local branches.'
-FETCH_DESCRIPTION = 'Downloads the changes from the remote server to the local workspace with out performing a merge'
-FETCH_HELP = 'Performs a fetch only sync, no changes will be made to the local workspace'
-UPDATE_LOCAL_MANIFEST_DESCRIPTION = 'Updates the global manifest repository and local manifest file prior to performing a sync'
-UPDATE_LOCAL_MANIFEST_HELP = 'Updates the local manifest file found in the <workspace>/repo directory prior to performing sync operations.'
-SYNC_OVERRIDE_HELP = 'Without this flag sync operations will not be completed if the updated manifest adds/removes repositories or if there are local commits on the target branch.'
-
