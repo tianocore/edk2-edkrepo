@@ -14,9 +14,7 @@ import os
 
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
-from edkrepo.common.argument_strings import CHECKOUT_COMMAND_DESCRIPTION
-from edkrepo.common.argument_strings import CHECKOUT_COMBINATION_DESCRIPTION
-from edkrepo.common.argument_strings import CHECKOUT_COMBINATION_HELP
+import edkrepo.commands.arguments.checkout_args as arguments
 from edkrepo.common.common_repo_functions import checkout
 
 
@@ -27,15 +25,15 @@ class CheckoutCommand(EdkrepoCommand):
     def get_metadata(self):
         metadata = {}
         metadata['name'] = 'checkout'
-        metadata['help-text'] = CHECKOUT_COMMAND_DESCRIPTION
+        metadata['help-text'] = arguments.COMMAND_DESCRIPTION
         args = []
         metadata['arguments'] = args
         args.append({'name' : 'Combination',
                      'positional' : True,
                      'position' : 0,
                      'required': True,
-                     'description' : CHECKOUT_COMBINATION_DESCRIPTION,
-                     'help-text' : CHECKOUT_COMBINATION_HELP})
+                     'description' : arguments.COMBINATION_DESCRIPTION,
+                     'help-text' : arguments.COMBINATION_HELP})
         args.append(OverrideArgument)
         return metadata
 

@@ -41,11 +41,6 @@ UPDATE_LOCAL_MANIFEST_DESCRIPTION = 'Updates the global manifest repository and 
 UPDATE_LOCAL_MANIFEST_HELP = 'Updates the local manifest file found in the <workspace>/repo directory prior to performing sync operations.'
 SYNC_OVERRIDE_HELP = 'Without this flag sync operations will not be completed if the updated manifest adds/removes repositories or if there are local commits on the target branch.'
 
-#Args  for checkout_command.py
-CHECKOUT_COMMAND_DESCRIPTION = 'The checkout command enables checking out a specific branch combination from the project manifest located in the <workspace>/repo directory or the sha of a specific commit which will update all repos in the workspace to this commit.\nNote that checkout SHA will put the affected repos into detached head mode.\n'
-CHECKOUT_COMBINATION_DESCRIPTION = 'EdkRepo checkout <Combination or sha>\n'
-CHECKOUT_COMBINATION_HELP = 'Combination: The name of the combination as defined in the workspace manifest file to checkout or the sha of the revision to checkout\n'
-
 #Args for sparse_command.py
 SPARSE_COMMAND_DESCRIPTION = 'Displays the current sparse checkout status and allows for changing the sparse checkout state.'
 SPARSE_ENABLE_HELP = 'Enables sparse checkout if supported by the manifest.'
