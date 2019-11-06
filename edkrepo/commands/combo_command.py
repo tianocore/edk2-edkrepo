@@ -8,10 +8,9 @@
 #
 from colorama import Fore
 
-# Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import ColorArgument
-from edkrepo.common.argument_strings import COMBO_COMMAND_DESCRIPTION
+import edkrepo.commands.arguments.combo_args as arguments
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo.config.config_factory import get_workspace_manifest
 
@@ -23,7 +22,7 @@ class ComboCommand(EdkrepoCommand):
     def get_metadata(self):
         metadata = {}
         metadata['name'] = 'combo'
-        metadata['help-text'] = COMBO_COMMAND_DESCRIPTION
+        metadata['help-text'] = arguments.COMMAND_DESCRIPTION
         args = []
         metadata['arguments'] = args
         args.append(ColorArgument)

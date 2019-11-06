@@ -46,9 +46,6 @@ CHECKOUT_COMMAND_DESCRIPTION = 'The checkout command enables checking out a spec
 CHECKOUT_COMBINATION_DESCRIPTION = 'EdkRepo checkout <Combination or sha>\n'
 CHECKOUT_COMBINATION_HELP = 'Combination: The name of the combination as defined in the workspace manifest file to checkout or the sha of the revision to checkout\n'
 
-#Args for combos_command.py
-COMBO_COMMAND_DESCRIPTION = 'Displays the list of combinations and the currently checked out combination'
-
 #Args for sparse_command.py
 SPARSE_COMMAND_DESCRIPTION = 'Displays the current sparse checkout status and allows for changing the sparse checkout state.'
 SPARSE_ENABLE_HELP = 'Enables sparse checkout if supported by the manifest.'
