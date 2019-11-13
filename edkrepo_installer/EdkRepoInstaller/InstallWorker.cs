@@ -622,7 +622,10 @@ namespace TianoCore.EdkRepoInstaller
                 {
                     if (Wheel.UninstallAllOtherCopies)
                     {
-                        ExclusivePackages.Add(new Tuple<string, PythonVersion>(Wheel.Package.Name, PyInstance.Version));
+                        //
+                        // pip doesn't understand the difference between '_' and '-'
+                        //
+                        ExclusivePackages.Add(new Tuple<string, PythonVersion>(Wheel.Package.Name.Replace('_', '-'), PyInstance.Version));
                     }
                 }
             }
