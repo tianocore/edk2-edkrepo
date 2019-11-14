@@ -90,8 +90,9 @@ def main():
         mod = importlib.import_module(pref_entry)
         func = getattr(mod, pref_entry_func)
         func()
-    except:
+    except Exception as e:
         print('Unable to launch preferred entry point. Launching default entry point edkrepo.edkrepo_cli.py')
+        traceback.print_exc()
         import edkrepo.edkrepo_cli
         edkrepo.edkrepo_cli.main()
 
@@ -100,4 +101,4 @@ if __name__ == "__main__":
         sys.exit(main())
     except Exception as e:
         traceback.print_exc()
-        sys.exit(1)
+        sys.exit(1)
