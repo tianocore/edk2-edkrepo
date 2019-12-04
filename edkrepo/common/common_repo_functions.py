@@ -201,26 +201,26 @@ def write_conditional_include(workspace_path, repo_sources, included_configs):
 def maintain_submodules(repo_sources, repo, verbose = False):
     try:
         output_data = repo.git.execute(['git', 'submodule', 'init'], with_extended_output=True, with_stdout=True)
-        if verbose:
+        if verbose and output_data[0]:
             print(output_data[0])
-        print(output_data[1])
-        if verbose:
+        if output_data[1]:
+            print(output_data[1])
+        if verbose and output_data[2]:
             print(output_data[2])
-        print()
         output_data = repo.git.execute(['git', 'submodule', 'sync', '--recursive'], with_extended_output=True, with_stdout=True)
-        if verbose:
+        if verbose and output_data[0]:
             print(output_data[0])
-        print(output_data[1])
-        if verbose:
+        if output_data[1]:
+            print(output_data[1])
+        if verbose and output_data[2]:
             print(output_data[2])
-        print()
         output_data = repo.git.execute(['git', 'submodule', 'update', '--recursive'], with_extended_output=True, with_stdout=True)
-        if verbose:
+        if verbose and output_data[0]:
             print(output_data[0])
-        print(output_data[1])
-        if verbose:
+        if output_data[1]:
+            print(output_data[1])
+        if verbose and output_data[2]:
             print(output_data[2])
-        print()
     except:
         raise EdkrepoGitException(SUBMODULE_FAILURE.format(repo_sources.remote_name))
 
