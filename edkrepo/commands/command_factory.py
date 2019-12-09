@@ -61,9 +61,16 @@ def get_commands():
             if module == '__init__.py' or os.path.splitext(module)[1] != '.py':
                 continue
             mod = importlib.import_module('{}.{}'.format(cmd_dir[0], os.path.splitext(module)[0]))
+            mod_path = os.path.normcase(os.path.normpath(inspect.getfile(mod)))
             classes = inspect.getmembers(mod, predicate=inspect.isclass)
             for cls in classes:
-                if _is_command(cls[1]):
+                in_same_module = False
+                try:
+                    if mod_path == os.path.normcase(os.path.normpath(inspect.getfile(cls[1]))):
+                        in_same_module = True
+                except TypeError:
+                    pass
+                if in_same_module and _is_command(cls[1]):
                     if cmd_dir[0] == pref_cmd_pkg:
                         pref_commands.update([(cls[0], cls[1])])
                     else:
