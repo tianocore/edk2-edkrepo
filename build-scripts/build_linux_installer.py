@@ -10,6 +10,7 @@
 from argparse import ArgumentParser
 import fnmatch, os, shutil, subprocess, sys
 import set_version_and_build_wheels as build_edkrepo
+import traceback
 
 def main():
     parser = ArgumentParser()
@@ -31,6 +32,7 @@ def main():
     try:
         build_edkrepo.main()
     except:
+        traceback.print_exc()
         print('Failed to build edkrepo wheel')
         return 1
 

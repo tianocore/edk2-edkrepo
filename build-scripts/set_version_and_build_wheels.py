@@ -3,7 +3,7 @@
 ## @file
 # set_version_and_build_wheels.py
 #
-# Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -214,7 +214,7 @@ def build_wheels(extension_pkgs):
 def copy_wheels_and_set_xml(package_version, extension_pkgs):
     dir_path = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "dist")
     dest_path = os.path.join(dir_path, "self_extract")
-    if ostype == LINUX:
+    if ostype != WIN:
         dest_path = os.path.join(dest_path, 'wheels')
     if not os.path.isdir(dest_path):
         os.makedirs(dest_path)
@@ -241,9 +241,9 @@ def create_final_copy_script(version):
             f.write("pushd ..\\dist\n")
             f.write("ren \"setup.exe\" \"EdkRepoSetup-{}.exe\"\n".format(version))
             f.write("popd\n")
-    elif ostype == LINUX:
+    else:
         with open('final_copy.py', 'w') as f:
-            f.write('#!/usr/bin/python3\n')
+            f.write('#!/usr/bin/env python3\n')
             f.write('import os, shutil, sys\n')
             f.write('dist_name = "edkrepo-{{}}".format("{}")\n'.format(version))
             f.write('installer_dir = "../dist/self_extract"\n')
@@ -257,7 +257,7 @@ def _copy_file(source, destination):
         check_call("cp -f {} {}".format(source, destination), shell=True)
 
 def make_version_cfg_file(version):
-    if ostype == LINUX:
+    if ostype != WIN:
         cfg_src = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'edkrepo_installer', 'linux-scripts')
         install_cfg = configparser.ConfigParser(allow_no_value=True)
         install_cfg.read(os.path.join(cfg_src, 'install.cfg'))

@@ -23,6 +23,21 @@ import sys
 import traceback
 import xml.etree.ElementTree as et
 
+#
+# Environment detection
+#
+MAC = "mac"
+LINUX = "linux"
+if sys.platform == "darwin":
+    ostype = MAC
+elif sys.platform.startswith("linux"):
+    ostype = LINUX
+elif os.name == "posix":
+    print("Warning: Unrecognized UNIX OS... treating as Linux")
+    ostype = LINUX
+else:
+    raise EnvironmentError("Unsupported OS")
+
 tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation, 2020'
 
 # Data here should be maintained in a configuration file
@@ -31,6 +46,7 @@ directories_with_executables = ['git_automation']
 cfg_src_dir = os.path.abspath('config')
 whl_src_dir = os.path.abspath('wheels')
 def_python = 'python3'
+nfs_home_directory_data = re.compile(r"NFSHomeDirectory:\s*(\S+)")
 
 # ZSH Configuration options
 prompt_regex = re.compile(r"#\s+[Aa][Dd][Dd]\s+[Ee][Dd][Kk][Rr][Ee][Pp][Oo]\s+&\s+[Gg][Ii][Tt]\s+[Tt][Oo]\s+[Tt][Hh][Ee]\s+[Pp][Rr][Oo][Mm][Pp][Tt]")
@@ -63,7 +79,8 @@ def init_logger(verbose):
 
 def get_args():
     parser = ArgumentParser()
-    parser.add_argument('-l', '--local', action='store_true', default=False, help='Install edkrepo to the user directory instead of system wide')
+    if ostype != MAC:
+        parser.add_argument('-l', '--local', action='store_true', default=False, help='Install edkrepo to the user directory instead of system wide')
     parser.add_argument('-p', '--py', action='store', default=None, help='Specify the python command to use when installing')
     parser.add_argument('-u', '--user', action='store', default=None, help='Specify user account to install edkrepo support on')
     parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Enables verbose output')
@@ -217,6 +234,18 @@ def _check_version(current, expected):
         elif int(cur_s[i]) > int(exp_s[i]):
             return 1
     return 0
+
+def get_user_home_directory(username):
+    if ostype == MAC:
+        res = default_run(['dscl', '.', '-read', '/Users/{}'.format(username), 'NFSHomeDirectory'])
+        data = nfs_home_directory_data.match(res.stdout.strip())
+        if data:
+            return data.group(1)
+        else:
+            raise ValueError("home directory not found")
+    else:
+        res = default_run(['getent', 'passwd', username])
+        return res.stdout.strip().split(':')[5]
 
 def get_site_packages_directory():
     res = default_run([def_python, '-c', 'import site; print(site.getsitepackages()[0])'])
@@ -424,6 +453,9 @@ def do_install():
 
     # Initialize information based on command line input
     username = args.user
+    install_to_local = False
+    if ostype != MAC and args.local:
+        install_to_local = True
 
     try:
         cfg = configparser.ConfigParser(allow_no_value=True)
@@ -449,7 +481,7 @@ def do_install():
 
     # Determine the user running sudo
     log.info('\nCollecting system information:')
-    if not args.local:
+    if not install_to_local and ostype != MAC:
         try:
             res = default_run(['id', '-u'])
         except:
@@ -466,11 +498,21 @@ def do_install():
             log.info('- Unable to determine current user.  Run installer using the --user flag and specify the correct user name.')
             return 1
     try:
-        res = default_run(['getent', 'passwd', username])
-        user_home_dir = res.stdout.strip().split(':')[5]
+        user_home_dir = get_user_home_directory(username)
     except:
         log.info('- Unable to determine users home directory')
         return 1
+    if ostype == MAC:
+        try:
+            res = default_run(['id', '-u'])
+        except:
+            log.info('- Failed to determine user ID')
+            return 1
+        if res.stdout.strip() == '0':
+            log.info('- Installer must NOT be run as root')
+            return 1
+        if os.path.commonprefix([user_home_dir, sys.executable]) != user_home_dir:
+            install_to_local = True
     default_cfg_dir = os.path.join(user_home_dir, cfg_dir)
     get_add_prompt_customization(args, user_home_dir)
     log.info('+ System information collected')
@@ -625,7 +667,7 @@ def do_install():
             install_whl = wheels_to_install[whl_name]['install']
             if install_whl:
                 install_cmd = [def_python, '-m', 'pip', 'install']
-                if args.local:
+                if install_to_local:
                     install_cmd.append('--user')
                 install_cmd.append(os.path.join(whl_src_dir, whl))
                 try:
@@ -639,23 +681,32 @@ def do_install():
     set_execute_permissions()
     log.info('+ Marked scripts as executable')
 
+    #If pyenv is being used, regenerate the pyenv shims
+    if shutil.which('pyenv') is not None:
+        try:
+            res = default_run(['pyenv', 'rehash'])
+            log.info('+ Generated pyenv shims')
+        except:
+            log.info('- Failed to generate pyenv shim')
 
     #Install the command completion script
     if shutil.which('edkrepo') is not None:
-        if args.local:
+        if install_to_local or ostype == MAC:
             command_completion_script = os.path.join(default_cfg_dir, 'edkrepo_completions.sh')
         else:
             command_completion_script = os.path.join('/', 'etc', 'profile.d', 'edkrepo_completions.sh')
         try:
             res = default_run(['edkrepo', 'generate-command-completion-script', command_completion_script])
-            if args.local:
+            if install_to_local or ostype == MAC:
                 shutil.chown(command_completion_script, user=username)
                 os.chmod(command_completion_script, 0o644)
             add_command_completions_to_shell(command_completion_script, args, username, user_home_dir)
+            log.info('+ Configured edkrepo command completion')
         except:
             log.info('- Failed to configure edkrepo command completion')
             if args.verbose:
                 traceback.print_exc()
+
     log.log(logging.PRINT, '\nInstallation complete\n')
 
     return 0

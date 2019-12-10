@@ -3,7 +3,7 @@
 ## @file
 # config_factory.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -30,9 +30,7 @@ def get_edkrepo_global_data_directory():
         common_appdata = create_unicode_buffer(MAX_PATH)
         SHGetFolderPath(None, CSIDL_COMMON_APPDATA, None, SHGFP_TYPE_CURRENT, common_appdata)
         global_data_dir = os.path.join(common_appdata.value, "edkrepo")
-    elif sys.platform == "darwin":
-        raise OSError("macOS support is in progress")
-    elif sys.platform.startswith("linux") or os.name == "posix":
+    elif sys.platform == "darwin" or sys.platform.startswith("linux") or os.name == "posix":
         global_data_dir = os.path.expanduser("~/.edkrepo")
     if not os.path.isdir(global_data_dir):
         if not os.path.exists(os.path.dirname(global_data_dir)):
