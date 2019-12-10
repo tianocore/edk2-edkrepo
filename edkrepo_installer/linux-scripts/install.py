@@ -15,6 +15,7 @@ import importlib.util
 import logging
 import os
 import platform
+import stat
 import shutil
 import subprocess
 import sys
@@ -25,6 +26,7 @@ tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation
 
 # Data here should be maintained in a configuration file
 cfg_dir = '.edkrepo'
+directories_with_executables = ['git_automation']
 cfg_src_dir = os.path.abspath('config')
 whl_src_dir = os.path.abspath('wheels')
 def_python = 'python3'
@@ -118,6 +120,27 @@ def _check_version(current, expected):
         elif int(cur_s[i]) > int(exp_s[i]):
             return 1
     return 0
+
+def get_site_packages_directory():
+    res = default_run([def_python, '-c', 'import site; print(site.getsitepackages()[0])'])
+    return res.stdout.strip()
+
+def set_execute_permissions():
+    site_packages = get_site_packages_directory()
+    config = configparser.ConfigParser(allow_no_value=True, delimiters='=')
+    config.read(os.path.join(cfg_src_dir, 'edkrepo.cfg'))
+    command_packages = [x.strip() for x in config['command-packages']['packages'].split('|')]
+    for command_package in command_packages:
+        package_dir = os.path.join(site_packages, command_package.split('.')[0])
+        for directory in directories_with_executables:
+            full_path = os.path.join(package_dir, directory)
+            if os.path.isdir(full_path):
+                for py_file in os.listdir(full_path):
+                    if py_file == '__init__.py' or os.path.splitext(py_file)[1] != '.py':
+                        continue
+                    py_file = os.path.join(full_path, py_file)
+                    stat_data = os.stat(py_file)
+                    os.chmod(py_file, stat_data.st_mode | stat.S_IEXEC)
 
 def do_install():
     global def_python
@@ -329,6 +352,10 @@ def do_install():
                     log.info('- Failed to install {}'.format(whl_name))
                     return 1
                 log.info('+ Installed {}'.format(whl_name))
+
+    #Mark scripts as executable
+    set_execute_permissions()
+    log.info('+ Marked scripts as executable')
 
     log.log(logging.PRINT, '\nInstallation complete\n')
 
