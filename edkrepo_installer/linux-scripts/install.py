@@ -95,8 +95,9 @@ def get_required_wheels():
             continue
         installed_modules[name] = version
     for name in ret_val:
-        if name in installed_modules:
-            version = installed_modules[name]
+        #pip doesn't understand the difference between '_' and '-'
+        if name.replace('_','-') in installed_modules:
+            version = installed_modules[name.replace('_','-')]
             if _check_version(version, ret_val[name]['version']) >= 0 and not ret_val[name]['uninstall']:
                 ret_val[name]['install'] = False
             else:
@@ -305,9 +306,8 @@ def do_install():
             log.info('- Missing wheel file directory')
             return 1
         for whl_name in wheels_to_install:
-            whl = wheels_to_install[whl_name]['wheel']
-            install_whl = wheels_to_install[whl_name]['install']
             uninstall_whl = wheels_to_install[whl_name]['uninstall']
+            whl_name = whl_name.replace('_','-')  #pip doesn't understand the difference between '_' and '-'
             if uninstall_whl:
                 try:
                     res = default_run([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
@@ -315,6 +315,9 @@ def do_install():
                     log.info('- Failed to uninstall {}'.format(whl_name))
                     return 1
                 log.info('+ Uninstalled {}'.format(whl_name))
+        for whl_name in wheels_to_install:
+            whl = wheels_to_install[whl_name]['wheel']
+            install_whl = wheels_to_install[whl_name]['install']
             if install_whl:
                 install_cmd = [def_python, '-m', 'pip', 'install']
                 if args.local:
