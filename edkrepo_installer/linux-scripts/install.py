@@ -27,6 +27,7 @@ tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation
 cfg_dir = '.edkrepo'
 cfg_src_dir = os.path.abspath('config')
 whl_src_dir = os.path.abspath('wheels')
+def_python = 'python3'
 
 def default_run(cmd):
     return subprocess.run(cmd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
@@ -45,6 +46,7 @@ def init_logger(verbose):
 def get_args():
     parser = ArgumentParser()
     parser.add_argument('-l', '--local', action='store_true', default=False, help='Install edkrepo to the user directory instead of system wide')
+    parser.add_argument('-p', '--py', action='store', default=None, help='Specify the python command to use when installing')
     parser.add_argument('-u', '--user', action='store', default=None, help='Specify user account to install edkrepo support on')
     parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Enables verbose output')
     return parser.parse_args()
@@ -75,7 +77,7 @@ def get_required_wheels():
                                                  'version':wheel.attrib['Version'],
                                                  'install':True}
             break
-    pip_cmd = ['python3', '-m', 'pip', 'list', '--legacy']
+    pip_cmd = [def_python, '-m', 'pip', 'list', '--legacy']
     try:
         res = default_run(pip_cmd)
     except:
@@ -117,8 +119,14 @@ def _check_version(current, expected):
     return 0
 
 def do_install():
+    global def_python
+    org_python = None
+
     # Parse command line
     args = get_args()
+    if args.py is not None:
+        org_python = def_python
+        def_python = args.py
 
     # Enable logging output
     log = init_logger(args.verbose)
@@ -132,6 +140,9 @@ def do_install():
     except:
         log.error('ERROR: Missing installer configuration file.')
         return 1
+    if org_python is not None:
+        cfg['req_tools'][def_python] = cfg['req_tools'][org_python]
+        cfg['req_tools'].pop(org_python)
     try:
         sha_data = configparser.ConfigParser(allow_no_value=True)
         sha_data.read(os.path.join(cfg_src_dir, 'sha_data.cfg'))
@@ -299,13 +310,13 @@ def do_install():
             uninstall_whl = wheels_to_install[whl_name]['uninstall']
             if uninstall_whl:
                 try:
-                    res = default_run(['python3', '-m', 'pip', 'uninstall', '--yes', whl_name])
+                    res = default_run([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
                 except:
                     log.info('- Failed to uninstall {}'.format(whl_name))
                     return 1
                 log.info('+ Uninstalled {}'.format(whl_name))
             if install_whl:
-                install_cmd = ['python3', '-m', 'pip', 'install']
+                install_cmd = [def_python, '-m', 'pip', 'install']
                 if args.local:
                     install_cmd.append('--user')
                 install_cmd.append(os.path.join(whl_src_dir, whl))
