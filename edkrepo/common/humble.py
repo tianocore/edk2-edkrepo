@@ -3,7 +3,7 @@
 ## @file
 # humble.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -23,11 +23,13 @@ RESET_HEAD = 'use "git reset HEAD <file>..."'
 CHECKOUT_HEAD = 'use "git checkout HEAD <file>..."'
 CHECKOUT = 'use "git checkout -- <file>..."'
 ADD = 'use "git add <file>..."'
+COMMIT_NOT_FOUND = 'The commit {} does not exist.'
 BRANCH_BEHIND = 'Your branch \'{local_branch}\' is {behind_count} commit(s) behind \'{target_remote}/{target_branch}\' and should be rebased.'
 COMMAND_NOT_SUPPORTED_MAC_OS = ' is not supported on macOS.'
 COMMAND_NOT_SUPPORT_LINUX = ' is not supported on Linux.'
 KEYBOARD_INTERRUPT = '\n\nKeyboard Interrupt'
 SUBMODULE_FAILURE = 'Error while performing submodule initialization and clone operations for {} repo.\n'
+NOT_GIT_REPO = 'The current directory does not appear to be a git repository'
 MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED = 'BRANCH or TAG name present with COMMIT ID in combination field for {} repo. Using COMMIT ID.\n'
 TAG_AND_BRANCH_SPECIFIED = 'BRANCH AND TAG name present in combination field for {} repo. Using TAG.\n'
 CHECKING_CONNECTION = 'Checking connection to remote url: {}\n'
@@ -133,6 +135,9 @@ INCLUDED_URL_LINE = '[url "{}"]\n'
 INCLUDED_INSTEAD_OF_LINE = '	insteadOf = {}\n'
 INCLUDED_FILE_NAME = '.gitconfig-{}'
 ERROR_WRITING_INCLUDE = 'An error occured while writting the URL redirection configuration for {} repo.\n'
+
+#Error messages for squash.py
+SQUASH_COMMON_ANCESTOR_REQUIRED = '{} is not in the same branch history as {}, unable to operate on this commit range.'
 
 # Messages for common_repo_functions.verify_manifest_data()
 VERIFY_GLOBAL = 'Verifying the active projects in the global manifest repository\n'
