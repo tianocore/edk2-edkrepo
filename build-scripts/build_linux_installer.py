@@ -3,7 +3,7 @@
 ## @file
 # build_linux_installer.py
 #
-# Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -21,7 +21,7 @@ def main():
         os.environ['BUILD_NUMBER'] = args.build
 
     # Step 1: Create required directory structure
-    dist_root = os.path.abspath('../dist/self_extract')
+    dist_root = os.path.abspath(os.path.join('..', 'dist', 'self_extract'))
     if not os.path.isdir(os.path.join(dist_root, 'wheels')):
         os.makedirs(os.path.join(dist_root, 'wheels'))
     if not os.path.isdir(os.path.join(dist_root, 'config')):
@@ -35,7 +35,7 @@ def main():
         return 1
 
     # Step 3: Copy required files
-    inst_root = os.path.abspath('../edkrepo_installer')
+    inst_root = os.path.abspath(os.path.join('..', 'edkrepo_installer'))
     ven_root = os.path.join(inst_root, 'Vendor')
     linux_root = os.path.join(inst_root, 'linux-scripts')
     try:
@@ -55,7 +55,7 @@ def main():
 
     # Step 4: Package installer files
     try:
-        subprocess.run('./final_copy.py', check=True)
+        subprocess.run('final_copy.py', check=True)
     except:
         print('Failed to generate installer package')
         return 1
@@ -65,7 +65,7 @@ def main():
         shutil.rmtree(dist_root, ignore_errors=True)
     except:
         print('Failed to remove temporary files')
-    os.unlink('./final_copy.py')
+    os.unlink('final_copy.py')
 
     return 0
 
