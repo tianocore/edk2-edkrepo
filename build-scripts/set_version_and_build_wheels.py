@@ -18,7 +18,7 @@ import re
 from subprocess import call, check_call
 from xml.etree import ElementTree
 
-PYTHON_VERSION="-3"
+PYTHON_VERSION="3"
 
 #
 # Environment detection
@@ -38,13 +38,13 @@ elif os.name == "posix":
 else:
     raise EnvironmentError("Unsupported OS")
 
-setup_py_version_data = re.compile("\s*version='([\d.]+)',")
-assembly_file_version_data = re.compile("\s*\[\s*assembly:\s*AssemblyFileVersion\s*\(\"([\d.]+)\"\)\s*\]")
-version_number_data = re.compile("(\d+)\.(\d+)\.(\d+)\.(\d+)")
-file_version_data = re.compile("FILEVERSION\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)")
-product_version_data = re.compile("PRODUCTVERSION\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)")
-file_version_string_data = re.compile("\s*VALUE\s*\"FileVersion\"\s*,\s*\"([\d.]+)\"")
-product_version_string_data = re.compile("\s*VALUE\s*\"ProductVersion\"\s*,\s*\"([\d.]+)\"")
+setup_py_version_data = re.compile(r"\s*version='([\d.]+)',")
+assembly_file_version_data = re.compile(r"\s*\[\s*assembly:\s*AssemblyFileVersion\s*\(\"([\d.]+)\"\)\s*\]")
+version_number_data = re.compile(r"(\d+)\.(\d+)\.(\d+)\.(\d+)")
+file_version_data = re.compile(r"FILEVERSION\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)")
+product_version_data = re.compile(r"PRODUCTVERSION\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)")
+file_version_string_data = re.compile(r"\s*VALUE\s*\"FileVersion\"\s*,\s*\"([\d.]+)\"")
+product_version_string_data = re.compile(r"\s*VALUE\s*\"ProductVersion\"\s*,\s*\"([\d.]+)\"")
 wheel_package = re.compile("^([^-]+)-")
 
 def get_current_version_number():
@@ -77,7 +77,7 @@ def set_version_number_setup_py(package_version):
 
 def set_version_number_assembly_info(version):
     assembly_info_files = []
-    for root, dirnames, filenames in os.walk(".."):
+    for root, _, filenames in os.walk(".."):
         for filename in filenames:
             if fnmatch.fnmatch(filename, "AssemblyInfo.cs"):
                 assembly_info_files.append(os.path.join(root, filename))
@@ -113,11 +113,11 @@ def _set_version_number_and_wheels_cr_tools_installer_config(package_version, wh
                                     present_wheels.append(found_wheel[0])
                     for found_wheel in wheels:
                         if found_wheel[0] not in present_wheels:
-                            new_element = ElementTree.SubElement(py_version, "Wheel",
-                                                                 {"Name": found_wheel[0],
-                                                                  "Path": found_wheel[1],
-                                                                  "Version": package_version,
-                                                                  "UninstallAllOtherCopies": "false"})
+                            ElementTree.SubElement(py_version, "Wheel",
+                                                   {"Name": found_wheel[0],
+                                                    "Path": found_wheel[1],
+                                                    "Version": package_version,
+                                                    "UninstallAllOtherCopies": "false"})
         elif root_element.tag == "Python":
             py_version = root_element
             present_wheels = []
@@ -130,11 +130,11 @@ def _set_version_number_and_wheels_cr_tools_installer_config(package_version, wh
                             present_wheels.append(found_wheel[0])
             for found_wheel in wheels:
                 if found_wheel[0] not in present_wheels:
-                    new_element = ElementTree.SubElement(py_version, "Wheel",
-                                                         {"Name": found_wheel[0],
-                                                          "Path": found_wheel[1],
-                                                          "Version": package_version,
-                                                          "UninstallAllOtherCopies": "false"})
+                    ElementTree.SubElement(py_version, "Wheel",
+                                           {"Name": found_wheel[0],
+                                            "Path": found_wheel[1],
+                                            "Version": package_version,
+                                            "UninstallAllOtherCopies": "false"})
     tree.write(file_path)
     print("Installer config regenerated successfully")
 
@@ -199,16 +199,16 @@ def build_wheels(extension_pkgs):
     dir_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
     file_path = os.path.join(dir_path, "setup.py")
     if ostype == WIN:
-        check_call("py {} \"{}\" bdist_wheel".format(PYTHON_VERSION, file_path), shell=True, cwd=dir_path)
+        check_call('py -{} "{}" bdist_wheel'.format(PYTHON_VERSION, file_path), shell=True, cwd=dir_path)
     else:
-        check_call('python3 "{}" bdist_wheel'.format(file_path), shell=True, cwd=dir_path)
+        check_call('python{} "{}" bdist_wheel'.format(PYTHON_VERSION, file_path), shell=True, cwd=dir_path)
     for pkg in extension_pkgs:
         ext_dir_path = os.path.abspath(pkg)
         ext_file_path = os.path.join(ext_dir_path, 'setup.py')
         if ostype == WIN:
-            check_call("py {} \"{}\" bdist_wheel".format(PYTHON_VERSION, ext_file_path), shell=True, cwd=ext_dir_path)
+            check_call('py -{} "{}" bdist_wheel'.format(PYTHON_VERSION, ext_file_path), shell=True, cwd=ext_dir_path)
         else:
-            check_call('python3 "{}" bdist_wheel'.format(ext_file_path), shell=True, cwd=ext_dir_path)
+            check_call('python{} "{}" bdist_wheel'.format(PYTHON_VERSION, ext_file_path), shell=True, cwd=ext_dir_path)
     print("Wheels built successfully")
 
 def copy_wheels_and_set_xml(package_version, extension_pkgs):
