@@ -55,7 +55,7 @@ def main():
 
     # Step 4: Package installer files
     try:
-        subprocess.run('final_copy.py', check=True)
+        subprocess.run(os.path.join('.', 'final_copy.py'), check=True)
     except:
         print('Failed to generate installer package')
         return 1
