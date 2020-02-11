@@ -95,8 +95,6 @@ MIRROR_PRIMARY_REPOS_MISSING = 'The edkrepo global configuration file missing [p
 MIRROR_DECODE_WARNING = 'WARNING: Could not decode so assuming a primary repo: {}'
 MAX_PATCH_SET_INVALID = 'Invalid value detected in user configuration file for max-patch-set (must be an integer).'
 
-NOT_IN_INDEX = 'The selected project cannot be found in the global manifest repository'
-
 # Manifest verification error messages
 VERIFY_ERROR_HEADER = 'Manifest repository verification errors:'
 VERIFY_EXCEPTION_MSG = 'Manifest repository verification failed'
