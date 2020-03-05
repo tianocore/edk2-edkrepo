@@ -83,7 +83,7 @@ CHECKOUT_INVALID_COMBO = UNSUPPORTED_COMBO + CHECKOUT_EXIT
 CHECKOUT_CURRENT_COMBO = 'The selected combination, {0}, is already checked out ' + CHECKOUT_EXIT
 CHECKOUT_UNCOMMITED_CHANGES = 'Uncommited changes present in workspace, unable to complete checkout.\nTo discard all local changes to tracked files rerun edkrepo checkout with the "--override" flag.\n'
 CHECKOUT_NO_REMOTE = 'The specified remote branch for the {0} repo does not exist.'
-CHECKOUT_COMBO_UNSUCCESFULL = 'The combination {} was not able to be checked out succesfully. Returning to initially active combination.'
+CHECKOUT_COMBO_UNSUCCESSFULL = 'The combination {} was not able to be checked out successfully. Returning to initially active combination.'
 
 # Informational messages for checkout_command.py
 CHECKING_OUT_COMBO = 'Checking out combination: {0} ...'
@@ -146,4 +146,4 @@ VERIFY_PROJ_NOT_IN_INDEX = 'Unable to find and entry in the CiIndex for project:
 VERIFY_PROJ_FAIL = 'Unable to verify the global manifest repository entry for project: {}\n'
 
 # Git Command Error Messages
-GIT_CMD_ERROR = 'The git command: {} failed to complete succesfully with the following errors.\n'
+GIT_CMD_ERROR = 'The git command: {} failed to complete successfully with the following errors.\n'

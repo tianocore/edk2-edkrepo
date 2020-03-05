@@ -39,7 +39,7 @@ from edkrepo.common.humble import SPARSE_CHECKOUT
 from edkrepo.common.humble import SPARSE_RESET
 from edkrepo.common.humble import CHECKING_OUT_COMBO
 from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
-from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESFULL
+from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
 from edkrepo.common.humble import GEN_A_NOT_IN_B, GEN_FOUND_MULT_A_IN_B
 from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
 from edkrepo.common.humble import ADD_PRIMARY_REMOTE, REMOVE_PRIMARY_REMOTE
