@@ -3,7 +3,7 @@
 ## @file
 # common_repo_functions.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -571,13 +571,22 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
     # Disable sparse checkout
     current_repos = initial_repo_sources
     sparse_enabled = sparse_checkout_enabled(workspace_path, initial_repo_sources)
+    sparse_diff = False
+    for source in initial_repo_sources:
+        for src in repo_sources:
+            if source.root == src.root:
+                if source.sparse != src.sparse:
+                    sparse_diff = True
+        if sparse_diff:
+            break
     # Sparse checkout only needs to be recomputed if
     # the dynamic sparse list is being used instead of the static sparse list
+    # or the sparse settings between two combinations differ
     if sparse_enabled:
         sparse_settings = manifest.sparse_settings
         if sparse_settings is not None:
             sparse_enabled = False
-    if sparse_enabled:
+    if sparse_enabled or sparse_diff:
         print(SPARSE_RESET)
         reset_sparse_checkout(workspace_path, current_repos)
 
@@ -595,7 +604,7 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
         # Return to the initial combo, since there was an issue with cheking out the selected combo
         checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
     finally:
-        if sparse_enabled:
+        if sparse_enabled or sparse_diff:
             print(SPARSE_CHECKOUT)
             sparse_checkout(workspace_path, current_repos, manifest)
 
