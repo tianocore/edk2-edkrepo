@@ -3,7 +3,7 @@
 ## @file
 # humble.py
 #
-# Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -147,3 +147,18 @@ VERIFY_PROJ_FAIL = 'Unable to verify the global manifest repository entry for pr
 
 # Git Command Error Messages
 GIT_CMD_ERROR = 'The git command: {} failed to complete successfully with the following errors.\n'
+
+# Error messages for create_pin_command.py
+CREATE_PIN_EXIT = 'Exiting without creating pin file ...'
+PIN_PATH_NOT_PRESENT = 'Pin Path not present in Manifest.xml ' + CREATE_PIN_EXIT
+PIN_FILE_ALREADY_EXISTS = 'A pin file with that name already exists for this project. Please rerun the command with a new filename. ' + CREATE_PIN_EXIT
+PATH_AND_FILEPATH_USED = 'Providing a file path for the PinFileName argument is not supported when using the --push flag. ' + CREATE_PIN_EXIT
+MISSING_REPO = 'The {} repository is missing from your workspace. ' + CREATE_PIN_EXIT
+
+# Informational messages for create_pin_command.py
+GENERATING_PIN_DATA = 'Generating pin data for {0} project based on {1} combination ...'
+GENERATING_REPO_DATA = 'Generating pin data for {0} repo:'
+BRANCH = '    Branch : {0}'
+COMMIT = '    Commit Id: {0}'
+WRITING_PIN_FILE = 'Writing pin file to {0} ...'
+COMMIT_MESSAGE = 'Pin file for project: {0} \nPin Description: {1}'

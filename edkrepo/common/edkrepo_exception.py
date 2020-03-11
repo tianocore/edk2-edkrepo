@@ -3,7 +3,7 @@
 ## @file
 # edkrepo_exception.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -77,6 +77,10 @@ class EdkrepoNotFoundException(EdkrepoException):
 class EdkrepoFoundMultipleException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 117)
+
+class EdkrepoWorkspaceCorruptException(EdkrepoException):
+    def __ini__(self, message):
+        super().__init__(message, 118)
 
 class EdkrepoWarningException(EdkrepoException):
     def __init__(self, message):
