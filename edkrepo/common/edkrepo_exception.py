@@ -58,6 +58,10 @@ class EdkrepoConfigFileReadOnlyException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 112)
 
+class EdkrepoProjectMismatchException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 113)
+
 class EdkrepoVerificationException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 114)
