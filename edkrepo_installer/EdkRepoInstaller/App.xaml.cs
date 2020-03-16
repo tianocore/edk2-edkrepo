@@ -185,7 +185,7 @@ namespace TianoCore.EdkRepoInstaller
                 {
                     InstallLogger.Log(string.Format("{0} is a third party version of {1}. {0} is already installed.", DisplayName, ProductName));
                     InstallLogger.Log(string.Format("To install this version of {1}, {0} must be uninstalled first.", DisplayName, ProductName));
-                    SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/c \"{0}\"", UninstallString));
+                    SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", UninstallString));
                     p.WaitForExit();
                     Thread.Sleep(4000);
                 }
@@ -200,7 +200,7 @@ namespace TianoCore.EdkRepoInstaller
                         );
                     if (Uninstall == MessageBoxResult.Yes)
                     {
-                        SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/c \"{0}\"", UninstallString));
+                        SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", UninstallString));
                         p.WaitForExit();
                         Thread.Sleep(1000);
                     }

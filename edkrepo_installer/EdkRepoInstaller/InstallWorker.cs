@@ -678,7 +678,7 @@ namespace TianoCore.EdkRepoInstaller
                         {
                             InstallLogger.Log(string.Format("Uninstalling {0}...", UninstallerPath));
                             string UninstallString = string.Format("\"{0}\" /Uninstall /Passive", UninstallerPath);
-                            SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/c \"{0}\"", UninstallString));
+                            SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", UninstallString));
                             p.WaitForExit();
                             Thread.Sleep(4000);
                         }
