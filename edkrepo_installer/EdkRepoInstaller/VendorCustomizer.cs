@@ -250,7 +250,7 @@ namespace TianoCore.EdkRepoInstaller
                             NewObsoletedPythonVersions.Add(new PythonVersion(version));
                         }
                         PythonVersions = NewPythonVersions;
-                        ObsoletedPythonVersions = NewPythonVersions;
+                        ObsoletedPythonVersions = NewObsoletedPythonVersions;
                     };
                 }
             }
