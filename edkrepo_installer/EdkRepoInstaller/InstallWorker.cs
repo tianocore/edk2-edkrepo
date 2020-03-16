@@ -550,10 +550,16 @@ namespace TianoCore.EdkRepoInstaller
             {
                 if (VendorCustomizer.Instance.GetPythonWheelsToUninstall != null)
                 {
-                    return VendorCustomizer.Instance.GetPythonWheelsToUninstall();
+                    //
+                    // pip doesn't understand the difference between '_' and '-'
+                    //
+                    return VendorCustomizer.Instance.GetPythonWheelsToUninstall().Select(p => p.Replace('_', '-'));
                 }
             }
-            return new string[] { InstallerStrings.EdkrepoPackageName };
+            //
+            // pip doesn't understand the difference between '_' and '-'
+            //
+            return (new string[] { InstallerStrings.EdkrepoPackageName }).Select(p => p.Replace('_', '-'));
         }
 
         public void PerformInstall(Action<bool, bool> ReportComplete, Action<int> ReportProgress, Action<bool> AllowCancel, Func<bool> CancelPending)
