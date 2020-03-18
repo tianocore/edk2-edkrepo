@@ -14,6 +14,7 @@ import sys
 import unicodedata
 import urllib.request
 import subprocess
+import traceback
 
 import git
 from git import Repo
@@ -600,7 +601,9 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
         if combination_is_in_manifest(combo_or_sha, manifest):
             manifest.write_current_combo(combo_or_sha)
     except:
-        print (CHECKOUT_COMBO_UNSUCCESFULL.format(combo_or_sha))
+        if verbose:
+            traceback.print_exc()
+        print (CHECKOUT_COMBO_UNSUCCESSFULL.format(combo_or_sha))
         # Return to the initial combo, since there was an issue with cheking out the selected combo
         checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
     finally:
