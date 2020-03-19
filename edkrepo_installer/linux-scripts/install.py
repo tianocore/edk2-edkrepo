@@ -3,7 +3,7 @@
 ## @file
 # install.py
 #
-# Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -53,6 +53,26 @@ def get_args():
     parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Enables verbose output')
     return parser.parse_args()
 
+def get_installed_packages(python_command):
+    pip_cmd = [def_python, '-m', 'pip', 'list', '--legacy']
+    try:
+        res = default_run(pip_cmd)
+    except:
+        pip_cmd.pop(-1)
+        try:
+            res = default_run(pip_cmd)
+        except:
+            return ret_val
+    installed_packages = {}
+    for pip_mod in res.stdout.split('\n'):
+        try:
+            name, version = pip_mod.split()
+            version = version.strip().strip('()')
+        except:
+            continue
+        installed_packages[name] = version
+    return installed_packages
+
 def get_required_wheels():
     ret_val = collections.OrderedDict()
     if platform.machine() == 'x86_64':
@@ -79,27 +99,11 @@ def get_required_wheels():
                                                  'version':wheel.attrib['Version'],
                                                  'install':True}
             break
-    pip_cmd = [def_python, '-m', 'pip', 'list', '--legacy']
-    try:
-        res = default_run(pip_cmd)
-    except:
-        pip_cmd.pop(-1)
-        try:
-            res = default_run(pip_cmd)
-        except:
-            return ret_val
-    installed_modules = {}
-    for pip_mod in res.stdout.split('\n'):
-        try:
-            name, version = pip_mod.split()
-            version = version.strip().strip('()')
-        except:
-            continue
-        installed_modules[name] = version
+    installed_packages = get_installed_packages(def_python)
     for name in ret_val:
         #pip doesn't understand the difference between '_' and '-'
-        if name.replace('_','-') in installed_modules:
-            version = installed_modules[name.replace('_','-')]
+        if name.replace('_','-') in installed_packages:
+            version = installed_packages[name.replace('_','-')]
             if _check_version(version, ret_val[name]['version']) >= 0 and not ret_val[name]['uninstall']:
                 ret_val[name]['install'] = False
             else:
@@ -328,16 +332,30 @@ def do_install():
         if not os.path.isdir(whl_src_dir):
             log.info('- Missing wheel file directory')
             return 1
+        updating_edkrepo = False
         for whl_name in wheels_to_install:
             uninstall_whl = wheels_to_install[whl_name]['uninstall']
             whl_name = whl_name.replace('_','-')  #pip doesn't understand the difference between '_' and '-'
             if uninstall_whl:
+                updating_edkrepo = True
                 try:
                     res = default_run([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
                 except:
                     log.info('- Failed to uninstall {}'.format(whl_name))
                     return 1
                 log.info('+ Uninstalled {}'.format(whl_name))
+
+        #Delete obsolete dependencies
+        if updating_edkrepo:
+            installed_packages = get_installed_packages(def_python)
+            for whl_name in ['smmap2', 'gitdb2']:
+                if whl_name in installed_packages:
+                    try:
+                        res = default_run([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
+                    except:
+                        log.info('- Failed to uninstall {}'.format(whl_name))
+                        return 1
+                    log.info('+ Uninstalled {}'.format(whl_name))
         for whl_name in wheels_to_install:
             whl = wheels_to_install[whl_name]['wheel']
             install_whl = wheels_to_install[whl_name]['install']

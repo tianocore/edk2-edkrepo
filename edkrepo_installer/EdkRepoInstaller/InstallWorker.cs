@@ -2,7 +2,7 @@
   InstallWorker.cs
 
 @copyright
-  Copyright 2017 - 2019 Intel Corporation. All rights reserved.<BR>
+  Copyright 2017 - 2020 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -710,6 +710,7 @@ namespace TianoCore.EdkRepoInstaller
                 string PythonPath;
                 bool Has32Bit;
                 bool Has64Bit;
+                bool DeleteObsoletePackages = false;
                 PythonOperations.GetPythonBitness(PyInstance.Version.Major, PyInstance.Version.Minor, out Has32Bit, out Has64Bit);
                 if (Has32Bit && Has64Bit && PyInstance.Architecture == CpuArchitecture.IA32)
                 {
@@ -720,14 +721,39 @@ namespace TianoCore.EdkRepoInstaller
                     PythonPath = PythonOperations.FindPython(PyInstance.Version.Major, PyInstance.Version.Minor, false);
                 }
                 List<PythonPackage> InstalledPackages = PythonOperations.GetInstalledPythonPackages(PythonPath);
-                foreach(PythonWheel Wheel in PyInstance.Wheels)
+                foreach (PythonWheel Wheel in PyInstance.Wheels)
+                {
+                    //If a package is already installed, check if we have a newer version bundled in the installer
+                    //If yes, the package will be upgraded, make sure obsolete packages are uninstalled first
+                    PythonPackage InstalledPackage = InstalledPackages.Where(p => p.Name == Wheel.Package.Name.Replace('_', '-')).FirstOrDefault();
+                    if (InstalledPackage != null && InstalledPackage.Version < Wheel.Package.Version)
+                    {
+                        DeleteObsoletePackages = true;
+                        break;
+                    }
+                }
+                if (DeleteObsoletePackages)
+                {
+                    //
+                    // Delete obsolete dependencies
+                    //
+                    foreach (string PackageName in new string[] { "smmap2", "gitdb2" })
+                    {
+                        if (InstalledPackages.Where(p => p.Name == PackageName).FirstOrDefault() != null)
+                        {
+                            InstallLogger.Log(string.Format("Uninstalling {0}", PackageName));
+                            PythonOperations.UninstallPythonPackage(PythonPath, PackageName);
+                        }
+                    }
+                }
+                foreach (PythonWheel Wheel in PyInstance.Wheels)
                 {
                     //PythonPackage InstalledPackage = (from package in InstalledPackages
                     //                                  where package.Name == Wheel.Package.Name
                     //                                  select package).FirstOrDefault();
                     //If the package is already installed, check if we have a newer version bundled in the installer
                     //If so, upgrade the package
-                    PythonPackage InstalledPackage = InstalledPackages.Where(p => p.Name == Wheel.Package.Name).FirstOrDefault();
+                    PythonPackage InstalledPackage = InstalledPackages.Where(p => p.Name == Wheel.Package.Name.Replace('_', '-')).FirstOrDefault();
                     if (InstalledPackage != null)
                     {
                         if (InstalledPackage.Version < Wheel.Package.Version)
