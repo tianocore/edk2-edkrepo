@@ -9,3 +9,4 @@
 
 COMMAND_DESCRIPTION = ('Checks out the revisions described in a PIN file in '
                        'an existing workpace of the same project')
+PIN_FILE_HELP = ('The name of the pin file to checkout.')
