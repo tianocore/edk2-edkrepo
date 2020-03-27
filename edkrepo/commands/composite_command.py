@@ -36,4 +36,4 @@ class CompositeCommand(object):
         command_names = []
         for command in self._commands:
             command_names.append(command.get_metadata()['name'])
-        return command_names
+        return sorted(command_names)
