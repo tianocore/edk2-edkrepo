@@ -3,7 +3,7 @@
 ## @file
 # clone_command.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -16,7 +16,7 @@ import edkrepo.commands.arguments.clone_args as arguments
 from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, clone_repos, sparse_checkout, verify_manifest_data
 from edkrepo.common.common_repo_functions import case_insensitive_single_match, update_editor_config
 from edkrepo.common.common_repo_functions import write_included_config, write_conditional_include
-from edkrepo.common.common_repo_functions import find_project_in_index
+from edkrepo.common.common_repo_functions import find_project_in_index, combinations_in_manifest
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
 from edkrepo.common.humble import CLONE_INVALID_WORKSPACE, CLONE_INVALID_PROJECT_ARG, CLONE_INVALID_COMBO_ARG
 from edkrepo.common.humble import SPARSE_CHECKOUT, CLONE_INVALID_LOCAL_ROOTS
@@ -99,7 +99,7 @@ class CloneCommand(EdkrepoCommand):
         combo_name = None
         if args.Combination is not None:
             try:
-                combo_name = case_insensitive_single_match(args.Combination, [x.name for x in manifest.combinations])
+                combo_name = case_insensitive_single_match(args.Combination, combinations_in_manifest(manifest))
             except:
                 #remove the repo directory and Manifest.xml from the workspace so the next time the user trys to clone
                 #they will have an empty workspace and then raise an exception
