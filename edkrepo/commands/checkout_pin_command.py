@@ -15,7 +15,7 @@ from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
 import edkrepo.commands.arguments.checkout_pin_args as arguments
 import edkrepo.commands.humble.checkout_pin_humble as humble
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, reset_sparse_checkout, sparse_checkout
-from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos
+from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest
 from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoProjectMismatchException
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
@@ -89,7 +89,7 @@ class CheckoutPinCommand(EdkrepoCommand):
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
         elif not set(pin.remotes).issubset(set(manifest.remotes)):
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
-        elif pin.general_config.current_combo not in [c.name for c in manifest.combinations]:
+        elif pin.general_config.current_combo not in combinations_in_manifest(manifest):
             print(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo))
         combo_name = pin.general_config.current_combo
         pin_sources = pin.get_repo_sources(combo_name)
