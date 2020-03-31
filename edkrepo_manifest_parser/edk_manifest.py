@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -306,7 +306,11 @@ class ManifestXml(BaseXmlHelper):
 
     @property
     def combinations(self):
-        return self._tuple_list(self.__combinations.values())
+        return self._tuple_list([x for x in self.__combinations.values() if not x.archived])
+
+    @property
+    def archived_combinations(self):
+        return self._tuple_list([x for x in self.__combinations.values() if x.archived])
 
     def get_repo_sources(self, combo_name):
         if combo_name in self.__combo_sources:
@@ -649,6 +653,10 @@ class _Combination():
             self.description = element.attrib['description']
         except:
             self.description = None   #description is optional attribute
+        try:
+            self.archived = (element.attrib['archived'].lower() == 'true')
+        except:
+            self.archived = False
 
     @property
     def tuple(self):
