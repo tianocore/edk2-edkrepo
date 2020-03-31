@@ -3,7 +3,7 @@
 ## @file
 # sync_command.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -38,7 +38,7 @@ from edkrepo.common.common_repo_functions import generate_name_for_obsolete_back
 from edkrepo.common.common_repo_functions import update_editor_config
 from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
 from edkrepo.common.common_repo_functions import has_primary_repo_remote, fetch_from_primary_repo, in_sync_with_primary
-from edkrepo.common.common_repo_functions import update_hooks, maintain_submodules
+from edkrepo.common.common_repo_functions import update_hooks, maintain_submodules, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
@@ -222,7 +222,7 @@ class SyncCommand(EdkrepoCommand):
                 if initial_manifest_remotes[remote_name] != new_manifest_remotes[remote_name]:
                     raise EdkrepoManifestChangedException(SYNC_URL_CHANGE.format(remote_name))
         #check to see if the currently checked out combo exists in the new manifest.
-        new_combos = [c.name for c in new_manifest_to_check.combinations]
+        new_combos = combinations_in_manifest(new_manifest_to_check)
         if current_combo not in new_combos:
             raise EdkrepoManifestChangedException(SYNC_COMBO_CHANGE.format(current_combo,
                                                                            initial_manifest.project_info.codename))
