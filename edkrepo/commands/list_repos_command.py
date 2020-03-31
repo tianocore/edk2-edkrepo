@@ -3,7 +3,7 @@
 ## @file
 # list_repos_command.py
 #
-# Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2019 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -74,7 +74,10 @@ class ListReposCommand(EdkrepoCommand):
             xml_file = ci_index_xml.get_project_xml(project)
             manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
             manifests[project] = manifest
-            for combo in [c.name for c in manifest.combinations]:
+            combo_list = [c.name for c in manifest.combinations]
+            if args.archived:
+                combo_list.extend([c.name for c in manifest.archived_combinations])
+            for combo in combo_list:
                 sources = manifest.get_repo_sources(combo)
                 for source in sources:
                     repo_urls.add(self.get_repo_url(source.remote_url))
@@ -84,7 +87,7 @@ class ListReposCommand(EdkrepoCommand):
         project_justify = len(max(manifests.keys(), key=len))
 
         #Determine the names of the repositories
-        self.generate_repo_names(repo_urls, manifests)
+        self.generate_repo_names(repo_urls, manifests, args.archived)
         print(humble.REPOSITORIES)
 
         #If the user provided a list of repositories to view, check to make sure
@@ -103,7 +106,10 @@ class ListReposCommand(EdkrepoCommand):
             #Determine the list of branches that used by any branch combination in any manifest
             branches = set()
             for project_name in manifests:
-                for combo in [c.name for c in manifests[project_name].combinations]:
+                combo_list = [c.name for c in manifests[project_name].combinations]
+                if args.archived:
+                    combo_list.extend([c.name for c in manifests[project_name].archived_combinations])
+                for combo in combo_list:
                     sources = manifests[project_name].get_repo_sources(combo)
                     for source in sources:
                         if self.get_repo_url(source.remote_url) == repo:
@@ -124,7 +130,10 @@ class ListReposCommand(EdkrepoCommand):
                 #Determine the branch combinations that use that branch
                 for project_name in manifests:
                     combos = []
-                    for combo in [c.name for c in manifests[project_name].combinations]:
+                    combo_list = [c.name for c in manifests[project_name].combinations]
+                    if args.archived:
+                        combo_list.extend([c.name for c in manifests[project_name].archived_combinations])
+                    for combo in combo_list:
                         sources = manifests[project_name].get_repo_sources(combo)
                         for source in sources:
                             if self.get_repo_url(source.remote_url) == repo and source.branch == branch:
@@ -165,11 +174,11 @@ class ListReposCommand(EdkrepoCommand):
                 return name
         raise EdkrepoInvalidParametersException(humble.REPO_NAME_NOT_FOUND)
 
-    def generate_repo_names(self, repo_urls, manifests):
+    def generate_repo_names(self, repo_urls, manifests, archived=False):
         #Determine the names of the repositories
         self.repo_names = collections.OrderedDict()
         for repo_url in repo_urls:
-            self.__repo_name_worker(repo_url, manifests)
+            self.__repo_name_worker(repo_url, manifests, archived)
 
         #Sort the git repositories so they will be displayed alphabetically
         self.repo_names = collections.OrderedDict(sorted(self.repo_names.items()))
@@ -188,12 +197,15 @@ class ListReposCommand(EdkrepoCommand):
         for name_to_move in names_to_move:
             self.repo_names.move_to_end(name_to_move, False)
 
-    def __repo_name_worker(self, repo_url, manifests):
+    def __repo_name_worker(self, repo_url, manifests, archived=False):
         #This is a heuristic that guesses the "name" of a repository by looking
         #at the name given to it by the most manifest files.
         names = collections.defaultdict(int)
         for project_name in manifests:
-            for combo in [c.name for c in manifests[project_name].combinations]:
+            combo_list = [c.name for c in manifests[project_name].combinations]
+            if archived:
+                combo_list.extend([c.name for c in manifests[project_name].archived_combinations])
+            for combo in combo_list:
                 sources = manifests[project_name].get_repo_sources(combo)
                 for source in sources:
                     if self.get_repo_url(source.remote_url) == repo_url:
@@ -209,7 +221,10 @@ class ListReposCommand(EdkrepoCommand):
                     #If only 1 project uses this name, then append the project
                     #name to the directory name to create the repo name
                     for project_name in manifests:
-                        for combo in [c.name for c in manifests[project_name].combinations]:
+                        combo_list = [c.name for c in manifests[project_name].combinations]
+                        if archived:
+                            combo_list.extend([c.name for c in manifests[project_name].archived_combinations])
+                        for combo in combo_list:
                             sources = manifests[project_name].get_repo_sources(combo)
                             for source in sources:
                                 if self.get_repo_url(source.remote_url) == repo_url and source.root == original_best_name:
@@ -239,7 +254,7 @@ class ListReposCommand(EdkrepoCommand):
                         del self.repo_names[best_name]
                         found_unique_name = True
                         self.repo_names[best_name] = (repo_url, best_name_frequency)
-                        self.__repo_name_worker(old_repo_url, manifests)
+                        self.__repo_name_worker(old_repo_url, manifests, archived)
                     else:
                         #Use the name given by the second most manifest files
                         del names[best_name]
