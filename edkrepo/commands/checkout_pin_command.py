@@ -53,7 +53,6 @@ class CheckoutPinCommand(EdkrepoCommand):
             origin = repo.remotes.origin
             origin.fetch()
         self.__pin_matches_project(pin, manifest, workspace_path)
-        manifest.write_current_combo(pin.general_config.current_combo)
         sparse_enabled = sparse_checkout_enabled(workspace_path, manifest_sources)
         if sparse_enabled:
             print(SPARSE_RESET)
@@ -61,6 +60,7 @@ class CheckoutPinCommand(EdkrepoCommand):
         pin_repo_sources = pin.get_repo_sources(pin.general_config.current_combo)
         try:
             checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest)
+            manifest.write_current_combo(humble.PIN_COMBO.format(args.pinfile))
         finally:
             if sparse_enabled:
                 print(SPARSE_CHECKOUT)

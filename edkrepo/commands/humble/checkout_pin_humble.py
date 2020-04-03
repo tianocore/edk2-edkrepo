@@ -12,3 +12,4 @@ NOT_FOUND = 'The selected PIN file was not found.'
 MANIFEST_MISMATCH = ('The selected PIN file does not refer to the same project '
                      'as the local manifest file. {}'.format(CHP_EXIT))
 COMMIT_NOT_FOUND = 'The commit referenced by the PIN file does not exist. {}'.format(CHP_EXIT) 
+PIN_COMBO = 'Pin: {}'

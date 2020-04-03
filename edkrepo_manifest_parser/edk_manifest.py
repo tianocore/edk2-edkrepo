@@ -311,6 +311,10 @@ class ManifestXml(BaseXmlHelper):
     def get_repo_sources(self, combo_name):
         if combo_name in self.__combo_sources:
             return self._tuple_list(self.__combo_sources[combo_name])
+        elif combo_name.startswith('Pin:'):
+            # If currently checked out onto a pin file reture the sources in the
+            # default combo
+            return self._tuple_list(self.__combo_sources[self.general_config.default_combo])
         else:
             raise ValueError(COMB_INVALIDINPUT_ERROR.format(combo_name))
 
