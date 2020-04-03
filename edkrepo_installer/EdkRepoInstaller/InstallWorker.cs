@@ -19,6 +19,7 @@ using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace TianoCore.EdkRepoInstaller
@@ -611,7 +612,7 @@ namespace TianoCore.EdkRepoInstaller
             SilentProcess process = SilentProcess.StartConsoleProcessSilently(GitPath, "--version", dataCapture.DataReceivedHandler);
             process.WaitForExit();
             PythonVersion gitVersion = new PythonVersion(dataCapture.GetData().Trim());
-            if (gitVersion < new PythonVersion(2,13,0))
+            if (gitVersion < new PythonVersion(2, 13, 0))
             {
                 InstallLogger.Log(string.Format("Git Version 2.13 or later is required. You have version {0}, please upgrade to a newer version of Git.", gitVersion));
                 ReportComplete(false, false);
@@ -624,7 +625,7 @@ namespace TianoCore.EdkRepoInstaller
             List<Tuple<string, PythonVersion>> ExclusivePackages = new List<Tuple<string, PythonVersion>>();
             foreach (PythonInstance PyInstance in PythonWheelsToInstall)
             {
-                foreach(PythonWheel Wheel in PyInstance.Wheels)
+                foreach (PythonWheel Wheel in PyInstance.Wheels)
                 {
                     if (Wheel.UninstallAllOtherCopies)
                     {
@@ -668,13 +669,13 @@ namespace TianoCore.EdkRepoInstaller
             //
             foreach (PythonVersion Obsolete in ObsoletedPythonVersions)
             {
-                if(ExistingEdkRepoPaths.Select(p => p.Item2).Contains(Obsolete))
+                if (ExistingEdkRepoPaths.Select(p => p.Item2).Contains(Obsolete))
                 {
                     foreach (string ExistingEdkrepoPythonPath in ExistingEdkRepoPaths.Where(p => p.Item2 == Obsolete).Select(p => p.Item1))
                     {
                         string UninstallerPath = Path.Combine(Path.GetDirectoryName(ExistingEdkrepoPythonPath), "Lib", "site-packages");
                         UninstallerPath = Path.Combine(UninstallerPath, Path.GetFileName(WindowsHelpers.GetApplicationPath()));
-                        if(File.Exists(UninstallerPath))
+                        if (File.Exists(UninstallerPath))
                         {
                             InstallLogger.Log(string.Format("Uninstalling {0}...", UninstallerPath));
                             string UninstallString = string.Format("\"{0}\" /Uninstall /Passive", UninstallerPath);
@@ -788,14 +789,15 @@ namespace TianoCore.EdkRepoInstaller
             //
             // Step 10 - Setup symlink to edkrepo and bash script to launch edkrepo from git bash
             //
+            string EdkrepoSymlinkPath = null;
             if (!string.IsNullOrEmpty(EdkrepoPythonPath))
             {
                 string EdkrepoScriptPath = Path.Combine(Path.GetDirectoryName(EdkrepoPythonPath), "Scripts", InstallerStrings.EdkrepoCliExecutable);
-                string EdkrepoSymlinkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), InstallerStrings.EdkrepoCliExecutable);
+                EdkrepoSymlinkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), InstallerStrings.EdkrepoCliExecutable);
                 if (File.Exists(EdkrepoScriptPath))
                 {
                     bool CreateSymlink = true;
-                    if(File.Exists(EdkrepoSymlinkPath))
+                    if (File.Exists(EdkrepoSymlinkPath))
                     {
                         try
                         {
@@ -805,22 +807,22 @@ namespace TianoCore.EdkRepoInstaller
                             }
                         }
                         catch (NotASymlinkException) { }
-                        if(CreateSymlink)
+                        if (CreateSymlink)
                         {
                             File.Delete(EdkrepoSymlinkPath);
                         }
                     }
-                    if(CreateSymlink)
+                    if (CreateSymlink)
                     {
                         InstallLogger.Log("Creating Symbolic Link for edkrepo.exe...");
                         WindowsHelpers.CreateSymbolicLink(EdkrepoSymlinkPath, EdkrepoScriptPath, WindowsHelpers.SYMBOLIC_LINK_FLAG.File);
                     }
                     string GitBashBinPath = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(GitPath)), "usr", "bin");
-                    if(Directory.Exists(GitBashBinPath))
+                    if (Directory.Exists(GitBashBinPath))
                     {
                         InstallLogger.Log("Creating edkrepo launcher in Git Bash...");
                         string EdkrepoBashScriptPath = Path.Combine(GitBashBinPath, InstallerStrings.EdkrepoBashLauncherScript);
-                        if(File.Exists(EdkrepoBashScriptPath))
+                        if (File.Exists(EdkrepoBashScriptPath))
                         {
                             File.Delete(EdkrepoBashScriptPath);
                         }
@@ -838,7 +840,7 @@ namespace TianoCore.EdkRepoInstaller
             // Step 11 - Copy edkrepo config file to the edkrepo global data directory
             //
             string EdkrepoCfg = Path.Combine(Path.GetDirectoryName(WindowsHelpers.GetApplicationPath()), InstallerStrings.EdkrepoCfg);
-            if(File.Exists(EdkrepoCfg))
+            if (File.Exists(EdkrepoCfg))
             {
                 CreateEdkrepoGlobalDataDirectory();
                 string EdkrepoCfgDir = Path.Combine(WindowsHelpers.GetAllUsersAppDataPath(), InstallerStrings.EdkrepoGlobalDirectoryName);
@@ -853,7 +855,7 @@ namespace TianoCore.EdkRepoInstaller
                 {
                     string NewCfgHash = ComputeSha256(ReadFile(EdkrepoCfg));
                     string OldCfgHash = ComputeSha256(ReadFile(EdkrepoCfgTarget));
-                    if(NewCfgHash != OldCfgHash)
+                    if (NewCfgHash != OldCfgHash)
                     {
                         if (GetPreviousEdkrepoCfgFileHashes().Contains(OldCfgHash))
                         {
@@ -908,7 +910,119 @@ namespace TianoCore.EdkRepoInstaller
             }
 
             //
-            // Step 13 - Create Programs and Features uninstall links
+            // Step 13 - Copy win_edkrepo_prompt.sh and generate edkrepo_completions.sh
+            //
+            string edkrepoPromptSource = Path.Combine(Path.GetDirectoryName(WindowsHelpers.GetApplicationPath()), InstallerStrings.EdkrepoPrompt);
+
+            if (File.Exists(edkrepoPromptSource) && !string.IsNullOrEmpty(EdkrepoSymlinkPath))
+            {
+                string gitBashEtcPath = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(GitPath)), "etc");
+                string gitBashEtcProfileDPath = Path.Combine(gitBashEtcPath, "profile.d");
+                if (Directory.Exists(gitBashEtcPath) && Directory.Exists(gitBashEtcProfileDPath))
+                {
+                    InstallLogger.Log("Installing EdkRepo command completion...");
+
+                    //Copy win_edkrepo_prompt.sh
+                    string edkrepoPromptDest = Path.Combine(gitBashEtcProfileDPath, InstallerStrings.EdkrepoPrompt);
+                    if (File.Exists(edkrepoPromptDest))
+                    {
+                        File.Delete(edkrepoPromptDest);
+                    }
+                    File.Copy(edkrepoPromptSource, edkrepoPromptDest);
+                    DirectoryInfo info = new DirectoryInfo(edkrepoPromptDest);
+                    DirectorySecurity security = info.GetAccessControl();
+                    security.AddAccessRule(new FileSystemAccessRule(
+                        new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null),
+                        FileSystemRights.FullControl,
+                        InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                        PropagationFlags.NoPropagateInherit,
+                        AccessControlType.Allow
+                        ));
+                    info.SetAccessControl(security);
+                    InstallLogger.Log(string.Format("Copied {0}", InstallerStrings.EdkrepoPrompt));
+
+                    //Generate edkrepo_completions.sh
+                    string edkrepoCompletionDest = Path.Combine(gitBashEtcProfileDPath, InstallerStrings.EdkrepoCompletion);
+                    if (File.Exists(edkrepoCompletionDest))
+                    {
+                        File.Delete(edkrepoCompletionDest);
+                    }
+                    dataCapture = new SilentProcess.StdoutDataCapture();
+                    process = SilentProcess.StartConsoleProcessSilently(
+                        EdkrepoSymlinkPath,
+                        string.Format(
+                            "generate-command-completion-script \"{0}\"",
+                            edkrepoCompletionDest),
+                        dataCapture.DataReceivedHandler);
+                    process.WaitForExit();
+                    InstallLogger.Log(EdkrepoSymlinkPath);
+                    InstallLogger.Log(edkrepoCompletionDest);
+                    InstallLogger.Log(dataCapture.GetData().Trim());
+                    if (process.ExitCode != 0)
+                    {
+                        throw new InvalidOperationException(string.Format("generate-command-completion-script failed with status {0}", process.ExitCode));
+                    }
+                    if (!File.Exists(edkrepoCompletionDest))
+                    {
+                        throw new InvalidOperationException(string.Format("generate-command-completion-script did not create {0}", InstallerStrings.EdkrepoCompletion));
+                    }
+                    info = new DirectoryInfo(edkrepoCompletionDest);
+                    security = info.GetAccessControl();
+                    security.AddAccessRule(new FileSystemAccessRule(
+                        new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null),
+                        FileSystemRights.FullControl,
+                        InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                        PropagationFlags.NoPropagateInherit,
+                        AccessControlType.Allow
+                        ));
+                    info.SetAccessControl(security);
+                    InstallLogger.Log(string.Format("Generated {0}", InstallerStrings.EdkrepoCompletion));
+
+                    //Call win_edkrepo_prompt.sh from bash.bashrc so edkrepo completions are available for "interactive non-login" bash shells
+                    string bashrcPath = Path.Combine(gitBashEtcPath, "bash.bashrc");
+                    if (File.Exists(bashrcPath))
+                    {
+                        string bashrc = Encoding.UTF8.GetString(ReadFile(bashrcPath));
+                        Match match = Regex.Match(bashrc, InstallerStrings.BashrcEdkrepoPromptCallPattern);
+                        if (match.Success)
+                        {
+                            InstallLogger.Log("EdkRepo prompt is already in bash.bashrc");
+                        }
+                        else
+                        {
+                            bashrc = string.Format("{0}{1}", bashrc, InstallerStrings.BashrcEdkRepoPromptCall);
+                            using (BinaryWriter writer = new BinaryWriter(File.Open(bashrcPath, FileMode.Truncate, FileAccess.Write)))
+                            {
+                                string sanitized = bashrc.Replace("\r\n", "\n");
+                                writer.Write(Encoding.UTF8.GetBytes(sanitized));
+                            }
+                            InstallLogger.Log("EdkRepo prompt added to bash.bashrc");
+                        }
+                    }
+                    else
+                    {
+                        InstallLogger.Log(string.Format("{0} not found", bashrcPath));
+                    }
+                }
+                else
+                {
+                    InstallLogger.Log("Git for Windows /etc/profile.d not found");
+                }
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(EdkrepoSymlinkPath))
+                {
+                    InstallLogger.Log("EdkRepo symlink not found");
+                }
+                if (!File.Exists(edkrepoPromptSource))
+                {
+                    InstallLogger.Log(string.Format("{0} not found", InstallerStrings.EdkrepoPrompt));
+                }
+            }
+
+            //
+            // Step 14 - Create Programs and Features uninstall links
             //
             if (!string.IsNullOrEmpty(EdkrepoPythonPath))
             {
@@ -977,7 +1091,7 @@ namespace TianoCore.EdkRepoInstaller
             string GitPath = PythonOperations.GetFullPath("git.exe");
 
             //
-            // Step 2 - Delete symlink to edkrepo and bash script to launch it from git bash
+            // Step 2 - Delete symlink to edkrepo
             //
             string EdkrepoSymlinkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), InstallerStrings.EdkrepoCliExecutable);
             if (File.Exists(EdkrepoSymlinkPath))
@@ -1003,7 +1117,11 @@ namespace TianoCore.EdkRepoInstaller
                     File.Delete(EdkrepoSymlinkPath);
                 }
             }
-            if (GitPath != null)
+
+            //
+            // Step 3 - Delete scripts to launch edkrepo and Python from git bash, and edkrepo command completion scripts
+            //
+            if (!string.IsNullOrWhiteSpace(GitPath))
             {
                 string GitBashBinPath = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(GitPath)), "usr", "bin");
                 if (Directory.Exists(GitBashBinPath))
@@ -1057,10 +1175,68 @@ namespace TianoCore.EdkRepoInstaller
                         File.Delete(EdkrepoPython2ScriptPath);
                     }
                 }
+                string gitBashEtcPath = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(GitPath)), "etc");
+                string gitBashEtcProfileDPath = Path.Combine(gitBashEtcPath, "profile.d");
+                if (Directory.Exists(gitBashEtcPath) && Directory.Exists(gitBashEtcProfileDPath))
+                {
+                    string edkrepoPromptDest = Path.Combine(gitBashEtcProfileDPath, InstallerStrings.EdkrepoPrompt);
+                    if (File.Exists(edkrepoPromptDest))
+                    {
+                        AllowCancel(false);
+                        if (CancelPending())
+                        {
+                            ReportComplete(true, true);
+                            return;
+                        }
+                        InstallLogger.Log(string.Format("Deleting {0}...", InstallerStrings.EdkrepoPrompt));
+                        File.Delete(edkrepoPromptDest);
+                    }
+
+                    string edkrepoCompletionDest = Path.Combine(gitBashEtcProfileDPath, InstallerStrings.EdkrepoCompletion);
+                    if (File.Exists(edkrepoCompletionDest))
+                    {
+                        AllowCancel(false);
+                        if (CancelPending())
+                        {
+                            ReportComplete(true, true);
+                            return;
+                        }
+                        InstallLogger.Log(string.Format("Deleting {0}...", InstallerStrings.EdkrepoCompletion));
+                        File.Delete(edkrepoCompletionDest);
+                    }
+
+                    //Remove call win_edkrepo_prompt.sh from bash.bashrc
+                    string bashrcPath = Path.Combine(gitBashEtcPath, "bash.bashrc");
+                    if (File.Exists(bashrcPath))
+                    {
+                        string original_bashrc = Encoding.UTF8.GetString(ReadFile(bashrcPath));
+
+                        string new_bashrc = Regex.Replace(original_bashrc, InstallerStrings.BashrcEdkrepoPromptCommentPattern, "");
+                        new_bashrc = Regex.Replace(new_bashrc, InstallerStrings.BashrcEdkrepoPromptCallPattern, "");
+                        if (new_bashrc == original_bashrc)
+                        {
+                            InstallLogger.Log("EdkRepo not found in bash.bashrc");
+                        }
+                        else
+                        {
+                            new_bashrc = new_bashrc.TrimEnd();
+                            using (BinaryWriter writer = new BinaryWriter(File.Open(bashrcPath, FileMode.Truncate, FileAccess.Write)))
+                            {
+                                string sanitized = new_bashrc.Replace("\r\n", "\n");
+                                writer.Write(Encoding.UTF8.GetBytes(sanitized));
+                            }
+                            InstallLogger.Log("EdkRepo prompt removed from bash.bashrc");
+                        }
+                    }
+                    else
+                    {
+                        InstallLogger.Log(string.Format("{0} not found", bashrcPath));
+                    }
+                }
             }
 
             //
-            // Step 3 - Uninstall any instances of edkrepo
+            // Step 4 - Uninstall any instances of edkrepo
             //
             IEnumerable<string> PackagesToUninstall = GetPythonWheelsToUninstall();
             InstallLogger.Log("Determining currently installed Python packages...");
@@ -1109,7 +1285,7 @@ namespace TianoCore.EdkRepoInstaller
             }
 
             //
-            // Step 4 - Invoke the Finish Uninstall Event
+            // Step 5 - Invoke the Finish Uninstall Event
             //
             if (VendorCustomizer.Instance != null)
             {
@@ -1122,7 +1298,7 @@ namespace TianoCore.EdkRepoInstaller
             }
 
             //
-            // Step 5 - Delete Programs and Feature uninstall link
+            // Step 6 - Delete Programs and Feature uninstall link
             //
             RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
             RegistryKey winUninstallRegistryKey = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", true);

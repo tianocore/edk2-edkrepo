@@ -2,7 +2,7 @@
   InstallerStrings.cs
 
 @copyright
-  Copyright 2016 - 2019 Intel Corporation. All rights reserved.<BR>
+  Copyright 2016 - 2020 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -43,7 +43,7 @@ namespace TianoCore.EdkRepoInstaller
         }
 
         public static string EdkrepoPackageName
-        { 
+        {
             get
             {
                 return "edkrepo";
@@ -110,6 +110,46 @@ namespace TianoCore.EdkRepoInstaller
             get
             {
                 return "edkrepo.cfg.old";
+            }
+        }
+
+        public static string EdkrepoPrompt
+        {
+            get
+            {
+                return "win_edkrepo_prompt.sh";
+            }
+        }
+
+        public static string EdkrepoCompletion
+        {
+            get
+            {
+                return "edkrepo_completions.sh";
+            }
+        }
+
+        public static string BashrcEdkrepoPromptCommentPattern
+        {
+            get
+            {
+                return @"#\s+Install\s+EdkRepo\s+command\s+completions";
+            }
+        }
+
+        public static string BashrcEdkrepoPromptCallPattern
+        {
+            get
+            {
+                return @"shopt\s+-q\s+login_shell\s+\|\|\s+\.\s+/etc/profile\.d/win_edkrepo_prompt\.sh";
+            }
+        }
+
+        public static string BashrcEdkRepoPromptCall
+        {
+            get
+            {
+                return "\n\n# Install EdkRepo command completions\nshopt -q login_shell || . /etc/profile.d/win_edkrepo_prompt.sh";
             }
         }
 
