@@ -563,7 +563,7 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
     combo_or_sha = combination_or_sha
     try:
         # Try to handle normalize combo name to match the manifest file.
-        combo_or_sha = case_insensitive_single_match(combo_or_sha, combinations_in_manifest())
+        combo_or_sha = case_insensitive_single_match(combo_or_sha, combinations_in_manifest(manifest))
     except:
         # No match so leave it alone.  It must be a SHA1 or a bad combo name.
         pass
