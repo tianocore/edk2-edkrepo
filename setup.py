@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 #
-## @file
-# setup.py
+## @file setup.py
 #
-# Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -20,7 +19,8 @@ setup(name='edkrepo',
       include_package_data=True,
       entry_points={
           'console_scripts': [
-              'edkrepo = edkrepo.edkrepo_entry_point:main'
+              'edkrepo = edkrepo.edkrepo_entry_point:main',
+              'command_completion_edkrepo = edkrepo.command_completion_edkrepo:main'
               ]
           }
       )

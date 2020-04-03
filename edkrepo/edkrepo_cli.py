@@ -3,7 +3,7 @@
 ## @file
 # edkrepo_cli.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -29,6 +29,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoGlobalConf
 from edkrepo.common.edkrepo_exception import EdkrepoWarningException
 from edkrepo.common.edkrepo_exception import EdkrepoConfigFileInvalidException
 from edkrepo.common.humble import KEYBOARD_INTERRUPT, GIT_CMD_ERROR
+from edkrepo.common.pathfix import get_actual_path
 
 def generate_command_line(command):
     parser = argparse.ArgumentParser()
@@ -100,6 +101,61 @@ def generate_command_line(command):
                 subparser_name.add_argument(('--' + arg.get('name')), action=arg_action, help=arg.get('help-text'))
     return parser
 
+command_completion_script_header='''#!/usr/bin/env bash
+#
+## @file edkrepo_completions.sh
+#
+# Automatically generated please DO NOT modify !!!
+#
+
+'''
+def generate_command_completion_script(script_filename, parser):
+    import edkrepo.command_completion_edkrepo as completion
+    commands = []
+    for action in parser._positionals._group_actions:
+        if action.choices is not None:
+            commands = [c for c in action.choices]
+            break
+    commands = sorted(commands)
+    commands_with_3rd_param_completion = [c for c in completion.command_completions if c in commands]
+    commands_with_3rd_param_completion = sorted(commands_with_3rd_param_completion)
+    with open(script_filename, 'w') as f:
+        f.write(command_completion_script_header)
+        if sys.platform == "win32":
+            command_completion_path = os.path.dirname(sys.executable)
+            command_completion_path = os.path.join(command_completion_path, 'Scripts', "command_completion_edkrepo.exe")
+            if not os.path.isfile(command_completion_path):
+                print('command_completion_edkrepo.exe not found')
+                return
+            command_completion_path = get_actual_path(command_completion_path)
+            (drive, path) = os.path.splitdrive(command_completion_path)
+            command_completion_path = '/{}{}'.format(drive.replace(':','').lower(), path.replace('\\','/'))
+            f.write("export command_completion_edkrepo_file='{}'\n".format(command_completion_path))
+            f.write('alias command_completion_edkrepo="$command_completion_edkrepo_file"\n')
+        f.write('_edkrepo_completions() {\n    if [ "${#COMP_WORDS[@]}" -eq "2" ]; then\n')
+        f.write('        COMPREPLY=($(compgen -W "{}" -- "${{COMP_WORDS[1]}}"))\n'.format(' '.join(commands)))
+        if len(commands_with_3rd_param_completion) > 0:
+            f.write('    elif [ "${#COMP_WORDS[@]}" -eq "3" ]; then\n')
+        first_loop = True
+        for command in commands_with_3rd_param_completion:
+            if first_loop:
+                f.write('        if [ "${{COMP_WORDS[1]}}" == "{}" ]; then\n'.format(command))
+                first_loop = False
+            else:
+                f.write('        elif [ "${{COMP_WORDS[1]}}" == "{}" ]; then\n'.format(command))
+            f.write('            COMPREPLY=($(compgen -W "$(command_completion_edkrepo ${COMP_WORDS[1]})" -- "${COMP_WORDS[2]}"))\n')
+        if len(commands_with_3rd_param_completion) > 0:
+            f.write('        fi\n')
+        f.write('    fi\n}\n\n')
+        if len(commands_with_3rd_param_completion) > 0:
+            if sys.platform == "win32":
+                f.write('if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v $command_completion_edkrepo_file)" ]; then\n')
+            else:
+                f.write('if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v command_completion_edkrepo)" ]; then\n')
+        else:
+            f.write('if [ -x "$(command -v edkrepo)" ]; then\n')
+        f.write('    complete -F _edkrepo_completions edkrepo\nfi\n')
+
 def main():
     command = command_factory.create_composite_command()
     config = {}
@@ -117,6 +173,9 @@ def main():
     if len(sys.argv) <= 1:
         parser.print_help()
         return 1
+    if sys.argv[1] == 'generate-command-completion-script' and len(sys.argv) >= 3:
+        generate_command_completion_script(sys.argv[2], parser)
+        return 0
     parsed_args = parser.parse_args()
     command_name = parsed_args.subparser_name
     try:
