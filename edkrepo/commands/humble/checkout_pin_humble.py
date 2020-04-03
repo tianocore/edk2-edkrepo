@@ -13,3 +13,5 @@ MANIFEST_MISMATCH = ('The selected PIN file does not refer to the same project '
                      'as the local manifest file. {}'.format(CHP_EXIT))
 COMMIT_NOT_FOUND = 'The commit referenced by the PIN file does not exist. {}'.format(CHP_EXIT) 
 PIN_COMBO = 'Pin: {}'
+COMBO_NOT_FOUND = ('Warning: The combo listed in PIN file: {} is no longer '
+                   'listed in the project manifest file.')

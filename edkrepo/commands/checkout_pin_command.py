@@ -90,11 +90,17 @@ class CheckoutPinCommand(EdkrepoCommand):
         elif not set(pin.remotes).issubset(set(manifest.remotes)):
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
         elif pin.general_config.current_combo not in [c.name for c in manifest.combinations]:
-            raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
+            print(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo))
         combo_name = pin.general_config.current_combo
         pin_sources = pin.get_repo_sources(combo_name)
         pin_root_remote = {source.root:source.remote_name for source in pin_sources}
-        manifest_sources = manifest.get_repo_sources(combo_name)
+        try:
+            # If the pin and the project manifest have the same combo get the
+            # repo sources from that combo. Otherwise get the default combo's
+            # repo sources
+            manifest_sources = manifest.get_repo_sources(combo_name)
+        except ValueError:
+            manifest_sources = manifest.get_repo_sources(manifest.general_config.default_combo)
         manifest_root_remote = {source.root:source.remote_name for source in manifest_sources}
         if set(pin_root_remote.items()).isdisjoint(set(manifest_root_remote.items())):
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
