@@ -47,24 +47,95 @@ To build a EdkRepo distribution tarball, the Python wheel package is required in
 2. `./build_linux_installer.py`
 
 ### Install From Source
-To install from source, one must have installedd using the tarball method above at least once in order to setup the EdkRepo configuration files. One this is done, one may use the standard distutils method to install EdkRepo from source:
+To install from source, one must have installed using the tarball method above at least once in order to setup the EdkRepo configuration files. One this is done, one may use the standard distutils method to install EdkRepo from source:
 
 `./setup.py install`
+
+## macOS Instructions
+
+### Install Pre-Requisites
+
+#### 1. Install the Xcode Command Line Tools
+
+a) Open a Terminal and type the following command:
+
+`xcode-select --install`
+
+b) A new window will appear, click Install.
+c) Accept the license agreement.
+d) Wait for the installation to complete.
+
+#### 2. Install Homebrew
+
+Install [Homebrew](https://brew.sh/) if it has not been installed already. Homebrew is a package manager for macOS that has become the most common method of installing command line software on macOS that was not originally provided by Apple. EdkRepo has several dependencies that are distributed via Homebrew.
+
+Type the following command to install Homebrew:
+
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"`
+
+Follow the on-screen prompts.
+
+#### 3. Install Dependencies
+
+Run the following commands to install EdkRepo's dependencies:
+
+`brew install bash-completion git git-gui pyenv`
+
+`pyenv install 3.8.2`
+
+`pyenv global 3.8.2`
+
+During installation, you may be prompted to enter your password.
+
+#### 4. Configure Shell for Pyenv and Git
+
+To enable usage of Pyenv installed Python interpreters and Git command completions, run the following command:
+
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/tianocore/edk2-staging/EdkRepo/edkrepo_installer/mac-scripts/setup_git_pyenv_mac.sh)"`
+
+Restart your shell so the Pyenv changes can take effect:
+
+`exec $SHELL`
+
+### Install EdkRepo
+
+Extract the archive:
+
+`tar -xzvf edkrepo-<version>.tar.gz`
+
+If you are installing from source, you will need to build the distribution tarball using the following commands first:
+
+1. `pip install wheel` (If not done already)
+1. `cd build-scripts`
+2. `./build_linux_installer.py`
+
+Install EdkRepo:
+
+`./install.py`
+
+Restart your shell so the new Pyenv shim for EdkRepo can take effect:
+
+`exec $SHELL`
 
 ## Windows Instructions
 ### Pre-Requisites
 - Git 2.13.x or later
 - Python 3.5 or later
 
-Git 2.16.2 is the version that has recieved the most validation, though any version of Git 2.13 or later works fine. If you want to install 2.16.2, here are some links:
-- [Direct Link - Git for Windows 2.16.2 - 64 Bit](https://github.com/git-for-windows/git/releases/download/v2.16.2.windows.1/Git-2.16.2-64-bit.exe)
-- [Direct Link - Git for Windows 2.16.2 - 32 Bit](https://github.com/git-for-windows/git/releases/download/v2.16.2.windows.1/Git-2.16.2-64-bit.exe)
+Git 2.26.0 is the version that has received the most validation, though any version of Git 2.13 or later works fine. If you want to install 2.26.0, here are some links:
+- [Direct Link - Git for Windows 2.26.0 - 64 Bit](https://github.com/git-for-windows/git/releases/download/v2.26.0.windows.1/Git-2.26.0-64-bit.exe)
+- [Direct Link - Git for Windows 2.26.0 - 32 Bit](https://github.com/git-for-windows/git/releases/download/v2.26.0.windows.1/Git-2.26.0-32-bit.exe)
 
-Python 3.7 or later is recommended due to performance improvements. You can get Python from here: https://www.python.org/
+Python 3.8 or later is recommended due to performance improvements. You can get Python from here: https://www.python.org/
 
 ### Install Process
 1. Run the installer .exe
 2. Click Install
+
+### Install From Source
+To install from source, one must build and run the installer .exe using the instructions below at least once in order to setup the EdkRepo configuration files. One this is done, one may use the standard distutils method to install EdkRepo from source:
+
+`py -3 setup.py install`
 
 ### Build Process
 #### Build Pre-Requisites
