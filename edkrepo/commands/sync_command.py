@@ -29,7 +29,7 @@ from edkrepo.common.humble import SYNC_MANIFEST_DIFF_WARNING, SYNC_MANIFEST_UPDA
 from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, SYNC_REPO_CHANGE, SYNCING, FETCHING, UPDATING_MANIFEST
 from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_MASTER, SYNC_ERROR
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
-from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL
+from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL, SYNC_INCOMPATIBLE_COMBO
 from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL
 from edkrepo.common.pathfix import get_actual_path
 from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, clone_repos, sparse_checkout_enabled
@@ -104,8 +104,15 @@ class SyncCommand(EdkrepoCommand):
         if args.update_local_manifest: #NOTE: hyphens in arg name replaced with underscores due to argparse
             self.__update_local_manifest(args, config, initial_manifest, workspace_path)
         manifest = get_workspace_manifest()
+        if args.update_local_manifest:
+            try:
+                repo_sources_to_sync = manifest.get_repo_sources(current_combo)
+            except ValueError:
+                # The manifest file was updated and the initial combo is no longer present so use the default combo
+                current_combo = manifest.general_config.default_combo
+                repo_sources_to_sync = manifest.get_repo_sources(current_combo)
         manifest.write_current_combo(current_combo)
-        repo_sources_to_sync = manifest.get_repo_sources(current_combo)
+
         sync_error = False
         # Calculate the hooks which need to be updated, added or removed for the sync
         if args.update_local_manifest:
@@ -211,9 +218,26 @@ class SyncCommand(EdkrepoCommand):
         ci_index_xml_rel_path = os.path.normpath(ci_index_xml.get_project_xml(initial_manifest.project_info.codename))
         global_manifest_path = os.path.join(global_manifest_directory, ci_index_xml_rel_path)
         new_manifest_to_check = ManifestXml(global_manifest_path)
+
+        # Does the current combo exist in the new manifest? If not check to see if you can use the repo sources from
+        # the default combo
+        initial_combos = combinations_in_manifest(initial_manifest)
+        new_combos = combinations_in_manifest(new_manifest_to_check)
+        if (current_combo not in new_combos) or (set(new_combos) != set(initial_combos)):
+            if initial_manifest.get_repo_sources(current_combo) == new_manifest_to_check.get_repo_sources(new_manifest_to_check.general_config.default_combo):
+                new_sources_for_current_combo = new_manifest_to_check.get_repo_sources(new_manifest_to_check.general_config.default_combo)
+                new_sources = new_sources_for_current_combo
+            else:
+                # Since asymetric combinations are not supported error out with an IMCOMPATIBLE_COMBO warning
+                print(SYNC_COMBO_CHANGE.format(current_combo, initial_manifest.project_info.codename))
+                raise EdkrepoManifestChangedException(SYNC_INCOMPATIBLE_COMBO)
+        else:
+            new_sources_for_current_combo = new_manifest_to_check.get_repo_sources(current_combo)
+            new_sources = new_manifest_to_check.get_repo_sources(current_combo)
+
         remove_included_config(initial_manifest.remotes, initial_manifest.submodule_alternate_remotes, local_manifest_dir)
         write_included_config(new_manifest_to_check.remotes, new_manifest_to_check.submodule_alternate_remotes, local_manifest_dir)
-        new_sources_for_current_combo = new_manifest_to_check.get_repo_sources(current_combo)
+
         self.__check_submodule_config(workspace_path, new_manifest_to_check, new_sources_for_current_combo)
         new_manifest_remotes = {name:url for name, url in new_manifest_to_check.remotes}
         #check for changes to remote urls
@@ -221,12 +245,7 @@ class SyncCommand(EdkrepoCommand):
             if remote_name in new_manifest_remotes.keys():
                 if initial_manifest_remotes[remote_name] != new_manifest_remotes[remote_name]:
                     raise EdkrepoManifestChangedException(SYNC_URL_CHANGE.format(remote_name))
-        #check to see if the currently checked out combo exists in the new manifest.
-        new_combos = combinations_in_manifest(new_manifest_to_check)
-        if current_combo not in new_combos:
-            raise EdkrepoManifestChangedException(SYNC_COMBO_CHANGE.format(current_combo,
-                                                                           initial_manifest.project_info.codename))
-        new_sources = new_manifest_to_check.get_repo_sources(current_combo)
+
         # Check that the repo sources lists are the same. If they are not the same and the override flag is not set, throw an exception.
         if not args.override and set(initial_sources) != set(new_sources):
             raise EdkrepoManifestChangedException(SYNC_REPO_CHANGE.format(initial_manifest.project_info.codename))

@@ -49,7 +49,7 @@ SYNC_COMMITS_ON_MASTER = 'Commits were found on {0} branch.\n  (use the "--overr
 SYNC_ERROR = '\nError: Some repositories were not updated.'
 SYNC_MANIFEST_NOT_FOUND = 'A manifest for project, {0}, was not found.\nTo complete this operation please rerun the command with the --override flag\n' + SYNC_EXIT
 SYNC_URL_CHANGE = 'The URL for the remote, {0} has changed.\n' + SYNC_EXIT
-SYNC_COMBO_CHANGE = 'The current checked out combination, {0}, does not exist in the latest manifest for project, {1}\n' + SYNC_EXIT
+SYNC_COMBO_CHANGE = 'The current checked out combination, {0}, does not exist in the latest manifest for project, {1}\n' 
 SYNC_REPO_CHANGE = 'The latest manifest for project, {0}, requires a change in currently cloned repositories.\nTo complete this operation please rerun the command with the --override flag\n' + SYNC_EXIT
 SYNC_SOURCE_MOVE_WARNING = '{}{}WARNING:{}{} {{}} being moved to {{}}'.format(Style.BRIGHT, Fore.RED, Style.RESET_ALL, Fore.RED)
 SYNC_REMOVE_WARNING = '{}{}WARNING:{}{} The following repos no longer exist in the new manifest and can no \nlonger be used for submitting code. Please manually delete the following \ndirectories after saving any work you have in them:'.format(Style.BRIGHT, Fore.RED, Style.RESET_ALL, Fore.RED)
@@ -58,6 +58,7 @@ SYNC_NEEDS_REBASE = BRANCH_BEHIND + '\n' + '  (use "git rebase {target_remote}/{
 SYNC_UPDATE_FIX = 'To checkout the new SHA/tag/branch run edkrepo checkout on the current combo.\n'
 SYNC_BRANCH_CHANGE_ON_LOCAL = 'The SHA, tag or branch defined in the current combo has changed from {} to {} for the {} repo.\n The current workspace is not on the SHA/tag/branch defined in the initial combo. Unable to checkout new SHA/tag/branch.\n' + SYNC_UPDATE_FIX
 SYNC_REBASE_CALC_FAIL = 'Unable to calculate if a rebase is required for the current branch'
+SYNC_INCOMPATIBLE_COMBO = 'No compatible combinations found in the latest manifest file. Cloning a new workspace is recommended. ' + SYNC_EXIT
 
 #informational messages for sync_command.py
 SYNCING = 'Syncing {0} to latest {1} branch ...'
