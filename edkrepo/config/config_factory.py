@@ -11,12 +11,14 @@ import os
 import sys
 import configparser
 import collections
+from ctypes import *
+
+import edkrepo.config.humble.config_factory_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoGlobalConfigNotFoundException, EdkrepoConfigFileInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoGlobalDataDirectoryNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoConfigFileReadOnlyException
 from edkrepo.common.humble import MIRROR_PRIMARY_REPOS_MISSING, MIRROR_DECODE_WARNING, MAX_PATCH_SET_INVALID
 from edkrepo_manifest_parser import edk_manifest
-from ctypes import *
 
 def get_edkrepo_global_data_directory():
     global_data_dir = None
@@ -34,7 +36,7 @@ def get_edkrepo_global_data_directory():
         global_data_dir = os.path.expanduser("~/.edkrepo")
     if not os.path.isdir(global_data_dir):
         if not os.path.exists(os.path.dirname(global_data_dir)):
-            raise EdkrepoGlobalDataDirectoryNotFoundException("{} does not exist".format(os.path.dirname(global_data_dir)))
+            raise EdkrepoGlobalDataDirectoryNotFoundException(humble.GLOBAL_DATA_DIR_NOT_FOUND.format(os.path.dirname(global_data_dir)))
         os.mkdir(global_data_dir)
     return global_data_dir
 
@@ -63,7 +65,7 @@ def cfg_property(filename, cfg, read_only, section, key):
         return cfg[section][key]
     def _set(self, value):
         if read_only:
-            raise EdkrepoConfigFileReadOnlyException('The configuration file is read only: {}'.format(filename))
+            raise EdkrepoConfigFileReadOnlyException(humble.READ_ONLY_CFG.format(filename))
         cfg[section][key] = value
         with open(filename, 'w') as cfg_stream:
             cfg.write(cfg_stream)
@@ -90,7 +92,7 @@ class BaseConfig():
             if prop.section not in self.cfg or prop.key not in self.cfg[prop.section]:
                 if prop.required or self.read_only:
                     # Required property is missing
-                    raise EdkrepoConfigFileInvalidException('{} is not present in {} section of {}'.format(prop.key, prop.section, os.path.basename(self.filename)))
+                    raise EdkrepoConfigFileInvalidException(humble.REQ_PROP_MISSING.format(prop.key, prop.section, os.path.basename(self.filename)))
                 if not self.read_only:
                     # Create the missing property
                     if prop.section not in self.cfg:
@@ -126,7 +128,7 @@ class GlobalConfig(BaseConfig):
                 CfgProp('preferred-command-package', 'preferred-package', 'pref_pkg', None, True),
                 CfgProp('preferred-entry-point', 'entry-point', 'pref_entry_point', None, True)]
         if not os.path.isfile(self.filename):
-            raise EdkrepoGlobalConfigNotFoundException("edkrepo global config file {} does not exist".format(self.filename))
+            raise EdkrepoGlobalConfigNotFoundException(humble.GLOBAL_CFG_NOT_FOUND.format(self.filename))
         super().__init__(self.filename, True)
 
     @property
@@ -189,7 +191,7 @@ def get_workspace_path():
         if os.path.dirname(path) == path:
             break
         path = os.path.dirname(path)
-    raise EdkrepoWorkspaceInvalidException("The current directory does not appear to be a valid workspace")
+    raise EdkrepoWorkspaceInvalidException(humble.INVALID_WKSPC)
 
 def get_workspace_manifest_file():
     path = get_workspace_path()
