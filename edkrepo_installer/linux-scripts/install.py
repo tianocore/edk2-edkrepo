@@ -296,7 +296,16 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v command_completion_edkre
   # manifest XML, which is a relatively expensive operation to do every time
   # the user presses <Enter>.
   # As a performance optimization, only do this if the present working directory
-  # changed
+  # changed or if the last command executed was edkrepo
+  do_combo_check="0"
+  edkrepo_check_last_command() {
+    if [[ "$BASH_COMMAND" == *"edkrepo"* ]] && [[ "$BASH_COMMAND" != *"_edkrepo"* ]]; then
+      if [[ "$BASH_COMMAND" != *"edkrepo_"* ]]; then
+        do_combo_check="1"
+      fi
+    fi
+  }
+  trap 'edkrepo_check_last_command' DEBUG
   if [[ ! -z ${PROMPT_COMMAND+x} ]] && [[ "$PROMPT_COMMAND" != "edkrepo_combo_chpwd" ]]; then
     old_prompt_command=$PROMPT_COMMAND
   fi
@@ -305,6 +314,10 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v command_completion_edkre
       if [[ "$(pwd)" != "$old_pwd" ]]; then
         old_pwd=$(pwd)
         current_edkrepo_combo=$(command_completion_edkrepo current-combo)
+        do_combo_check="0"
+      elif [ "$do_combo_check" == "1" ]; then
+        current_edkrepo_combo=$(command_completion_edkrepo current-combo)
+        do_combo_check="0"
       fi
       if [[ ! -z ${PROMPT_COMMAND+x} ]]; then
         eval $old_prompt_command
@@ -346,16 +359,34 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v command_completion_edkre
   # manifest XML, which is a relatively expensive operation to do every time
   # the user presses <Enter>.
   # As a performance optimization, only do this if the present working directory
-  # changed
+  # changed or if the last command executed was edkrepo
+  do_combo_check="0"
   function edkrepo_combo_chpwd() {
     current_edkrepo_combo=$(command_completion_edkrepo current-combo)
+    do_combo_check="0"
   }
   chpwd_functions=(${chpwd_functions[@]} "edkrepo_combo_chpwd")
+  function edkrepo_combo_preexec() {
+    if [[ "$1" = *"edkrepo"* ]] && [[ "$1" != *"_edkrepo"* ]]; then
+      if [[ "$1" != *"edkrepo_"* ]]; then
+        do_combo_check="1"
+      fi
+    fi
+  }
+  preexec_functions=(${preexec_functions[@]} "edkrepo_combo_preexec")
+  function edkrepo_combo_precmd() {
+    if [ "$do_combo_check" = "1" ]; then
+      current_edkrepo_combo=$(command_completion_edkrepo current-combo)
+      do_combo_check="0"
+    fi
+  }
+  precmd_functions=(${precmd_functions[@]} "edkrepo_combo_precmd")
 fi
 
 # Load version control information
 autoload -Uz vcs_info
-precmd() { vcs_info }
+git_precmd() { vcs_info }
+precmd_functions=(${precmd_functions[@]} "git_precmd")
 
 # Format the vcs_info_msg_0_ variable
 zstyle ':vcs_info:git:*' formats " %{$fg[cyan]%}(%b)%{$reset_color%}"
@@ -363,6 +394,7 @@ zstyle ':vcs_info:git:*' formats " %{$fg[cyan]%}(%b)%{$reset_color%}"
 # Set up the prompt (with git branch name)
 setopt PROMPT_SUBST
 eval "PROMPT='$new_prompt\${vcs_info_msg_0_}\$prompt_suffix'"
+
 '''
 
 def add_command_to_startup_script(script_file, regex, command, username):

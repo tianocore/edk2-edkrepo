@@ -39,7 +39,16 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v $command_completion_edkr
   # manifest XML, which is a relatively expensive operation to do every time
   # the user presses <Enter>.
   # As a performance optimization, only do this if the present working directory
-  # changed
+  # changed or if the last command executed was edkrepo
+  do_combo_check="0"
+  edkrepo_check_last_command() {
+    if [[ "$BASH_COMMAND" == *"edkrepo"* ]] && [[ "$BASH_COMMAND" != *"_edkrepo"* ]]; then
+      if [[ "$BASH_COMMAND" != *"edkrepo_"* ]]; then
+        do_combo_check="1"
+      fi
+    fi
+  }
+  trap 'edkrepo_check_last_command' DEBUG
   if [[ ! -z ${PROMPT_COMMAND+x} ]] && [[ "$PROMPT_COMMAND" != "edkrepo_combo_chpwd" ]]; then
     old_prompt_command=$PROMPT_COMMAND
   fi
@@ -48,6 +57,10 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v $command_completion_edkr
       if [[ "$(pwd)" != "$old_pwd" ]]; then
         old_pwd=$(pwd)
         current_edkrepo_combo=$(command_completion_edkrepo current-combo)
+        do_combo_check="0"
+      elif [ "$do_combo_check" == "1" ]; then
+        current_edkrepo_combo=$(command_completion_edkrepo current-combo)
+        do_combo_check="0"
       fi
       if [[ ! -z ${PROMPT_COMMAND+x} ]]; then
         eval $old_prompt_command
@@ -57,4 +70,4 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v $command_completion_edkr
 fi
 
 PS1="$newps1$prompt_suffix"
-MSYS2_PS1="$PS1"  # for detection by MSYS2 SDK's bash.basrc
+MSYS2_PS1="$PS1"  # for detection by MSYS2 SDK's bash.bashrc
