@@ -111,6 +111,8 @@ class SyncCommand(EdkrepoCommand):
                 # The manifest file was updated and the initial combo is no longer present so use the default combo
                 current_combo = manifest.general_config.default_combo
                 repo_sources_to_sync = manifest.get_repo_sources(current_combo)
+        else:
+            repo_sources_to_sync = manifest.get_repo_sources(current_combo)
         manifest.write_current_combo(current_combo)
 
         sync_error = False
