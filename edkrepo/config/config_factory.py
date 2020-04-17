@@ -77,10 +77,11 @@ class BaseConfig():
     for the class.  Property generation and verification is based off of a list of CfgProp classes.
     """
     prop_list = []
-    def __init__(self, filename, read_only=True):
+    def __init__(self, filename, global_data_dir, read_only=True):
         # Do basic initialization of private variables
         self.read_only = read_only
         self.filename = filename
+        self.global_data_dir = global_data_dir
         self.cfg = configparser.ConfigParser(allow_no_value=True, delimiters='=')
         if os.path.isfile(self.filename):
             self.cfg.read(self.filename)
@@ -132,8 +133,7 @@ class GlobalConfig(BaseConfig):
     edkrepo installer.
     """
     def __init__(self):
-        self.edkrepo_global_data_directory = get_edkrepo_global_data_directory()
-        self.filename = os.path.join(self.edkrepo_global_data_directory, "edkrepo.cfg")
+        self.filename = os.path.join(get_edkrepo_global_data_directory(), "edkrepo.cfg")
         self.prop_list = [
                 CfgProp('manifest-repo', 'URL', 'manifest_repo_url', None, True),
                 CfgProp('manifest-repo', 'Branch', 'manifest_repo_branch', None, True),
@@ -148,7 +148,7 @@ class GlobalConfig(BaseConfig):
                 CfgProp('preferred-entry-point', 'entry-point', 'pref_entry_point', None, True)]
         if not os.path.isfile(self.filename):
             raise EdkrepoGlobalConfigNotFoundException(humble.GLOBAL_CFG_NOT_FOUND.format(self.filename))
-        super().__init__(self.filename, True)
+        super().__init__(self.filename, get_edkrepo_global_data_directory(), True)
 
     @property
     def preferred_entry(self):
@@ -165,7 +165,7 @@ class GlobalConfig(BaseConfig):
     @property
     def manifest_repo_abs_local_path(self):
         """Provides an absolute path to the manifest repo based on configuration file values."""
-        return os.path.join(self.edkrepo_global_data_directory, self.manifest_repo_local_path)
+        return os.path.join(self.global_data_dir, self.manifest_repo_local_path)
 
     @property
     def sparsecheckout_data(self):
@@ -192,7 +192,7 @@ class GlobalUserConfig(BaseConfig):
             CfgProp('scm', 'mirror_geo', 'geo', 'none', False),
             CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False)
             ]
-        super().__init__(self.filename, False)
+        super().__init__(self.filename, get_edkrepo_global_data_directory(), False)
 
     @property
     def max_patch_set_int(self):
