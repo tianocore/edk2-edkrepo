@@ -85,6 +85,12 @@ class BaseConfig():
         if os.path.isfile(self.filename):
             self.cfg.read(self.filename)
 
+        if self.cfg.has_section('manifest-repos'):
+            for option in self.cfg.options('manifest-repos'):
+                self.prop_list.append(CfgProp('{}'.format(option), 'URL', '{}-manifest_repo_url.'.format(option), None, False))
+                self.prop_list.append(CfgProp('{}'.format(option), 'Branch', '{}-manifest_repo_branch'.format(option), None, False))
+                self.prop_list.append(CfgProp('{}'.format(option), 'LocalPath', '{}-manifest_repo_local_path.'.format(option), None, False))
+
         # Create properties defined by the prop_list
         cfg_updated = False
         for prop in self.prop_list:
