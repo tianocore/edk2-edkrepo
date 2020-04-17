@@ -113,6 +113,12 @@ class BaseConfig():
             with open(self.filename, 'w') as cfg_stream:
                 self.cfg.write(cfg_stream)
 
+    @property
+    def manifest_repo_list(self):
+        """Returns a list of available manifest repos"""
+        if self.cfg.has_section('manifest-repos'):
+            return self.cfg.options('manifest-repos')
+
 class GlobalConfig(BaseConfig):
     """
     Class access structure for the edkrepo.cfg file.  This file is read only and maintained by the
