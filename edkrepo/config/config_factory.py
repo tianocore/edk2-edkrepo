@@ -127,6 +127,43 @@ class BaseConfig():
         """
         return [x for x in self.prop_list if manifest_repo in x.name]
 
+    def get_manifest_repo_url(self, manifest_repo):
+        """ 
+        Returns the URL value for a given manifest repo based on config
+        file contents.
+        """
+        for prop in self.manifest_repo_props(manifest_repo):
+            if 'URL' == prop.key:
+                return self.cfg[prop.section][prop.key]
+        return None
+
+    def get_manifest_repo_branch(self, manifest_repo):
+        """
+        Returns the Branch value for a given manifest repo based on config file
+        contents.
+        """
+        for prop in self.manifest_repo_props(manifest_repo):
+            if 'Branch' == prop.key:
+                return self.cfg[prop.section][prop.key]
+        return None
+
+    def get_manifest_repo_local_path(self, manifest_repo):
+        """
+        Returns the Local path value for a given manifest repo based on config
+        file contents.
+        """
+        for prop in self.manifest_repo_props(manifest_repo):
+            if 'LocalPath' == prop.key:
+                return self.cfg[prop.section][prop.key]
+        return None
+
+    def manifest_repo_abs_path(self, manifest_repo):
+        """
+        Returns the absolute path of a single manifest repo based on config
+        file contents and the global_data_dir location.
+        """
+        return os.path.join(self.global_data_dir, self.get_manifest_repo_local_path(manifest_repo))
+
 class GlobalConfig(BaseConfig):
     """
     Class access structure for the edkrepo.cfg file.  This file is read only and maintained by the
