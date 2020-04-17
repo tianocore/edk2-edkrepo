@@ -698,7 +698,7 @@ def do_install():
             whl = wheels_to_install[whl_name]['wheel']
             install_whl = wheels_to_install[whl_name]['install']
             if install_whl:
-                install_cmd = [def_python, '-m', 'pip', 'install']
+                install_cmd = [def_python, '-m', 'pip', 'install', '--no-index', '--find-links={}'.format(whl_src_dir)]
                 if install_to_local:
                     install_cmd.append('--user')
                 install_cmd.append(os.path.join(whl_src_dir, whl))
