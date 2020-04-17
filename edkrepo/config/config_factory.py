@@ -118,6 +118,13 @@ class BaseConfig():
         """Returns a list of available manifest repos"""
         if self.cfg.has_section('manifest-repos'):
             return self.cfg.options('manifest-repos')
+    
+    def manifest_repo_props(self, manifest_repo):
+        """
+        Returns a list of cfg_prop objects that pertain to a given manifest
+        repo
+        """
+        return [x for x in self.prop_list if manifest_repo in x.name]
 
 class GlobalConfig(BaseConfig):
     """
