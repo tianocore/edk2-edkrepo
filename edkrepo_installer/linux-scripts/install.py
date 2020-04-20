@@ -102,7 +102,7 @@ def is_prompt_customization_installed(user_home_dir):
     return customization_installed
 
 __add_prompt_customization = None
-def get_add_prompt_customization(args, user_home_dir):
+def get_add_prompt_customization(args, username, user_home_dir):
     global __add_prompt_customization
     if __add_prompt_customization is not None:
         return __add_prompt_customization
@@ -118,10 +118,16 @@ def get_add_prompt_customization(args, user_home_dir):
         return False
     #If the prompt has not been installed and EdkRepo >= 2.0.0 is installed, then don't install the prompt customization
     if shutil.which('edkrepo') is not None:
-        res = default_run(['edkrepo', '--version'])
-        if _check_version(res.stdout.replace('edkrepo ', '').strip(), '2.0.0') >= 0:
-            __add_prompt_customization = False
-            return False
+        try:
+            if is_current_user_root():
+                res = subprocess.run("echo 'edkrepo --version; exit' | su - {}".format(username), shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
+            else:
+                res = default_run(['edkrepo', '--version'])
+            if _check_version(res.stdout.replace('edkrepo ', '').strip(), '2.0.0') >= 0:
+                __add_prompt_customization = False
+                return False
+        except:
+            pass
     #Show the user an advertisement to see if they want the prompt customization
     from select import select
     import termios
@@ -250,6 +256,12 @@ def get_user_home_directory(username):
 def get_site_packages_directory():
     res = default_run([def_python, '-c', 'import site; print(site.getsitepackages()[0])'])
     return res.stdout.strip()
+
+def is_current_user_root():
+    res = default_run(['id', '-u'])
+    if res.stdout.strip() == '0':
+        return True
+    return False
 
 def set_execute_permissions():
     site_packages = get_site_packages_directory()
@@ -457,7 +469,7 @@ def add_command_completions_to_shell(command_completion_script, args, username, 
     comment = '\n# Add EdkRepo command completions'
     bash_rc_file = os.path.join(user_home_dir, '.bashrc')
     add_command_comment_to_startup_script(bash_rc_file, regex, new_source_line, comment, username)
-    if get_add_prompt_customization(args, user_home_dir):
+    if get_add_prompt_customization(args, username, user_home_dir):
         add_command_to_startup_script(bash_rc_file, prompt_regex, bash_prompt_customization, username)
     zsh_rc_file = os.path.join(user_home_dir, '.zshrc')
     add_command_to_startup_script(zsh_rc_file, zsh_autoload_compinit_regex, zsh_autoload_compinit, username)
@@ -467,7 +479,7 @@ def add_command_completions_to_shell(command_completion_script, args, username, 
     add_command_to_startup_script(zsh_rc_file, zsh_compinit_regex, zsh_compinit, username)
     add_command_to_startup_script(zsh_rc_file, zsh_bashcompinit_regex, zsh_bashcompinit, username)
     add_command_comment_to_startup_script(zsh_rc_file, regex, new_source_line, comment, username)
-    if get_add_prompt_customization(args, user_home_dir):
+    if get_add_prompt_customization(args, username, user_home_dir):
         add_command_to_startup_script(zsh_rc_file, prompt_regex, zsh_prompt_customization, username)
 
 def do_install():
@@ -515,11 +527,11 @@ def do_install():
     log.info('\nCollecting system information:')
     if not install_to_local and ostype != MAC:
         try:
-            res = default_run(['id', '-u'])
+            user_is_root = is_current_user_root()
         except:
             log.info('- Failed to determine user ID')
             return 1
-        if res.stdout.strip() != '0':
+        if not user_is_root:
             log.info('- Installer must be run as root')
             return 1
     if username is None:
@@ -536,17 +548,17 @@ def do_install():
         return 1
     if ostype == MAC:
         try:
-            res = default_run(['id', '-u'])
+            user_is_root = is_current_user_root()
         except:
             log.info('- Failed to determine user ID')
             return 1
-        if res.stdout.strip() == '0':
+        if user_is_root:
             log.info('- Installer must NOT be run as root')
             return 1
         if os.path.commonprefix([user_home_dir, sys.executable]) != user_home_dir:
             install_to_local = True
     default_cfg_dir = os.path.join(user_home_dir, cfg_dir)
-    get_add_prompt_customization(args, user_home_dir)
+    get_add_prompt_customization(args, username, user_home_dir)
     log.info('+ System information collected')
 
     # Display current system information.
@@ -728,7 +740,21 @@ def do_install():
         else:
             command_completion_script = os.path.join('/', 'etc', 'profile.d', 'edkrepo_completions.sh')
         try:
-            res = default_run(['edkrepo', 'generate-command-completion-script', command_completion_script])
+            user_is_root = False
+            try:
+                user_is_root = is_current_user_root()
+            except:
+                pass
+            current_home = None
+            if 'HOME' in os.environ:
+                current_home = os.environ['HOME']
+            try:
+                if user_is_root and current_home is not None and current_home != user_home_dir:
+                    os.environ['HOME'] = user_home_dir
+                res = default_run(['edkrepo', 'generate-command-completion-script', command_completion_script])
+            finally:
+                if current_home is not None and os.environ['HOME'] != current_home:
+                    os.environ['HOME'] = current_home
             if install_to_local or ostype == MAC:
                 shutil.chown(command_completion_script, user=username)
                 os.chmod(command_completion_script, 0o644)
