@@ -82,7 +82,7 @@ class BaseConfig():
         self.read_only = read_only
         self.filename = filename
         self.global_data_dir = global_data_dir
-        self.cfg = configparser.ConfigParser(allow_no_value=True, delimiters='=')
+        self.cfg = configparser.ConfigParser(allow_no_value=True)
         if os.path.isfile(self.filename):
             self.cfg.read(self.filename)
 
