@@ -3,7 +3,7 @@
 ## @file
 # sparse.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 import os
@@ -552,11 +552,11 @@ class BuildInfo:
 
     def sparse_checkout(self, root=None, always_include=[], always_exclude=[]):
         """Performs a sparse checkout operation on a single repository"""
-        local_prune_data = set()
+        local_prune_data = []
         for item in always_include:
-            local_prune_data.add('/{}'.format(item))
+            local_prune_data.append('/{}'.format(item))
         for item in always_exclude:
-            local_prune_data.discard('/{}'.format(item))
+            local_prune_data.append('!/{}'.format(item))
         try:
             repo = git.Repo(root)
         except:
@@ -578,7 +578,11 @@ def process_sparse_checkout(workspace_root, repo_list, current_combo, manifest):
     workspace_list.extend([os.path.join(workspace_root, os.path.normpath(x.root)) for x in repo_list])
 
     # Filter sparse data entries that apply to the current combo or all combos
-    sparse_data = [x for x in manifest.sparse_data if x.combination is None or x.combination == current_combo]
+    # Build list in three steps (all, repo, combo) to make sure the priority is correct
+    sparse_data = []
+    sparse_data.extend([x for x in manifest.sparse_data if x.remote_name is None and x.combination is None])
+    sparse_data.extend([x for x in manifest.sparse_data if x.remote_name is not None and x.combination is None])
+    sparse_data.extend([x for x in manifest.sparse_data if x.remote_name is not None and x.combination == current_combo])
 
     # Create object that processes build information.
     build_info = BuildInfo(workspace_list)
@@ -602,8 +606,8 @@ if __name__ == "__main__":
     # Program Information
     #
     __title__ = 'Sparse Checkout'
-    __version__ = '0.02.00'
-    __copyright__ = 'Copyright (c) 2017, Intel Corporation. All rights reserved.'
+    __version__ = '0.03.00'
+    __copyright__ = 'Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.'
 
     #
     # Processes command line arguments
