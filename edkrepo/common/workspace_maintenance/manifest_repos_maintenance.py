@@ -57,3 +57,28 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
             print (humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
             repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), branch=branch)
 
+def detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg):
+    '''
+    Determines whether there is are conflicting or duplicated manifest
+    repositories listed in the edkrepo.cfg and the edkrepo_user.cfg.
+    '''
+    conflicts = []
+    duplicates = []
+    if not edkrepo_user_cfg.manifest_repo_list:
+        return conflicts, duplicates
+    else:
+        config_repos = set(edkrepo_cfg.manifest_repo_list)
+        user_cfg_repos = set(edkrepo_user_cfg.manifest_repo_list)
+    if config_repos.isdisjoint(user_cfg_repos):
+        return conflicts, duplicates
+    else:
+        for repo in config_repos.intersection(user_cfg_repos):
+            if edkrepo_cfg.get_manifest_repo_url(repo) != edkrepo_user_cfg.get_manifest_repo_url(repo):
+                conflicts.append(repo)
+            elif edkrepo_cfg.get_manifest_repo_branch(repo) != edkrepo_user_cfg.get_manifest_repo_branch(repo):
+                conflicts.append(repo)
+            elif edkrepo_cfg.get_manifest_repo_local_path(repo) != edkrepo_user_cfg.get_manifest_repo_local_path(repo):
+                conflicts.append(repo)
+            else:
+                duplicates.append(repo)
+    return conflicts, duplicates
