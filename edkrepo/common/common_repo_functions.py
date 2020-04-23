@@ -46,12 +46,10 @@ from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUS
 from edkrepo.common.humble import ADD_PRIMARY_REMOTE, REMOVE_PRIMARY_REMOTE
 from edkrepo.common.humble import FETCH_PRIMARY_REMOTE, MIRROR_PRIMARY_SHA, TAG_AND_BRANCH_SPECIFIED
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR, SUBMODULE_FAILURE
-from edkrepo.common.humble import MANIFEST_REPO_DIRTY, MANIFEST_REPO_MOVED, CLONING_MANIFEST_REPO, SYNCING_MANIFEST_REPO
 from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
-from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL, MANIFEST_REPO_NOT_CONFIG_BRANCH
-from edkrepo.common.humble import MANIFEST_REPO_CHECKOUT_CONFIG_BRANCH
+from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL
 from edkrepo.common.pathfix import get_actual_path
 from project_utils.sparse import BuildInfo, process_sparse_checkout
 from edkrepo.config.config_factory import get_workspace_path
@@ -61,6 +59,7 @@ from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException, EdkrepoWarningException
 from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoHookNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_single_manifest_repo
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo_manifest_parser import edk_manifest
 from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
@@ -77,32 +76,8 @@ def pull_latest_manifest_repo(args, config, reset_hard=False):
     branch = config['cfg_file'].manifest_repo_branch
     local_path = config['cfg_file'].manifest_repo_local_path
     init_color_console(False)
-    if not (os.path.isabs(local_path)):
-        #since only a relative path was specified it must be joined to the Edkrepo Application Data Directory
-        local_path = os.path.join(get_edkrepo_global_data_directory(), local_path)
-    if not os.path.exists(local_path):
-        print (CLONING_MANIFEST_REPO.format(local_path, repo_url))
-        repo = Repo.clone_from(repo_url, local_path, progress=GitProgressHandler(), branch=branch)
-    else:
-        repo = Repo(local_path)
-        if repo_url in repo.remotes['origin'].urls:
-            if repo.is_dirty(untracked_files=True) and not reset_hard:
-                raise EdkrepoWarningException(MANIFEST_REPO_DIRTY)
-            elif repo.is_dirty(untracked_files=True) and reset_hard:
-                repo.git.reset('--hard')
-            print (SYNCING_MANIFEST_REPO)
-            if repo.active_branch.name != branch:
-                print(MANIFEST_REPO_NOT_CONFIG_BRANCH.format(repo.active_branch.name))
-                print(MANIFEST_REPO_CHECKOUT_CONFIG_BRANCH.format(branch))
-                repo.git.checkout(branch)
-            repo.remotes.origin.pull()
-        else:
-            new_path = generate_name_for_obsolete_backup(local_path)
-            new_path = os.path.join(os.path.dirname(local_path), new_path)
-            print(MANIFEST_REPO_MOVED.format(new_path))
-            shutil.move(local_path, new_path)
-            print (CLONING_MANIFEST_REPO.format(local_path, repo_url))
-            repo = Repo.clone_from(repo_url, local_path, progress=GitProgressHandler(), branch=branch)
+    pull_single_manifest_repo(repo_url, branch, local_path, reset_hard)
+
 
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, skip_submodule, manifest):
     for repo_to_clone in repos_to_clone:

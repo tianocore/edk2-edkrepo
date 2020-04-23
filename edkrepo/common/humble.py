@@ -34,14 +34,6 @@ MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED = 'BRANCH or TAG name present with COMMIT I
 TAG_AND_BRANCH_SPECIFIED = 'BRANCH AND TAG name present in combination field for {} repo. Using TAG.\n'
 CHECKING_CONNECTION = 'Checking connection to remote url: {}\n'
 
-# Informational messages and warnings for pull_latest_manifest_repo()
-MANIFEST_REPO_DIRTY = 'Uncommited changes present in the global manifest repository. Run edkrepo update-manifest-repo --hard to revert these changes and sync the global manifest repository.\n'
-MANIFEST_REPO_MOVED = '{}{}WARNING:{}{} The Global manifest repository has moved. Backing up previous global manifest repository to: {{}}{}\n'.format(Style.BRIGHT, Fore.RED, Style.RESET_ALL, Fore.RED, Style.RESET_ALL)
-CLONING_MANIFEST_REPO = 'Cloning global manifest repository to: {} from: {}\n'
-SYNCING_MANIFEST_REPO = 'Syncing the global manifest repository.\n'
-MANIFEST_REPO_NOT_CONFIG_BRANCH = 'The current active branch, {}, is not the specified manifest repository branch'
-MANIFEST_REPO_CHECKOUT_CONFIG_BRANCH = 'Checking out the specified manifest repository branch, {}, prior to syncing'
-
 #Error messages for sync_command.py
 SYNC_EXIT = 'Exiting without performing sync operations.'
 SYNC_UNCOMMITED_CHANGES = UNCOMMITED_CHANGES + SYNC_EXIT
