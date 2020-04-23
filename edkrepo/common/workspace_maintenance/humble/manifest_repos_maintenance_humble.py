@@ -21,3 +21,7 @@ SINGLE_MAN_REPO_NOT_CFG_BRANCH = ('The current active branch, {}, is not the '
                                   'specified branch for global manifst repository: {}')
 SINGLE_MAN_REPO_CHECKOUT_CFG_BRANCH = 'Checking out the specified branch: {} prior to syncing'
 SINGLE_MAN_REPO_MOVED = '{}{}WARNING:{}{} The global manifest repository has moved. Backing up previous global manifest repository to: {{}}{}\n'.format(Style.BRIGHT, Fore.RED, Style.RESET_ALL, Fore.RED, Style.RESET_ALL)
+CONFLICT_NO_CLONE = ('The definition of global manifest repository, {}, '
+                     'in the edkrepo_user.cfg does not match the definition in the edkrepo.cfg. '
+                     'This global manifest repository will not be downloaded or updated. '
+                     'Resolve the conflict and then re-run the failed operation')

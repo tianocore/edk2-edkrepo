@@ -57,6 +57,44 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
             print (humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
             repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), branch=branch)
 
+def pull_all_manifest_repos(edkrepo_cfg, edkrepo_user_cfg, reset_hard=False):
+    '''
+    Clones or syncs all global manifest repositories defined in both the
+    edkrepo_cfg and the edkrepo_user.cfg)
+    '''
+    cfg_man_repos = []
+    user_cfg_man_repos = []
+    conflicts, duplicates = detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg)
+    if not conflicts and not duplicates:
+        cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
+        user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
+    elif conflicts:
+        for conflict in conflicts:
+            # In the case of a conflict do not pull conflicting repo
+            print(humble.CONFLICT_NO_CLONE.format(conflict))
+            cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
+            cfg_man_repos.remove(conflict)
+            user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
+            user_cfg_man_repos.remove(conflict)
+    elif duplicates:
+        for duplicate in duplicates:
+            # the duplicate needs to be ignored in on of the repo lists so it is
+            # not cloned/pulled twice
+            cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
+            user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
+            user_cfg_man_repos.remove(conflict)
+    for repo in cfg_man_repos:
+        pull_single_manifest_repo(edkrepo_cfg.get_manifest_repo_url(repo),
+                                  edkrepo_cfg.get_manifest_repo_branch(repo),
+                                  edkrepo_cfg.get_manifest_repo_local_path(repo),
+                                  reset_hard)
+    for repo in user_cfg_man_repos:
+        pull_single_manifest_repo(edkrepo_user_cfg.get_manifest_repo_url(repo),
+                                  edkrepo_user_cfg.get_manifest_repo_branch(repo),
+                                  edkrepo_user_cfg.get_manifest_repo_local_path(repo),
+                                  reset_hard)
+
+
 def detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg):
     '''
     Determines whether there is are conflicting or duplicated manifest
