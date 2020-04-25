@@ -21,7 +21,7 @@ import copy
 # All the namedtuple data structures that consumers of this module will need.
 #
 ProjectInfo = namedtuple('ProjectInfo', ['codename', 'description', 'dev_leads', 'reviewers', 'org', 'short_name'])
-GeneralConfig = namedtuple('GeneralConfig', ['default_combo', 'current_combo', 'pin_path'])
+GeneralConfig = namedtuple('GeneralConfig', ['default_combo', 'current_combo', 'pin_path', 'source_man_repo'])
 RemoteRepo = namedtuple('RemoteRepo', ['name', 'url'])
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
 Combination = namedtuple('Combination', ['name', 'description'])
@@ -406,6 +406,24 @@ class ManifestXml(BaseXmlHelper):
         self._tree.write(filename)
         self.__general_config.current_combo = combo_name
 
+    def write_source_manifest_repo(self, manifest_repo, filename=None):
+        '''
+        Writes the name of the source manifest repository to the
+        general config sections of the manifest file.
+        '''
+        if filename is None:
+            filename = self._fileref
+        subroot = self._tree.find('GeneralConfig')
+        if subroot is None:
+            raise KeyError(GENERAL_CONFIG_MISSING_ERROR)
+
+        element = subroot.find('SourceManifestRepository')
+        if element is None:
+            element = ET.SubElement(subroot, 'SourceManifestRepository')
+        element.attrib['manifest_repo'] = manifest_repo
+        self._tree.write(filename)
+        self.__general_config.source_man_repo = manifest_repo
+
     def generate_pin_xml(self, description, combo_name, repo_source_list, filename=None):
 
         pin_tree = ET.ElementTree(ET.Element('Pin'))
@@ -605,10 +623,14 @@ class _GeneralConfig():
             self.curr_combo = element.find('CurrentClonedCombo').attrib['combination']
         except:
             self.curr_combo = None
+        try:
+            self.source_man_repo = element.find('SourceManifestRepository').attrib['manifest_repo']
+        except:
+            self.source_man_repo = None
 
     @property
     def tuple(self):
-        return GeneralConfig(self.default_combo, self.curr_combo, self.pin_path)
+        return GeneralConfig(self.default_combo, self.curr_combo, self.pin_path, self.source_man_repo)
 
 class _RemoteRepo():
     def __init__(self, element):
