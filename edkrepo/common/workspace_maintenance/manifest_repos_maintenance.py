@@ -64,25 +64,10 @@ def pull_all_manifest_repos(edkrepo_cfg, edkrepo_user_cfg, reset_hard=False):
     '''
     cfg_man_repos = []
     user_cfg_man_repos = []
-    conflicts, duplicates = detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg)
-    if not conflicts and not duplicates:
-        cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
-        user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
-    elif conflicts:
-        for conflict in conflicts:
-            # In the case of a conflict do not pull conflicting repo
-            print(humble.CONFLICT_NO_CLONE.format(conflict))
-            cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
-            cfg_man_repos.remove(conflict)
-            user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
-            user_cfg_man_repos.remove(conflict)
-    elif duplicates:
-        for duplicate in duplicates:
-            # the duplicate needs to be ignored in on of the repo lists so it is
-            # not cloned/pulled twice
-            cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
-            user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
-            user_cfg_man_repos.remove(conflict)
+    conflicts = []
+    cfg_man_repos, user_cfg_man_repos, conflicts = list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg)
+    for conflict in conflicts:
+        print(humble.CONFLICT_NO_CLONE.format(conflict))
     for repo in cfg_man_repos:
         pull_single_manifest_repo(edkrepo_cfg.get_manifest_repo_url(repo),
                                   edkrepo_cfg.get_manifest_repo_branch(repo),
@@ -120,3 +105,33 @@ def detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg):
             else:
                 duplicates.append(repo)
     return conflicts, duplicates
+
+def list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg):
+    '''
+    Checks for conflicts/duplicates within all manifest repositories defined in
+    both the edkrepo.cfg and the edkrepo_user.cfg and resturns a list of available
+    manifest_repos for each and a list of conflicting manifest repository entries.
+    '''
+    cfg_man_repos = []
+    user_cfg_man_repos = []
+    conflicts, duplicates = detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg)
+    if not conflicts and not duplicates:
+        cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
+        user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
+    elif conflicts:
+        for conflict in conflicts:
+            # In the case of a conflict do not pull conflicting repo
+            cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
+            cfg_man_repos.remove(conflict)
+            user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
+            user_cfg_man_repos.remove(conflict)
+    elif duplicates:
+        for duplicate in duplicates:
+            # the duplicate needs to be ignored in on of the repo lists so it is
+            # not cloned/pulled twice
+            cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
+            user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
+            user_cfg_man_repos.remove(duplicate)
+    return cfg_man_repos, user_cfg_man_repos, conflicts
+
+
