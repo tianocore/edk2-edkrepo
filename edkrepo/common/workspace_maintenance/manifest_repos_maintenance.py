@@ -15,11 +15,12 @@ import git
 from git import Repo
 
 import edkrepo.config.config_factory as cfg
-from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
+from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoInvalidParametersException
 from edkrepo.common.progress_handler import GitProgressHandler
 import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as humble
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
-
+from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 
 def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
     '''
@@ -133,5 +134,70 @@ def list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg):
             user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
             user_cfg_man_repos.remove(duplicate)
     return cfg_man_repos, user_cfg_man_repos, conflicts
+
+
+def find_project_in_single_index (project, index_file, manifest_dir):
+    '''
+    Finds a project in a single global manifest repositories index file. If found
+    returns (True, path to file) if not returns (False, None)
+    '''
+    global_manifest_path = None
+    try:
+        proj_name = case_insensitive_single_match(project, index_file.project_list)
+    except:
+        proj_name = None
+    if proj_name:
+        ci_index_xml_rel_path = os.path.normpath(index_file.get_project_xml(proj_name))
+        global_manifest_path = os.path.join(manifest_dir, ci_index_xml_rel_path)
+        return True, global_manifest_path
+    else:
+        return False, global_manifest_path
+
+
+def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_msg_man_repo, except_msg_not_found, man_repo=None):
+    '''
+    Finds the project in all manifest repositories listed in the edkrepo.efg and
+    edkrepo_user.cfg. If a project with the same name is found uses man_repo to select
+    the correct entry
+    '''
+    cfg_man_repos, user_cfg_man_repos, conflicts = list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg)
+    projects = {}
+    for repo in cfg_man_repos:
+        manifest_dir = edkrepo_cfg.manifest_repo_abs_path(repo)
+        index_file = CiIndexXml(os.path.join(manifest_dir, 'CiIndex.xml'))
+        found, man_path = find_project_in_single_index(project, index_file, manifest_dir)
+        if found:
+            projects[repo] = ('edkrepo_cfg', man_path)
+    for repo in user_cfg_man_repos:
+        manifest_dir = edkrepo_user_cfg.manifest_repo_abs_path(repo)
+        index_file = CiIndexXml(os.path.join(manifest_dir, 'CiIndex.xml'))
+        found, man_path = find_project_in_single_index(project, index_file, manifest_dir)
+        if found:
+            projects[repo] = ('edkrepo_user_cfg', man_path)
+    if len(projects.keys()) == 1:
+        repo = list(projects.keys())[0]
+        return repo, projects[repo][0], projects[repo][1]
+    elif len(projects.keys()) > 1 and man_repo:
+        try:
+            return man_repo, projects[man_repo][0], projects[man_repo][1]
+        except KeyError:
+            raise EdkrepoInvalidParametersException(except_msg_man_repo)
+    elif os.path.isabs(project):
+        return None, None, project
+    elif os.path.isfile(os.path.join(os.getcwd(), project)):
+        return None, None, os.path.join(os.getcwd(), project)
+    elif not os.path.dirname(project):
+        for repo in cfg_man_repos:
+            if (man_repo and (repo == man_repo)) or not man_repo:
+                for dirpath, dirname, filenames in os.walk(edkrepo_cfg.manifest_repo_abs_path(repo)):
+                    if project in filenames:
+                        return repo, 'edkrepo_cfg', os.path.join(dirpath, project)
+        for repo in user_cfg_man_repos:
+            if (man_repo and (repo == man_repo)) or not man_repo:
+                for dirpath, dirname, filenames in os.walk(edkrepo_user_cfg.manifest_repo_abs_path(repo)):
+                    if project in filenames:
+                        return repo, 'edkrepo_user_cfg', os.path.join(dirpath, project)
+
+
 
 
