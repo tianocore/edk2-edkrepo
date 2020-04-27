@@ -199,5 +199,20 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
                         return repo, 'edkrepo_user_cfg', os.path.join(dirpath, project)
 
 
+def find_source_man_repo (project_manifest, edkrepo_cfg, edkrepo_user_cfg):
+    '''
+    Finds the source manifest repo for a given project.
+    '''
+    if project_manifest.general_config.source_man_repo:
+       return project_manifest.general_config.source_man_repo
+    else:
+        src_man_repo, src_config, src_man_path = find_project_in_all_indices(project_manifest.project_info.codename,
+                                                                             edkrepo_cfg,
+                                                                             edkrepo_user_cfg,
+                                                                             humble.PROJ_NOT_IN_REPO.format(project_manifest.project_info.codename),
+                                                                             humble.SOURCE_MAN_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
+                                                                             man_repo=None)
+        project_manifest.write_source_manifest_repo(src_man_repo)
+        return src_man_repo    
 
 

@@ -25,3 +25,5 @@ CONFLICT_NO_CLONE = ('The definition of global manifest repository, {}, '
                      'in the edkrepo_user.cfg does not match the definition in the edkrepo.cfg. '
                      'This global manifest repository will not be downloaded or updated. '
                      'Resolve the conflict and then re-run the failed operation')
+SOURCE_MAN_REPO_NOT_FOUND = 'Could not determine the source global manifest repository for project: {}'
+PROJ_NOT_IN_REPO = 'Project: {} does not exist in any global manifest repository'
