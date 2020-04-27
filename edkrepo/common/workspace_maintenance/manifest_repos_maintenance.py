@@ -199,7 +199,7 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
                         return repo, 'edkrepo_user_cfg', os.path.join(dirpath, project)
 
 
-def find_source_man_repo (project_manifest, edkrepo_cfg, edkrepo_user_cfg):
+def find_source_man_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None):
     '''
     Finds the source manifest repo for a given project.
     '''
@@ -213,6 +213,25 @@ def find_source_man_repo (project_manifest, edkrepo_cfg, edkrepo_user_cfg):
                                                                              humble.SOURCE_MAN_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
                                                                              man_repo=None)
         project_manifest.write_source_manifest_repo(src_man_repo)
-        return src_man_repo    
+        return src_man_repo
+
+def pull_workspace_man_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None, reset_hard=False):
+    '''
+    Pulls only the global manifest repo for the current workspace.
+    '''
+    src_man_repo = find_source_man_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo)
+    config_repos, user_config_repos, conflicts = list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg)
+    if src_man_repo in config_repos:
+        pull_single_manifest_repo(edkrepo_cfg.get_manifest_repo_url(src_man_repo),
+                                  edkrepo_cfg.get_manifest_repo_branch(src_man_repo),
+                                  edkrepo_cfg.get_manifest_repo_local_path(src_man_repo),
+                                  reset_hard)
+    elif src_man_repo in user_config_repos:
+        pull_single_manifest_repo(edkrepo_user_cfg.get_manifest_repo_url(src_man_repo),
+                                  edkrepo_user_cfg.get_manifest_repo_branch(src_man_repo),
+                                  edkrepo_user_cfg.get_manifest_repo_local_path(src_man_repo),
+                                  reset_hard)
+    elif src_man_repo in conflicts:
+        raise EdkrepoInvalidParametersException(humble.CONFLICT_NO_CLONE.format(src_man_repo))
 
 
