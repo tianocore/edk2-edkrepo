@@ -51,7 +51,7 @@ GENERAL_CONFIG_MISSING_ERROR = "Unable to locate <GeneralConfig>"
 SOURCELIST_EMPTY_ERROR = "Invalid input: empty values in source list"
 INVALID_PROJECTNAME_ERROR = "Invalid input: {} not found in CiIndexXml"
 UNSUPPORTED_TYPE_ERROR = "{} is not a supported xml type: {}"
-INVALID_XML_ERROR = "{} is not a valid xml file"
+INVALID_XML_ERROR = "{} is not a valid xml file ({})"
 
 
 class BaseXmlHelper():
@@ -59,8 +59,8 @@ class BaseXmlHelper():
         self._fileref = fileref
         try:
             self._tree = ET.ElementTree(file=fileref)  # fileref can be a filename or filestream
-        except Exception:
-            raise TypeError(INVALID_XML_ERROR.format(fileref))
+        except Exception as et_error:
+            raise TypeError(INVALID_XML_ERROR.format(fileref, et_error))
 
         self._xml_type = self._tree.getroot().tag
         if self._xml_type not in xml_types:
