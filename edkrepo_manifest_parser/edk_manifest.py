@@ -25,19 +25,22 @@ GeneralConfig = namedtuple('GeneralConfig', ['default_combo', 'current_combo', '
 RemoteRepo = namedtuple('RemoteRepo', ['name', 'url'])
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
 Combination = namedtuple('Combination', ['name', 'description'])
-RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse', 'enable_submodule', 'tag'])
+RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
+                                       'enable_submodule', 'tag'])
 
 SparseSettings = namedtuple('SparseSettings', ['sparse_by_default'])
 SparseData = namedtuple('SparseData', ['combination', 'remote_name', 'always_include', 'always_exclude'])
 
 FolderToFolderMapping = namedtuple('FolderToFolderMapping', ['project1', 'project2', 'remote_name', 'folders'])
-FolderToFolderMappingFolder = namedtuple('FolderToFolderMappingFolder', ['project1_folder', 'project2_folder', 'excludes'])
+FolderToFolderMappingFolder = namedtuple('FolderToFolderMappingFolder', ['project1_folder', 'project2_folder',
+                                                                         'excludes'])
 FolderToFolderMappingFolderExclude = namedtuple('FolderToFolderMappingFolderExclude', ['path'])
 
 SubmoduleAlternateRemote = namedtuple('SubmoduleAlternateRemote', ['remote_name', 'original_url', 'alternate_url'])
 
 REQUIRED_ATTRIB_ERROR_MSG = "Required attribute malformed in <{}>: {}"
-NO_ASSOCIATED_REMOTE = 'There are no remotes associated with the ClientGitHook entry: \nsource:{} destination:{} \nThis hook will not be installed, updated or deleted.\n'
+NO_ASSOCIATED_REMOTE = 'There are no remotes associated with the ClientGitHook entry:\nsource:{} destination:{}' \
+                       '\nThis hook will not be installed, updated or deleted.\n'
 NO_REMOTE_EXISTS_WITH_NAME = 'There are no remotes with the name: {} listed in the manifest file.'
 PIN_COMB_ERROR = "Pin \"{}\" Pin did not have a single <Combination> tag."
 DUPLICATE_TAG_ERROR = "Duplicate <{}> tag not allowed: '{}' (Note: check <include>'s"
@@ -50,12 +53,13 @@ INVALID_PROJECTNAME_ERROR = "Invalid input: {} not found in CiIndexXml"
 UNSUPPORTED_TYPE_ERROR = "{} is not a supported xml type: {}"
 INVALID_XML_ERROR = "{} is not a valid xml file"
 
+
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
         self._fileref = fileref
         try:
-            self._tree = ET.ElementTree(file=fileref)  #fileref can be a filename or filestream
-        except:
+            self._tree = ET.ElementTree(file=fileref)  # fileref can be a filename or filestream
+        except Exception:
             raise TypeError(INVALID_XML_ERROR.format(fileref))
 
         self._xml_type = self._tree.getroot().tag
@@ -97,6 +101,7 @@ class CiIndexXml(BaseXmlHelper):
         else:
             raise ValueError(INVALID_PROJECTNAME_ERROR.format(project_name))
 
+
 class _Project():
     def __init__(self, element):
         try:
@@ -105,10 +110,11 @@ class _Project():
         except KeyError as k:
             raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
         try:
-            #if the archived attrib is not explicitly set to true, then assume false
+            # if the archived attrib is not explicitly set to true, then assume false
             self.archived = (element.attrib['archived'].lower() == 'true')
-        except:
+        except Exception:
             self.archived = False
+
 
 #
 #  This class will parse and the manifest XML file and populate the named
@@ -116,22 +122,21 @@ class _Project():
 #
 class ManifestXml(BaseXmlHelper):
     def __init__(self, fileref):
-
         # Most of the attributes of this class are intended to be private as they are used for
         # internally gathering and storing the manifest data. As such, all access to them should be
         # done through the provided methods to ensure future compatibility if the xml schema changes
         super().__init__(fileref, ['Pin', 'Manifest'])
         self.__project_info = None
         self.__general_config = None
-        self.__remotes = {}                 #dict of _Remote objs, with Remote.name as key
+        self.__remotes = {}                    # dict of _Remote objs, with Remote.name as key
         self.__client_hook_list = []
-        self.__combinations = {}            #dict of _Combination objs, with Combination.name as key
-        self.__combo_sources = {}           #dict of _RepoSource obj lists, with Combination.name as key
+        self.__combinations = {}               # dict of _Combination objs, with Combination.name as key
+        self.__combo_sources = {}              # dict of _RepoSource obj lists, with Combination.name as key
         self.__dsc_list = []
-        self.__sparse_settings = None       # A single instance of platform sparse checkout settings
-        self.__sparse_data = []             # List of SparseData objects
-        self.__commit_templates = {}        #dict of commit message templates with the remote name as the key
-        self.__folder_to_folder_mappings = [] # List of FolderToFolderMapping objects
+        self.__sparse_settings = None          # A single instance of platform sparse checkout settings
+        self.__sparse_data = []                # List of SparseData objects
+        self.__commit_templates = {}           # dict of commit message templates with the remote name as the key
+        self.__folder_to_folder_mappings = []  # List of FolderToFolderMapping objects
         self.__submodule_alternate_remotes = []
 
         #
@@ -143,12 +148,12 @@ class ManifestXml(BaseXmlHelper):
             incl_file = os.path.join(incl_path, include_elem.attrib['xml'])
             try:
                 include_tree = ET.ElementTree(file=incl_file)
-            except:
+            except Exception:
                 raise TypeError("{} is not a valid xml file".format(incl_file))
             for elem in include_tree.iterfind('*'):
                 if elem.tag != 'ProjectInfo' and elem.tag != 'GeneralConfig':
                     tree_root.append(elem)
-            #remove include tags after added to etree to prevent feedback issues
+            # remove include tags after added to etree to prevent feedback issues
             tree_root.remove(include_elem)
 
         #
@@ -388,7 +393,7 @@ class ManifestXml(BaseXmlHelper):
         # Note: It will also strip all the comments from the file
         #
         if self._xml_type == 'Pin':
-            #raise Warning("This method is not supported for Pin xmls")
+            # raise Warning("This method is not supported for Pin xmls")
             return
         if filename is None:
             filename = self._fileref
@@ -462,12 +467,12 @@ class ManifestXml(BaseXmlHelper):
         # Only one of Branch or SHA is required to write PIN and checkout code
         for src_tuple in repo_source_list:
             if (src_tuple.root is None or src_tuple.remote_name is None or src_tuple.remote_url is
-                None or (src_tuple.commit is None and src_tuple.branch is None and src_tuple.tag is None)):
+                    None or (src_tuple.commit is None and src_tuple.branch is None and src_tuple.tag is None)):
                 raise ValueError("Invalid input: empty values in source list")
 
             # the data to create the remote elements could also be retrieved
             # from __remotes, but this is easier
-            elem = ET.SubElement(remote_root, 'Remote', {'name' : src_tuple.remote_name})
+            elem = ET.SubElement(remote_root, 'Remote', {'name': src_tuple.remote_name})
             elem.text = src_tuple.remote_url
             elem.tail = '\n    '
 
@@ -487,22 +492,33 @@ class ManifestXml(BaseXmlHelper):
             if src_tuple.commit:
                 if src_tuple.branch:
                     if src_tuple.tag:
-                        elem = ET.SubElement(source_root, 'Source', {'localRoot':src_tuple.root, 'remote':src_tuple.remote_name,
-                                                                     'branch':src_tuple.branch, 'commit':src_tuple.commit,
-                                                                     'sparseCheckout':sparse, 'enable_submodule':sub,
-                                                                     'tag':src_tuple.tag})
+                        elem = ET.SubElement(source_root, 'Source', {'localRoot': src_tuple.root,
+                                                                     'remote': src_tuple.remote_name,
+                                                                     'branch': src_tuple.branch,
+                                                                     'commit': src_tuple.commit,
+                                                                     'sparseCheckout': sparse,
+                                                                     'enable_submodule': sub,
+                                                                     'tag': src_tuple.tag})
                     else:
-                        elem = ET.SubElement(source_root, 'Source', {'localRoot':src_tuple.root, 'remote':src_tuple.remote_name,
-                                                                     'branch':src_tuple.branch, 'commit':src_tuple.commit,
-                                                                     'sparseCheckout':sparse, 'enable_submodule':sub})
+                        elem = ET.SubElement(source_root, 'Source', {'localRoot': src_tuple.root,
+                                                                     'remote': src_tuple.remote_name,
+                                                                     'branch': src_tuple.branch,
+                                                                     'commit': src_tuple.commit,
+                                                                     'sparseCheckout': sparse,
+                                                                     'enable_submodule': sub})
                 elif src_tuple.branch is None and src_tuple.tag:
-                    elem = ET.SubElement(source_root, 'Source', {'localRoot':src_tuple.root, 'remote':src_tuple.remote_name,
-                                                                 'commit':src_tuple.commit,'sparseCheckout':sparse,
-                                                                 'enable_submodule':sub, 'tag':src_tuple.tag})
+                    elem = ET.SubElement(source_root, 'Source', {'localRoot': src_tuple.root,
+                                                                 'remote': src_tuple.remote_name,
+                                                                 'commit': src_tuple.commit,
+                                                                 'sparseCheckout': sparse,
+                                                                 'enable_submodule': sub,
+                                                                 'tag': src_tuple.tag})
                 elif src_tuple.branch is None and src_tuple.tag is None:
-                    elem = ET.SubElement(source_root, 'Source', {'localRoot':src_tuple.root, 'remote':src_tuple.remote_name,
-                                                                 'commit':src_tuple.commit,'sparseCheckout':sparse,
-                                                                 'enable_submodule':sub})
+                    elem = ET.SubElement(source_root, 'Source', {'localRoot': src_tuple.root,
+                                                                 'remote': src_tuple.remote_name,
+                                                                 'commit': src_tuple.commit,
+                                                                 'sparseCheckout': sparse,
+                                                                 'enable_submodule': sub})
             else:
                 raise ValueError('Pin.xml cannot be generated with an empty commit value')
 
@@ -570,9 +586,9 @@ class ManifestXml(BaseXmlHelper):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+
 class _ProjectInfo():
     def __init__(self, element):
-
         try:
             self.codename = element.find('CodeName').text
             self.descript = element.find('Description').text
@@ -583,17 +599,17 @@ class _ProjectInfo():
             self.lead_list = []
             for lead in element.findall('DevLead'):
                 self.lead_list.append(lead.text)
-        except:
+        except Exception:
             self.lead_list = None
 
         try:
             self.org = element.find('Org').text
-        except:
+        except Exception:
             self.org = None
 
         try:
             self.short_name = element.find('ShortName').text
-        except:
+        except Exception:
             self.short_name = None
 
         try:
@@ -601,27 +617,27 @@ class _ProjectInfo():
             subroot = element.find('LeadReviewers')
             for reviewer in subroot.iter(tag='Reviewer'):
                 self.reviewer_list.append(reviewer.text)
-        except:
+        except Exception:
             self.reviewer_list = None
-
 
     @property
     def tuple(self):
         return ProjectInfo(self.codename, self.descript, self.lead_list, self.reviewer_list, self.org, self.short_name)
 
+
 class _GeneralConfig():
     def __init__(self, element):
         try:
             self.pin_path = element.find('PinPath').text
-        except:
+        except Exception:
             self.pin_path = None
         try:
             self.default_combo = element.find('DefaultCombo').attrib['combination']
-        except:
+        except Exception:
             self.default_combo = None
         try:
             self.curr_combo = element.find('CurrentClonedCombo').attrib['combination']
-        except:
+        except Exception:
             self.curr_combo = None
         try:
             self.source_manifest_repo = element.find('SourceManifestRepository').attrib['manifest_repo']
@@ -631,6 +647,7 @@ class _GeneralConfig():
     @property
     def tuple(self):
         return GeneralConfig(self.default_combo, self.curr_combo, self.pin_path, self.source_manifest_repo)
+
 
 class _RemoteRepo():
     def __init__(self, element):
@@ -644,6 +661,7 @@ class _RemoteRepo():
     def tuple(self):
         return RemoteRepo(self.name, self.url)
 
+
 class _RepoHook():
     def __init__(self, element, remotes):
         try:
@@ -653,17 +671,18 @@ class _RepoHook():
             raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
         try:
             self.remote_url = remotes[element.attrib['remote']].url
-        except:
+        except Exception:
             self.remote_url = None
             print(NO_ASSOCIATED_REMOTE.format(self.source, self.dest_path))
         try:
             self.dest_file = element.attrib['destination_file']
-        except:
+        except Exception:
             self.dest_file = None
 
     @property
     def tuple(self):
         return RepoHook(self.source, self.dest_path, self.dest_file, self.remote_url)
+
 
 class _Combination():
     def __init__(self, element):
@@ -673,16 +692,17 @@ class _Combination():
             raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
         try:
             self.description = element.attrib['description']
-        except:
-            self.description = None   #description is optional attribute
+        except Exception:
+            self.description = None   # description is optional attribute
         try:
             self.archived = (element.attrib['archived'].lower() == 'true')
-        except:
+        except Exception:
             self.archived = False
 
     @property
     def tuple(self):
         return Combination(self.name, self.description)
+
 
 class _RepoSource():
     def __init__(self, element, remotes):
@@ -694,25 +714,25 @@ class _RepoSource():
             raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
         try:
             self.branch = element.attrib['branch']
-        except:
+        except Exception:
             self.branch = None
         try:
             self.commit = element.attrib['commit']
-        except:
+        except Exception:
             self.commit = None
         try:
             self.tag = element.attrib['tag']
-        except:
+        except Exception:
             self.tag = None
         try:
-            #if the sparse attrib is not explicitly set to true, then assume false
+            # if the sparse attrib is not explicitly set to true, then assume false
             self.sparse = (element.attrib['sparseCheckout'].lower() == 'true')
-        except:
+        except Exception:
             self.sparse = False
         try:
-            #If enableSubmodule is not set to True then default to False
+            # If enableSubmodule is not set to True then default to False
             self.enableSub = (element.attrib['enableSubmodule'].lower() == 'true')
-        except:
+        except Exception:
             self.enableSub = False
 
         if self.branch is None and self.commit is None and self.tag is None:
@@ -720,19 +740,22 @@ class _RepoSource():
 
     @property
     def tuple(self):
-        return RepoSource(self.root, self.remote_name, self.remote_url, self.branch, self.commit, self.sparse, self.enableSub, self.tag)
+        return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
+                          self.commit, self.sparse, self.enableSub, self.tag)
+
 
 class _SparseSettings():
     def __init__(self, element):
         self.sparse_by_default = False
         try:
             self.sparse_by_default = (element.attrib['sparseByDefault'].lower() == 'true')
-        except:
+        except Exception:
             pass
 
     @property
     def tuple(self):
         return SparseSettings(self.sparse_by_default)
+
 
 class _SparseData():
     def __init__(self, element):
@@ -742,11 +765,11 @@ class _SparseData():
         self.always_exclude = []
         try:
             self.combination = element.attrib['combination']
-        except:
+        except Exception:
             pass
         try:
             self.remote_name = element.attrib['remote']
-        except:
+        except Exception:
             pass
         for includes in element.iter(tag='AlwaysInclude'):
             self.always_include.extend(includes.text.split('|'))
@@ -757,17 +780,19 @@ class _SparseData():
     def tuple(self):
         return SparseData(self.combination, self.remote_name, self.always_include, self.always_exclude)
 
+
 class _FolderToFolderMappingFolderExclude():
     def __init__(self, element):
         self.path = None
         try:
             self.path = element.attrib['path']
-        except:
+        except Exception:
             pass
 
     @property
     def tuple(self):
         return FolderToFolderMappingFolderExclude(self.path)
+
 
 class _FolderToFolderMappingFolder():
     def __init__(self, element):
@@ -776,11 +801,11 @@ class _FolderToFolderMappingFolder():
         self.excludes = []
         try:
             self.project1_folder = element.attrib['project1']
-        except:
+        except Exception:
             pass
         try:
             self.project2_folder = element.attrib['project2']
-        except:
+        except Exception:
             pass
         for exclude in element.iter(tag='Exclude'):
             self.excludes.append(_FolderToFolderMappingFolderExclude(exclude))
@@ -788,6 +813,7 @@ class _FolderToFolderMappingFolder():
     @property
     def tuple(self):
         return FolderToFolderMappingFolder(self.project1_folder, self.project2_folder, self.excludes)
+
 
 class _FolderToFolderMapping():
     def __init__(self, element):
@@ -797,15 +823,15 @@ class _FolderToFolderMapping():
         self.folders = []
         try:
             self.project1 = element.attrib['project1']
-        except:
+        except Exception:
             pass
         try:
             self.project2 = element.attrib['project2']
-        except:
+        except Exception:
             pass
         try:
             self.remote_name = element.attrib['remote']
-        except:
+        except Exception:
             pass
         for folder in element.iter(tag='Folder'):
             self.folders.append(_FolderToFolderMappingFolder(folder))
@@ -833,6 +859,7 @@ class _SubmoduleAlternateRemote():
     def tuple(self):
         return SubmoduleAlternateRemote(self.remote_name, self.originalUrl, self.altUrl)
 
+
 #
 # Optional entry point for debug and validation of the CiIndexXml & ManifestXml classes
 #
@@ -846,7 +873,8 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("InputFile", help="Xml file to parse", nargs='?', default="manifest.xml")
-    parser.add_argument('-v', '--verbose', action='store_true', help='Increased verbosity including exception tracebacks')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='Increased verbosity including exception tracebacks')
 
     args = parser.parse_args()
 
@@ -955,6 +983,7 @@ def main():
         print('{} is an invalid Manifest or Pin file or an invalid xml file.'.format(args.InputFile))
         if args.verbose:
             traceback.print_exc()
+
 
 if __name__ == "__main__":
     main()
