@@ -73,16 +73,16 @@ class BaseXmlHelper():
 class CiIndexXml(BaseXmlHelper):
     def __init__(self, fileref):
         super().__init__(fileref, 'ProjectList')
-        self.__projects = {}
+        self._projects = {}
         for element in self._tree.iter(tag='Project'):
             proj = _Project(element)
             # Todo: add check for unique
-            self.__projects[proj.name] = proj
+            self._projects[proj.name] = proj
 
     @property
     def project_list(self):
         proj_names = []
-        for proj in self.__projects.values():
+        for proj in self._projects.values():
             if proj.archived is False:
                 proj_names.append(proj.name)
         return proj_names
@@ -90,14 +90,14 @@ class CiIndexXml(BaseXmlHelper):
     @property
     def archived_project_list(self):
         proj_names = []
-        for proj in self.__projects.values():
+        for proj in self._projects.values():
             if proj.archived is True:
                 proj_names.append(proj.name)
         return proj_names
 
     def get_project_xml(self, project_name):
-        if project_name in self.__projects:
-            return self.__projects[project_name].xmlPath
+        if project_name in self._projects:
+            return self._projects[project_name].xmlPath
         else:
             raise ValueError(INVALID_PROJECTNAME_ERROR.format(project_name))
 
@@ -126,18 +126,18 @@ class ManifestXml(BaseXmlHelper):
         # internally gathering and storing the manifest data. As such, all access to them should be
         # done through the provided methods to ensure future compatibility if the xml schema changes
         super().__init__(fileref, ['Pin', 'Manifest'])
-        self.__project_info = None
-        self.__general_config = None
-        self.__remotes = {}                    # dict of _Remote objs, with Remote.name as key
-        self.__client_hook_list = []
-        self.__combinations = {}               # dict of _Combination objs, with Combination.name as key
-        self.__combo_sources = {}              # dict of _RepoSource obj lists, with Combination.name as key
-        self.__dsc_list = []
-        self.__sparse_settings = None          # A single instance of platform sparse checkout settings
-        self.__sparse_data = []                # List of SparseData objects
-        self.__commit_templates = {}           # dict of commit message templates with the remote name as the key
-        self.__folder_to_folder_mappings = []  # List of FolderToFolderMapping objects
-        self.__submodule_alternate_remotes = []
+        self._project_info = None
+        self._general_config = None
+        self._remotes = {}                    # dict of _Remote objs, with Remote.name as key
+        self._client_hook_list = []
+        self._combinations = {}               # dict of _Combination objs, with Combination.name as key
+        self._combo_sources = {}              # dict of _RepoSource obj lists, with Combination.name as key
+        self._dsc_list = []
+        self._sparse_settings = None          # A single instance of platform sparse checkout settings
+        self._sparse_data = []                # List of SparseData objects
+        self._commit_templates = {}           # dict of commit message templates with the remote name as the key
+        self._folder_to_folder_mappings = []  # List of FolderToFolderMapping objects
+        self._submodule_alternate_remotes = []
 
         #
         # Append include XML's to the Manifest etree before parsing
@@ -161,19 +161,19 @@ class ManifestXml(BaseXmlHelper):
         #
         for subroot in self._tree.iter(tag='RemoteList'):
             for element in subroot.iter(tag='Remote'):
-                self._add_unique_item(_RemoteRepo(element), self.__remotes, element.tag)
+                self._add_unique_item(_RemoteRepo(element), self._remotes, element.tag)
 
         #
         # parse <ProjectInfo> tags
         #
         subroot = self._tree.find('ProjectInfo')
-        self.__project_info = _ProjectInfo(subroot)
+        self._project_info = _ProjectInfo(subroot)
 
         #
         # parse <GeneralConfig> tags
         #
         subroot = self._tree.find('GeneralConfig')
-        self.__general_config = _GeneralConfig(subroot)
+        self._general_config = _GeneralConfig(subroot)
 
         #
         # parse <ClientGitHookList> tags
@@ -181,7 +181,7 @@ class ManifestXml(BaseXmlHelper):
         #
         for subroot in self._tree.iter(tag='ClientGitHookList'):
             for element in subroot.iter(tag='ClientGitHook'):
-                self.__client_hook_list.append(_RepoHook(element, self.__remotes))
+                self._client_hook_list.append(_RepoHook(element, self._remotes))
 
         #
         # Parse <SubmoduleAlternateRemotes>
@@ -189,7 +189,7 @@ class ManifestXml(BaseXmlHelper):
         #
         for subroot in self._tree.iter(tag='SubmoduleAlternateRemotes'):
             for element in subroot.iter(tag='SubmoduleAlternateRemote'):
-                self.__submodule_alternate_remotes.append(_SubmoduleAlternateRemote(element, self.__remotes))
+                self._submodule_alternate_remotes.append(_SubmoduleAlternateRemote(element, self._remotes))
 
         #
         # parse <CombinationList> tags
@@ -223,7 +223,7 @@ class ManifestXml(BaseXmlHelper):
         #
         for subroot in self._tree.iter(tag='DscList'):
             for element in subroot.iter(tag='Dsc'):
-                self.__dsc_list.append(element.text)
+                self._dsc_list.append(element.text)
 
         #
         # Process <SparseCheckout> tag
@@ -231,11 +231,11 @@ class ManifestXml(BaseXmlHelper):
         subroot = self._tree.find('SparseCheckout')
         if subroot is not None:
             try:
-                self.__sparse_settings = _SparseSettings(subroot.find('SparseSettings'))
+                self._sparse_settings = _SparseSettings(subroot.find('SparseSettings'))
             except KeyError as k:
                 raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, subroot.tag))
             for sparse_data in subroot.iter(tag='SparseData'):
-                self.__sparse_data.append(_SparseData(sparse_data))
+                self._sparse_data.append(_SparseData(sparse_data))
 
         #
         # Process any commit log templates that may exist (optional)
@@ -248,7 +248,7 @@ class ManifestXml(BaseXmlHelper):
                     template_text = template_element.text
                 except KeyError as k:
                     raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, subroot.tag))
-                self.__commit_templates[remote_name] = template_text
+                self._commit_templates[remote_name] = template_text
 
         #
         # Process <FolderToFolderMappingList> tag
@@ -256,7 +256,7 @@ class ManifestXml(BaseXmlHelper):
         subroot = self._tree.find('FolderToFolderMappingList')
         if subroot is not None:
             for f2f_mapping in subroot.iter(tag='FolderToFolderMapping'):
-                self.__folder_to_folder_mappings.append(_FolderToFolderMapping(f2f_mapping))
+                self._folder_to_folder_mappings.append(_FolderToFolderMapping(f2f_mapping))
 
         return
 
@@ -274,11 +274,11 @@ class ManifestXml(BaseXmlHelper):
     def _add_combo_source(self, subroot, combo):
         # create a list of _RepoSource objs from the <Source> tags in subroot
         # and add it to the __combo_sources dictionary
-        self._add_unique_item(combo, self.__combinations, subroot.tag)
+        self._add_unique_item(combo, self._combinations, subroot.tag)
         temp_sources = []
         for element in subroot.iter(tag='Source'):
-            temp_sources.append(_RepoSource(element, self.__remotes))
-        self.__combo_sources[combo.name] = temp_sources
+            temp_sources.append(_RepoSource(element, self._remotes))
+        self._combo_sources[combo.name] = temp_sources
 
     def _add_unique_item(self, obj, item_dict, tag):
         # add the 'obj' to 'dict', or raise error if it already exists
@@ -299,56 +299,56 @@ class ManifestXml(BaseXmlHelper):
     #
     @property
     def project_info(self):
-        return self.__project_info.tuple
+        return self._project_info.tuple
 
     @property
     def general_config(self):
-        return self.__general_config.tuple
+        return self._general_config.tuple
 
     @property
     def remotes(self):
-        return self._tuple_list(self.__remotes.values())
+        return self._tuple_list(self._remotes.values())
 
     @property
     def combinations(self):
-        return self._tuple_list([x for x in self.__combinations.values() if not x.archived])
+        return self._tuple_list([x for x in self._combinations.values() if not x.archived])
 
     @property
     def archived_combinations(self):
-        return self._tuple_list([x for x in self.__combinations.values() if x.archived])
+        return self._tuple_list([x for x in self._combinations.values() if x.archived])
 
     def get_repo_sources(self, combo_name):
-        if combo_name in self.__combo_sources:
-            return self._tuple_list(self.__combo_sources[combo_name])
+        if combo_name in self._combo_sources:
+            return self._tuple_list(self._combo_sources[combo_name])
         elif combo_name.startswith('Pin:'):
             # If currently checked out onto a pin file reture the sources in the
             # default combo
-            return self._tuple_list(self.__combo_sources[self.general_config.default_combo])
+            return self._tuple_list(self._combo_sources[self.general_config.default_combo])
         else:
             raise ValueError(COMB_INVALIDINPUT_ERROR.format(combo_name))
 
     @property
     def repo_hooks(self):
-        return self._tuple_list(self.__client_hook_list)
+        return self._tuple_list(self._client_hook_list)
 
     @property
     def dsc_list(self):
-        return self.__dsc_list
+        return self._dsc_list
 
     @property
     def sparse_settings(self):
-        if self.__sparse_settings:
-            return self.__sparse_settings.tuple
+        if self._sparse_settings:
+            return self._sparse_settings.tuple
         return None
 
     @property
     def sparse_data(self):
-        return self._tuple_list(self.__sparse_data)
+        return self._tuple_list(self._sparse_data)
 
     @property
     def folder_to_folder_mappings(self):
         f2f_tuples = []
-        for f2f_mapping in self.__folder_to_folder_mappings:
+        for f2f_mapping in self._folder_to_folder_mappings:
             folders = f2f_mapping.folders
             folder_tuples = []
             for folder in folders:
@@ -373,15 +373,15 @@ class ManifestXml(BaseXmlHelper):
 
     @property
     def commit_templates(self):
-        return self.__commit_templates
+        return self._commit_templates
 
     @property
     def submodule_alternate_remotes(self):
-        return self._tuple_list(self.__submodule_alternate_remotes)
+        return self._tuple_list(self._submodule_alternate_remotes)
 
     def get_submodule_alternates_for_remote(self, remote_name):
         alternates = []
-        for alternate in self.__submodule_alternate_remotes:
+        for alternate in self._submodule_alternate_remotes:
             if alternate.remote_name == remote_name:
                 alternates.append(alternate.tuple)
         return alternates
@@ -409,7 +409,7 @@ class ManifestXml(BaseXmlHelper):
 
         element.attrib['combination'] = combo_name
         self._tree.write(filename)
-        self.__general_config.current_combo = combo_name
+        self._general_config.current_combo = combo_name
 
     def write_source_manifest_repo(self, manifest_repo, filename=None):
         '''
@@ -461,7 +461,7 @@ class ManifestXml(BaseXmlHelper):
 
         remote_root = ET.SubElement(pin_root, 'RemoteList')
         source_root = ET.SubElement(pin_root, 'Combination')
-        source_root.attrib['name'] = self.__combinations[combo_name].name
+        source_root.attrib['name'] = self._combinations[combo_name].name
 
         # Add tags for each RepoSource tuple in the list provided
         # Only one of Branch or SHA is required to write PIN and checkout code
