@@ -3,7 +3,7 @@
 ## @file
 # edkrepo_entry_point.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -27,6 +27,8 @@ import edkrepo
 
 #Prefer the site-packages version of edkrepo
 sitepackages = site.getsitepackages()
+if site.ENABLE_USER_SITE:
+    sitepackages.append(site.getusersitepackages())
 sys.path = sitepackages + sys.path
 edkrepo_site_dir = None
 edkrepo_package_path = os.path.dirname(os.path.dirname(edkrepo.__file__))
