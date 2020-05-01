@@ -15,7 +15,9 @@ import git
 from git import Repo
 
 import edkrepo.config.config_factory as cfg
+from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 from edkrepo.common.progress_handler import GitProgressHandler
 import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as humble
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
@@ -66,7 +68,7 @@ def pull_all_manifest_repos(edkrepo_cfg, edkrepo_user_cfg, reset_hard=False):
     cfg_man_repos = []
     user_cfg_man_repos = []
     conflicts = []
-    cfg_man_repos, user_cfg_man_repos, conflicts = list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg)
+    cfg_man_repos, user_cfg_man_repos, conflicts = list_available_manifest_repos(edkrepo_cfg, edkrepo_user_cfg)
     for conflict in conflicts:
         print(humble.CONFLICT_NO_CLONE.format(conflict))
     for repo in cfg_man_repos:
@@ -81,7 +83,7 @@ def pull_all_manifest_repos(edkrepo_cfg, edkrepo_user_cfg, reset_hard=False):
                                   reset_hard)
 
 
-def detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg):
+def detect_manifest_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg):
     '''
     Determines whether there is are conflicting or duplicated manifest
     repositories listed in the edkrepo.cfg and the edkrepo_user.cfg.
@@ -107,7 +109,7 @@ def detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg):
                 duplicates.append(repo)
     return conflicts, duplicates
 
-def list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg):
+def list_available_manifest_repos(edkrepo_cfg, edkrepo_user_cfg):
     '''
     Checks for conflicts/duplicates within all manifest repositories defined in
     both the edkrepo.cfg and the edkrepo_user.cfg and resturns a list of available
@@ -115,7 +117,7 @@ def list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg):
     '''
     cfg_man_repos = []
     user_cfg_man_repos = []
-    conflicts, duplicates = detect_man_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg)
+    conflicts, duplicates = detect_manifest_repo_conflicts_duplicates(edkrepo_cfg, edkrepo_user_cfg)
     if not conflicts and not duplicates:
         cfg_man_repos.extend(edkrepo_cfg.manifest_repo_list)
         user_cfg_man_repos.extend(edkrepo_user_cfg.manifest_repo_list)
@@ -160,17 +162,17 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
     edkrepo_user.cfg. If a project with the same name is found uses man_repo to select
     the correct entry
     '''
-    cfg_man_repos, user_cfg_man_repos, conflicts = list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg)
+    cfg_man_repos, user_cfg_man_repos, conflicts = list_available_manifest_repos(edkrepo_cfg, edkrepo_user_cfg)
     projects = {}
     for repo in cfg_man_repos:
         manifest_dir = edkrepo_cfg.manifest_repo_abs_path(repo)
-        index_file = CiIndexXml(os.path.join(manifest_dir, 'CiIndex.xml'))
+        index_file = CiIndexXml(os.path.join(manifest_dir, CI_INDEX_FILE_NAME))
         found, man_path = find_project_in_single_index(project, index_file, manifest_dir)
         if found:
             projects[repo] = ('edkrepo_cfg', man_path)
     for repo in user_cfg_man_repos:
         manifest_dir = edkrepo_user_cfg.manifest_repo_abs_path(repo)
-        index_file = CiIndexXml(os.path.join(manifest_dir, 'CiIndex.xml'))
+        index_file = CiIndexXml(os.path.join(manifest_dir, CI_INDEX_FILE_NAME))
         found, man_path = find_project_in_single_index(project, index_file, manifest_dir)
         if found:
             projects[repo] = ('edkrepo_user_cfg', man_path)
@@ -197,30 +199,32 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
                 for dirpath, dirname, filenames in os.walk(edkrepo_user_cfg.manifest_repo_abs_path(repo)):
                     if project in filenames:
                         return repo, 'edkrepo_user_cfg', os.path.join(dirpath, project)
+    else:
+        raise EdkrepoManifestNotFoundException(humble.PROJ_NOT_IN_REPO.format(project))
 
 
-def find_source_man_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None):
+def find_source_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None):
     '''
     Finds the source manifest repo for a given project.
     '''
-    if project_manifest.general_config.source_man_repo:
-       return project_manifest.general_config.source_man_repo
+    if project_manifest.general_config.source_manifest_repo:
+       return project_manifest.general_config.source_manifest_repo
     else:
         src_man_repo, src_config, src_man_path = find_project_in_all_indices(project_manifest.project_info.codename,
                                                                              edkrepo_cfg,
                                                                              edkrepo_user_cfg,
                                                                              humble.PROJ_NOT_IN_REPO.format(project_manifest.project_info.codename),
-                                                                             humble.SOURCE_MAN_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
+                                                                             humble.SOURCE_MANIFEST_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
                                                                              man_repo=None)
         project_manifest.write_source_manifest_repo(src_man_repo)
         return src_man_repo
 
-def pull_workspace_man_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None, reset_hard=False):
+def pull_workspace_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None, reset_hard=False):
     '''
     Pulls only the global manifest repo for the current workspace.
     '''
-    src_man_repo = find_source_man_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo)
-    config_repos, user_config_repos, conflicts = list_available_man_repos(edkrepo_cfg, edkrepo_user_cfg)
+    src_man_repo = find_source_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo)
+    config_repos, user_config_repos, conflicts = list_available_manifest_repos(edkrepo_cfg, edkrepo_user_cfg)
     if src_man_repo in config_repos:
         pull_single_manifest_repo(edkrepo_cfg.get_manifest_repo_url(src_man_repo),
                                   edkrepo_cfg.get_manifest_repo_branch(src_man_repo),
