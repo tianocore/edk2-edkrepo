@@ -16,3 +16,4 @@ DRY_RUN_HELP = "Don't actually do anything"
 OVERRIDE_HELP = 'Ignore warnings'
 SUBMODULE_SKIP_HELP = 'Skip the pull or sync of any submodules.'
 COLOR_HELP = 'Force color output (useful with \'less -r\')'
+SOURCE_MANIFEST_REPO_HELP = "The name of the workspace's source global manifest repository"

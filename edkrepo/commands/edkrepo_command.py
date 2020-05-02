@@ -48,3 +48,9 @@ SubmoduleSkipArgument = {'name': 'skip-submodule',
                          'positional' : False,
                          'required' : False,
                          'help-text' : arguments.SUBMODULE_SKIP_HELP}
+
+SourceManifestRepoArgument = {'name' : 'source-manifest-repo',
+                         'positional': False,
+                         'required' : False,
+                         'action' : 'store',
+                         'help-text' : arguments.SOURCE_MANIFEST_REPO_HELP}
