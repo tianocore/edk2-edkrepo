@@ -60,6 +60,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGi
 from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoHookNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_single_manifest_repo
+from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo_manifest_parser import edk_manifest
 from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
@@ -570,19 +571,6 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
         if sparse_enabled or sparse_diff:
             print(SPARSE_CHECKOUT)
             sparse_checkout(workspace_path, current_repos, manifest)
-
-
-def case_insensitive_equal(str1, str2):
-    return unicodedata.normalize("NFKD", str1.casefold()) == unicodedata.normalize("NFKD", str2.casefold())
-
-
-def case_insensitive_single_match(str1, str_list):
-    matches = [x for x in str_list if case_insensitive_equal(str1, x)]
-    if len(matches) == 0:
-        raise EdkrepoNotFoundException(GEN_A_NOT_IN_B.format(str1, str_list))
-    elif len(matches) > 1:
-        raise EdkrepoFoundMultipleException(GEN_FOUND_MULT_A_IN_B.format(str1, str_list))
-    return matches[0]
 
 def get_latest_sha(repo, branch, remote_or_url='origin'):
     try:
