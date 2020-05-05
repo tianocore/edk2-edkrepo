@@ -34,12 +34,13 @@ from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL
 from edkrepo.common.pathfix import get_actual_path
 from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, clone_repos, sparse_checkout_enabled
 from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_manifest_data
-from edkrepo.common.common_repo_functions import generate_name_for_obsolete_backup, checkout_repos, check_dirty_repos
+from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
 from edkrepo.common.common_repo_functions import update_editor_config
 from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
 from edkrepo.common.common_repo_functions import has_primary_repo_remote, fetch_from_primary_repo, in_sync_with_primary
 from edkrepo.common.common_repo_functions import update_hooks, maintain_submodules, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
+from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml

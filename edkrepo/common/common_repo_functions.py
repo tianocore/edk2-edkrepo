@@ -393,27 +393,6 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
         if repo_to_checkout.enable_submodule:
             maintain_submodules(repo_to_checkout, repo, verbose)
 
-
-
-def generate_name_for_obsolete_backup(absolute_path):
-    if not os.path.exists(absolute_path):
-        raise ValueError("{} does not exist".format(absolute_path))
-    original_name = os.path.basename(absolute_path)
-    dir_name = os.path.dirname(absolute_path)
-    unique_name = ""
-    unique_name_found = False
-    index = 1
-    while not unique_name_found:
-        if index == 1:
-            unique_name = "{}_old".format(original_name)
-        else:
-            unique_name = "{}_old{}".format(original_name, index)
-        if not os.path.exists(os.path.join(dir_name, unique_name)):
-            unique_name_found = True
-        index += 1
-    return unique_name
-
-
 def verify_manifest_data(global_manifest_directory, config, verbose=False, verify_all=False, verify_proj=None, verify_archived=False):
     # Validate the project individual project selected
     if verify_proj:
