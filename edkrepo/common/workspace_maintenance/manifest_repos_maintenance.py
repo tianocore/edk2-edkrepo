@@ -185,9 +185,29 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
         except KeyError:
             raise EdkrepoInvalidParametersException(except_msg_man_repo)
     elif os.path.isabs(project):
-        return None, None, project
+        manifest = ManifestXml(project)
+        try:
+            found_manifest_repo, found_cfg, found_project = find_project_in_all_indices(manifest.project_info.codename,
+                                                                                        edkrepo_cfg,
+                                                                                        edkrepo_user_cfg,
+                                                                                        except_msg_man_repo,
+                                                                                        except_msg_not_found,
+                                                                                        man_repo)
+            return found_manifest_repo, found_cfg, project
+        except EdkrepoManifestNotFoundException:
+            return None, None, project
     elif os.path.isfile(os.path.join(os.getcwd(), project)):
-        return None, None, os.path.join(os.getcwd(), project)
+        manifest = os.path.join(os.getcwd(), project)
+        try:
+            found_manifest_repo, found_cfg, found_project = find_project_in_all_indices(manifest.project_info.codename,
+                                                                                        edkrepo_cfg,
+                                                                                        edkrepo_user_cfg,
+                                                                                        except_msg_man_repo,
+                                                                                        except_msg_not_found,
+                                                                                        man_repo)
+            return found_manifest_repo, found_cfg, project
+        except EdkrepoManifestNotFoundException:
+            return None, None, os.path.join(os.getcwd(), project)
     elif not os.path.dirname(project):
         for repo in cfg_man_repos:
             if (man_repo and (repo == man_repo)) or not man_repo:
@@ -215,7 +235,7 @@ def find_source_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, m
                                                                              edkrepo_user_cfg,
                                                                              humble.PROJ_NOT_IN_REPO.format(project_manifest.project_info.codename),
                                                                              humble.SOURCE_MANIFEST_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
-                                                                             man_repo=None)
+                                                                             man_repo)
         project_manifest.write_source_manifest_repo(src_man_repo)
         return src_man_repo
 
