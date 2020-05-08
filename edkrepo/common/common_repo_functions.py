@@ -426,6 +426,17 @@ def verify_manifest_data(global_manifest_directory, config, verbose=False, verif
             if verbose:
                 print_manifest_errors(manifestfile_validation_data)
 
+def verify_single_manifest(cfg_file, manifest_repo, manifest_path, verbose=False):
+    manifest = ManifestXml(manifest_path)
+    print(VERIFY_PROJ.format(manifest.project_info.codename))
+    index_path = os.path.join(cfg_file.manifest_repo_abs_path(manifest_repo), CI_INDEX_FILE_NAME)
+    proj_val_data = validate_manifestfiles(index_path, [manifest_path])
+    proj_val_error = get_manifest_validation_status(proj_val_data)
+    if proj_val_error:
+        if verbose:
+            print_manifest_errors(proj_val_data)
+        raise EdkrepoManifestInvalidException(VERIFY_PROJ_FAIL.format(manifest.project_info.codename))
+
 def sort_commits(manifest, workspace_path, max_commits=None):
     colorama.init()
     repo_sources_to_log = manifest.get_repo_sources(manifest.general_config.current_combo)
