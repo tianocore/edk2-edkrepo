@@ -11,13 +11,15 @@ import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
+from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.checkout_pin_args as arguments
 import edkrepo.commands.humble.checkout_pin_humble as humble
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, reset_sparse_checkout, sparse_checkout
 from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest
 from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoProjectMismatchException
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 
@@ -38,12 +40,21 @@ class CheckoutPinCommand(EdkrepoCommand):
                      'required' : True,
                      'help-text' : arguments.PIN_FILE_HELP})
         args.append(OverrideArgument)
+        args.append(SourceManifestRepoArgument)
         return metadata
 
     def run_command(self, args, config):
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
-        pin_path = self.__get_pin_path(args, workspace_path, config['cfg_file'].manifest_repo_abs_local_path, manifest)
+
+        manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+        cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        if manifest_repo in cfg:
+            manifest_repo_path = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
+        elif manifest_repo in user_cfg:
+            manifest_repo_path = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
+
+        pin_path = self.__get_pin_path(args, workspace_path, manifest_repo_path, manifest)
         pin = ManifestXml(pin_path)
         manifest_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
         check_dirty_repos(manifest, workspace_path)
