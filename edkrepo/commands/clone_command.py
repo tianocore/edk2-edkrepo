@@ -11,16 +11,18 @@ import os
 import shutil
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument
+from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.clone_args as arguments
-from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, clone_repos, sparse_checkout, verify_manifest_data
-from edkrepo.common.common_repo_functions import update_editor_config
+from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout, verify_single_manifest
+from edkrepo.common.common_repo_functions import update_editor_config, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, write_conditional_include
-from edkrepo.common.common_repo_functions import find_project_in_index, combinations_in_manifest
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
 from edkrepo.common.humble import CLONE_INVALID_WORKSPACE, CLONE_INVALID_PROJECT_ARG, CLONE_INVALID_COMBO_ARG
 from edkrepo.common.humble import SPARSE_CHECKOUT, CLONE_INVALID_LOCAL_ROOTS
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 
 
@@ -58,12 +60,14 @@ class CloneCommand(EdkrepoCommand):
                      'required': False,
                      'help-text': arguments.NO_SPARSE_HELP})
         args.append(SubmoduleSkipArgument)
+        args.append(SourceManifestRepoArgument)
         return metadata
 
 
     def run_command(self, args, config):
-        pull_latest_manifest_repo(args, config)
+        pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
         update_editor_config(config)
+
         name_or_manifest = args.ProjectNameOrManifestFile
         workspace_dir = args.Workspace
         # Check to see if requested workspace exists. If not create it. If so check for empty
@@ -77,17 +81,19 @@ class CloneCommand(EdkrepoCommand):
         if not os.path.isdir(workspace_dir):
             os.makedirs(workspace_dir)
 
-        # Get path to global manifest file
-        global_manifest_directory = config['cfg_file'].manifest_repo_abs_local_path
+        cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        manifest_repo, source_cfg, global_manifest_path = find_project_in_all_indices(args.ProjectNameOrManifestFile,
+                                                                  config['cfg_file'],
+                                                                  config['user_cfg_file'],
+                                                                  PROJ_NOT_IN_REPO.format(args.ProjectNameOrManifestFile),
+                                                                  SOURCE_MANIFEST_REPO_NOT_FOUND.format(args.ProjectNameOrManifestFile),
+                                                                  args.source_manifest_repo)
 
-        # Verify the manifest directory at this point.
-        verify_manifest_data(global_manifest_directory, config, verbose=args.verbose, verify_proj=name_or_manifest)
-
-        # Now try to find the correct manifest file.
-        index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
-        ci_index_xml = CiIndexXml(index_path)
-
-        global_manifest_path = find_project_in_index(name_or_manifest, ci_index_xml, global_manifest_directory, CLONE_INVALID_PROJECT_ARG)
+        # If this manifest is in a defined manifest repository validate the manifest within the manifest repo
+        if manifest_repo in cfg:
+            verify_single_manifest(config['cfg_file'], manifest_repo, global_manifest_path)
+        elif manifest_repo in user_cfg:
+            verify_single_manifest(config['user_cfg_file'], manifest_repo, global_manifest_path)
 
         # Copy project manifest to local manifest dir and rename it Manifest.xml.
         local_manifest_dir = os.path.join(workspace_dir, "repo")
