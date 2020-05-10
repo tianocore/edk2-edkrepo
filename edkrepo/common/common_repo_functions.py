@@ -54,6 +54,7 @@ from edkrepo.common.pathfix import get_actual_path
 from project_utils.sparse import BuildInfo, process_sparse_checkout
 from edkrepo.config.config_factory import get_workspace_path
 from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException, EdkrepoWarningException
@@ -426,11 +427,22 @@ def verify_manifest_data(global_manifest_directory, config, verbose=False, verif
             if verbose:
                 print_manifest_errors(manifestfile_validation_data)
 
+def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
+    print(VERIFY_GLOBAL)
+    if archived:
+        print(VERIFY_ARCHIVED)
+    manifest_validation_data = validate_manifestrepo(manifest_repo, archived)
+    manifest_repo_error = get_manifest_validation_status(manifest_validation_data)
+    if manifest_repo_error:
+        print(VERIFY_GLOBAL_FAIL)
+        if verbose:
+            print_manifest_errors(manifest_validation_data)
+
 def verify_single_manifest(cfg_file, manifest_repo, manifest_path, verbose=False):
     manifest = ManifestXml(manifest_path)
     print(VERIFY_PROJ.format(manifest.project_info.codename))
     index_path = os.path.join(cfg_file.manifest_repo_abs_path(manifest_repo), CI_INDEX_FILE_NAME)
-    proj_val_data = validate_manifestfiles(index_path, [manifest_path])
+    proj_val_data = validate_manifestfiles([manifest_path])
     proj_val_error = get_manifest_validation_status(proj_val_data)
     if proj_val_error:
         if verbose:

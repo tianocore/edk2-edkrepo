@@ -3,7 +3,7 @@
 ## @file
 # manifest_command.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -15,9 +15,12 @@ from colorama import Fore
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import ColorArgument
 import edkrepo.commands.arguments.manifest_args as arguments
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
-from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, verify_manifest_data
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoManifestNotFoundException
+from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, validate_manifest_repo
 from edkrepo.common.ui_functions import init_color_console
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml
 
@@ -44,46 +47,67 @@ class ManifestCommand(EdkrepoCommand):
         print()
         init_color_console(args.color)
 
-        # Get path to global manifest file
-        global_manifest_directory = config['cfg_file'].manifest_repo_abs_local_path
-        if args.verbose:
-            print("Manifest directory:")
-            print(global_manifest_directory)
-            print()
-        index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
+        cfg_file = config['cfg_file']
+        user_cfg = config['user_cfg_file']
+        cfg_man_repos, user_cfg_man_repos, conflicts = list_available_manifest_repos(cfg_file, user_cfg)
+        man_repos = {}
 
-        pull_latest_manifest_repo(args, config)
-        print()
+        pull_all_manifest_repos(cfg_file, user_cfg, False)
 
-        ci_index_xml = CiIndexXml(index_path)
+        # Get paths to the global manifest dirs and their index files
+        for repo in cfg_man_repos:
+            global_manifest_directory = cfg_file.manifest_repo_abs_path(repo)
+            index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
+            man_repos[repo] = (global_manifest_directory, index_path)
+        for repo in user_cfg_man_repos:
+            global_manifest_directory = user_cfg.manifest_repo_abs_path(repo)
+            index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
+            man_repos[repo] = (global_manifest_directory, index_path)
 
         try:
-            current_project = get_workspace_manifest().project_info.codename
+            wkspc_manifest = get_workspace_manifest()
+            current_project = wkspc_manifest.project_info.codename
+            src_man_repo = find_source_manifest_repo(wkspc_manifest, cfg_file, user_cfg, None)
         except EdkrepoWorkspaceInvalidException:
             current_project = None
+            src_man_repo = None
+        except EdkrepoManifestNotFoundException:
+            src_man_repo = None
 
-        # Attempt to make sure the manifest data is good
-        try:
-            verify_manifest_data(global_manifest_directory, config, verbose=args.verbose, verify_all=True, verify_archived=args.archived)
-        except:
+
+        for repo in man_repos.keys():
             print()
-
-        print("Projects:")
-        for project in ci_index_xml.project_list:
-            if project == current_project:
-                print("* {}{}{}".format(Fore.GREEN, project, Fore.RESET))
-            else:
-                print("  {}".format(project))
+            print("Manifest directory:")
+            print(repo)
             if args.verbose:
-                print("   -> {}".format(ci_index_xml.get_project_xml(project)))
-
-        if args.archived:
+                print('Manifest directory path:')
+                print(man_repos[repo][0])
             print()
-            print("Archived Projects:")
-            for project in ci_index_xml.archived_project_list:
-                if project == current_project:
+
+            ci_index_xml = CiIndexXml(man_repos[repo][1])
+
+            # Attempt to make sure the manifest data is good
+            try:
+                validate_manifest_repo(man_repos[repo][0], args.verbose, args.archived)
+            except:
+                print()
+
+            print("Projects:")
+            for project in sorted(ci_index_xml.project_list):
+                if (project == current_project and src_man_repo == repo) or (not src_man_repo and project == current_project):
                     print("* {}{}{}".format(Fore.GREEN, project, Fore.RESET))
                 else:
                     print("  {}".format(project))
                 if args.verbose:
                     print("   -> {}".format(ci_index_xml.get_project_xml(project)))
+
+            if args.archived:
+                print()
+                print("Archived Projects:")
+                for project in sorted(ci_index_xml.archived_project_list):
+                    if project == current_project:
+                        print("* {}{}{}".format(Fore.GREEN, project, Fore.RESET))
+                    else:
+                        print("  {}".format(project))
+                    if args.verbose:
+                        print("   -> {}".format(ci_index_xml.get_project_xml(project)))
