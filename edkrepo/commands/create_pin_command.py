@@ -12,14 +12,16 @@ from collections import namedtuple
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument
 import edkrepo.commands.arguments.create_pin_args as arguments
-from edkrepo.common.common_repo_functions import pull_latest_manifest_repo
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException, EdkrepoInvalidParametersException
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceCorruptException
 from edkrepo.common.humble import WRITING_PIN_FILE, GENERATING_PIN_DATA, GENERATING_REPO_DATA, BRANCH, COMMIT
 from edkrepo.common.humble import COMMIT_MESSAGE, PIN_PATH_NOT_PRESENT, PIN_FILE_ALREADY_EXISTS, PATH_AND_FILEPATH_USED
 from edkrepo.common.humble import MISSING_REPO
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
 from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 
@@ -49,6 +51,7 @@ class CreatePinCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.PUSH_HELP})
+        args.append(SourceManifestRepoArgument)
         return metadata
 
     def run_command(self, args, config):
@@ -56,14 +59,21 @@ class CreatePinCommand(EdkrepoCommand):
         if args.push and os.path.dirname(args.PinFileName):
             raise EdkrepoInvalidParametersException(PATH_AND_FILEPATH_USED)
 
-        pull_latest_manifest_repo(args, config)
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
 
+        if args.push:
+            src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+            pull_workspace_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
+            cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+            if src_manifest_repo in cfg:
+                manifest_repo_path = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+            elif src_manifest_repo in user_cfg:
+                manifest_repo_path = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
         # If the push flag is enabled use general_config.pin_path to determine global manifest relative location to save
         # pin file to.
         if args.push and manifest.general_config.pin_path is not None:
-            pin_dir = os.path.join(config['cfg_file'].manifest_repo_abs_local_path, os.path.normpath(manifest.general_config.pin_path))
+            pin_dir = os.path.join(manifest_repo_path, os.path.normpath(manifest.general_config.pin_path))
             pin_file_name = os.path.join(pin_dir, args.PinFileName)
         elif args.push and manifest.general_config.pin_path is None:
             raise EdkrepoManifestInvalidException(PIN_PATH_NOT_PRESENT)
@@ -104,7 +114,7 @@ class CreatePinCommand(EdkrepoCommand):
 
         # commit and push the pin file
         if args.push:
-            manifest_repo = Repo(config['cfg_file'].manifest_repo_abs_local_path)
+            manifest_repo = Repo(manifest_repo_path)
             # Create a local branch with the same name as the pin file arg and check it out before attempting the push
             # to master
             master_branch = manifest_repo.active_branch
@@ -124,4 +134,4 @@ class CreatePinCommand(EdkrepoCommand):
                 manifest_repo.git.push('origin', 'HEAD:master')
             finally:
                 manifest_repo.heads[master_branch.name].checkout()
-                manifest_repo.delete_head(local_branch, '-D')
+                manifest_repo.delete_head(local_branch, '-D')
