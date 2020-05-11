@@ -79,8 +79,6 @@ class SyncCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        update_editor_config(config)
-
         workspace_path = get_workspace_path()
         initial_manifest = get_workspace_manifest()
         current_combo = initial_manifest.general_config.current_combo
@@ -96,6 +94,8 @@ class SyncCommand(EdkrepoCommand):
         elif source_global_manifest_repo in user_cfg_manifest_repos:
             global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
             verify_single_manifest(config['user_cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
+
+        update_editor_config(config, global_manifest_directory)
 
         if not args.update_local_manifest:
             self.__check_for_new_manifest(args, config, initial_manifest, workspace_path, global_manifest_directory)
@@ -145,7 +145,7 @@ class SyncCommand(EdkrepoCommand):
         for repo_to_sync in repo_sources_to_sync:
             local_repo_path = os.path.join(workspace_path, repo_to_sync.root)
             # Update any hooks
-            update_hooks(hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo_to_sync, config)
+            update_hooks(hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo_to_sync, config, global_manifest_directory)
             repo = Repo(local_repo_path)
             #Fetch notes
             repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
@@ -200,7 +200,7 @@ class SyncCommand(EdkrepoCommand):
                     # Perform submodule updates and url redirection
                     maintain_submodules(repo_to_sync, repo)
             # Update commit message templates
-            update_repo_commit_template(workspace_path, repo, repo_to_sync, config)
+            update_repo_commit_template(workspace_path, repo, repo_to_sync, config, source_global_manifest_repo)
 
         if sync_error:
             print(SYNC_ERROR)

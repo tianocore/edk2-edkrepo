@@ -119,7 +119,7 @@ class BaseConfig():
         """Returns a list of available manifest repos"""
         if self.cfg.has_section('manifest-repos'):
             return self.cfg.options('manifest-repos')
-    
+
     def manifest_repo_props(self, manifest_repo):
         """
         Returns a list of cfg_prop objects that pertain to a given manifest
@@ -128,7 +128,7 @@ class BaseConfig():
         return [x for x in self.prop_list if manifest_repo in x.name]
 
     def get_manifest_repo_url(self, manifest_repo):
-        """ 
+        """
         Returns the URL value for a given manifest repo based on config
         file contents.
         """
@@ -172,9 +172,6 @@ class GlobalConfig(BaseConfig):
     def __init__(self):
         self.filename = os.path.join(get_edkrepo_global_data_directory(), "edkrepo.cfg")
         self.prop_list = [
-                CfgProp('manifest-repo', 'URL', 'manifest_repo_url', None, True),
-                CfgProp('manifest-repo', 'Branch', 'manifest_repo_branch', None, True),
-                CfgProp('manifest-repo', 'LocalPath', 'manifest_repo_local_path', None, True),
                 CfgProp('sparsecheckout', 'always_include', 'sparsecheckout_always_include', None, True),
                 CfgProp('sparsecheckout', 'always_exclude', 'sparsecheckout_always_exclude', None, True),
                 CfgProp('f2f-cherry-pick', 'ignored_folder_substrings', 'f2f_cp_ignored_folder_substrings'),
@@ -198,11 +195,6 @@ class GlobalConfig(BaseConfig):
         for pkg in initial_list:
             pkg_list.append(pkg.strip())
         return pkg_list
-
-    @property
-    def manifest_repo_abs_local_path(self):
-        """Provides an absolute path to the manifest repo based on configuration file values."""
-        return os.path.join(self.global_data_dir, self.manifest_repo_local_path)
 
     @property
     def sparsecheckout_data(self):

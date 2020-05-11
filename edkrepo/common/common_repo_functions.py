@@ -59,8 +59,8 @@ from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException, EdkrepoWarningException
 from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoHookNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_single_manifest_repo
+from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo_manifest_parser import edk_manifest
@@ -112,11 +112,27 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
             if repo_to_clone.enable_submodule:
                 maintain_submodules(repo_to_clone, repo, args.verbose)
 
-        # Install git hooks
-        install_hooks(project_client_side_hooks, local_repo_path, repo_to_clone, config)
+        try:
+            if 'source_manifest_repo' in vars(args).keys():
+                src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+            else:
+                src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], None)
+        except EdkrepoManifestNotFoundException:
+            src_manifest_repo = None
+        if src_manifest_repo:
+            cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+            if src_manifest_repo in cfg:
+                global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+            elif src_manifest_repo in user_cfg:
+                global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+            else:
+                global_manifest_directory = None
+        if global_manifest_directory:
+            # Install git hooks if there is a manifest repo associated with the manifest being cloned
+            install_hooks(project_client_side_hooks, local_repo_path, repo_to_clone, config, global_manifest_directory)
 
-        # Add the commit template if it exists.
-        update_repo_commit_template(workspace_dir, repo, repo_to_clone, config)
+            # Add the commit template if it exists.
+            update_repo_commit_template(workspace_dir, repo, repo_to_clone, config, global_manifest_directory)
 
         # Check to see if mirror is in sync with primary repo
         if not in_sync_with_primary(repo, repo_to_clone, args.verbose):
@@ -194,7 +210,7 @@ def maintain_submodules(repo_sources, repo, verbose = False):
     except:
         raise EdkrepoGitException(SUBMODULE_FAILURE.format(repo_sources.remote_name))
 
-def install_hooks(hooks, local_repo_path, repo_for_install, config):
+def install_hooks(hooks, local_repo_path, repo_for_install, config, global_manifest_directory):
     # Determine the which hooks are for the repo in question and which are from a URL based source or are in a global
     # manifest repo relative path
     hooks_url = []
@@ -222,7 +238,6 @@ def install_hooks(hooks, local_repo_path, repo_for_install, config):
 
     # Copy any global manifest repository relative path source based hooks
     for hook in hooks_path:
-        global_manifest_directory = config['cfg_file'].manifest_repo_abs_local_path
         man_dir_rel_hook_path = os.path.join(global_manifest_directory, hook.source)
         if not os.path.exists(man_dir_rel_hook_path):
             raise EdkrepoHookNotFoundException(HOOK_NOT_FOUND_ERROR.format(hook.source, repo_for_install.root))
@@ -258,11 +273,11 @@ def uninstall_hooks(hooks, local_repo_path, repo_for_uninstall):
                     hook_file = os.path.join(destination, (os.path.basename(str(hook.source))))
             os.remove(hook_file)
 
-def update_hooks (hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo, config):
+def update_hooks (hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo, config, global_manifest_directory):
     if hooks_add:
-        install_hooks(hooks_add, local_repo_path, repo, config)
+        install_hooks(hooks_add, local_repo_path, repo, config, global_manifest_directory)
     if hooks_update:
-        install_hooks(hooks_update, local_repo_path, repo, config)
+        install_hooks(hooks_update, local_repo_path, repo, config, global_manifest_directory)
     if hooks_uninstall:
         uninstall_hooks(hooks_uninstall, local_repo_path, repo)
 
@@ -562,14 +577,10 @@ def get_latest_sha(repo, branch, remote_or_url='origin'):
         latest_sha = None
     return latest_sha
 
-def update_repo_commit_template(workspace_dir, repo, repo_info, config):
+def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_manifest_directory):
     # Open the local manifest and get any templates
     manifest = edk_manifest.ManifestXml(os.path.join(workspace_dir, 'repo', 'Manifest.xml'))
     templates = manifest.commit_templates
-
-    # Need to know where the global manifest directory is located at this point
-    global_manifest_directory = os.path.join(get_edkrepo_global_data_directory(),
-                                             config['cfg_file'].manifest_repo_local_path)
 
     # Apply the template based on current manifest
     with repo.config_writer() as cw:
@@ -590,7 +601,7 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config):
             if cw.has_option(section='commit', option='template'):
                 cw.remove_option(section='commit', option='template')
 
-def update_editor_config(config):
+def update_editor_config(config, global_manifest_directory):
     return
 
 def has_primary_repo_remote(repo, verbose=False):

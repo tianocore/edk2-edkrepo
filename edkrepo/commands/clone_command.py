@@ -66,7 +66,6 @@ class CloneCommand(EdkrepoCommand):
 
     def run_command(self, args, config):
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
-        update_editor_config(config)
 
         name_or_manifest = args.ProjectNameOrManifestFile
         workspace_dir = args.Workspace
@@ -92,8 +91,10 @@ class CloneCommand(EdkrepoCommand):
         # If this manifest is in a defined manifest repository validate the manifest within the manifest repo
         if manifest_repo in cfg:
             verify_single_manifest(config['cfg_file'], manifest_repo, global_manifest_path)
+            update_editor_config(config, config['cfg_file'].manifest_repo_abs_path(manifest_repo))
         elif manifest_repo in user_cfg:
             verify_single_manifest(config['user_cfg_file'], manifest_repo, global_manifest_path)
+            update_editor_config(config, config['user_cfg_file'].manifest_repo_abs_path(manifest_repo))
 
         # Copy project manifest to local manifest dir and rename it Manifest.xml.
         local_manifest_dir = os.path.join(workspace_dir, "repo")
