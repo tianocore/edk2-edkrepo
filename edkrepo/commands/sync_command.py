@@ -18,7 +18,7 @@ from git import Repo
 
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import DryRunArgument, SubmoduleSkipArgument
+from edkrepo.commands.edkrepo_command import DryRunArgument, SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.sync_args as arguments
 from edkrepo.common.progress_handler import GitProgressHandler
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoManifestNotFoundException
@@ -32,8 +32,8 @@ from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE,
 from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL, SYNC_INCOMPATIBLE_COMBO
 from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL
 from edkrepo.common.pathfix import get_actual_path
-from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, clone_repos, sparse_checkout_enabled
-from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_manifest_data
+from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout_enabled
+from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_single_manifest
 from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
 from edkrepo.common.common_repo_functions import update_editor_config
 from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
@@ -41,8 +41,12 @@ from edkrepo.common.common_repo_functions import has_primary_repo_remote, fetch_
 from edkrepo.common.common_repo_functions import update_hooks, maintain_submodules, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
+from edkrepo.config.config_factory import get_workspace_manifest_file
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 
 
@@ -71,23 +75,30 @@ class SyncCommand(EdkrepoCommand):
                      'required' : False,
                      'help-text' : arguments.OVERRIDE_HELP})
         args.append(SubmoduleSkipArgument)
+        args.append(SourceManifestRepoArgument)
         return metadata
 
     def run_command(self, args, config):
         update_editor_config(config)
+
         workspace_path = get_workspace_path()
         initial_manifest = get_workspace_manifest()
         current_combo = initial_manifest.general_config.current_combo
         initial_sources = initial_manifest.get_repo_sources(current_combo)
         initial_hooks = initial_manifest.repo_hooks
 
-        pull_latest_manifest_repo(args, config)
+        source_global_manifest_repo = find_source_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+        pull_workspace_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
+        cfg_manifest_repos, user_cfg_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        if source_global_manifest_repo in cfg_manifest_repos:
+            global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
+            verify_single_manifest(config['cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
+        elif source_global_manifest_repo in user_cfg_manifest_repos:
+            global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
+            verify_single_manifest(config['user_cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
 
-        # Verify that the latest version of the manifest in the global manifest repository is not broken
-        global_manifest_directory = config['cfg_file'].manifest_repo_abs_local_path
-        verify_manifest_data(global_manifest_directory, config, verbose=args.verbose, verify_proj=initial_manifest.project_info.codename)
         if not args.update_local_manifest:
-            self.__check_for_new_manifest(args, config, initial_manifest, workspace_path)
+            self.__check_for_new_manifest(args, config, initial_manifest, workspace_path, global_manifest_directory)
         check_dirty_repos(initial_manifest, workspace_path)
         # Determine if sparse checkout needs to be disabled for this operation
         sparse_settings = initial_manifest.sparse_settings
@@ -103,7 +114,7 @@ class SyncCommand(EdkrepoCommand):
 
         # Get the latest manifest if requested
         if args.update_local_manifest: #NOTE: hyphens in arg name replaced with underscores due to argparse
-            self.__update_local_manifest(args, config, initial_manifest, workspace_path)
+            self.__update_local_manifest(args, config, initial_manifest, workspace_path, global_manifest_directory)
         manifest = get_workspace_manifest()
         if args.update_local_manifest:
             try:
@@ -199,7 +210,7 @@ class SyncCommand(EdkrepoCommand):
             print(SPARSE_CHECKOUT)
             sparse_checkout(workspace_path, repo_sources_to_sync, manifest)
 
-    def __update_local_manifest(self, args, config, initial_manifest, workspace_path):
+    def __update_local_manifest(self, args, config, initial_manifest, workspace_path, global_manifest_directory):
         local_manifest_dir = os.path.join(workspace_path, 'repo')
         current_combo = initial_manifest.general_config.current_combo
         initial_sources = initial_manifest.get_repo_sources(current_combo)
@@ -209,8 +220,6 @@ class SyncCommand(EdkrepoCommand):
             repo = Repo(local_repo_path)
             origin = repo.remotes.origin
             origin.fetch()
-
-        global_manifest_directory = config['cfg_file'].manifest_repo_abs_local_path
 
         #see if there is an entry in CiIndex.xml that matches the prject name of the current manifest
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
@@ -364,8 +373,7 @@ class SyncCommand(EdkrepoCommand):
                         break
         return repos_to_checkout
 
-    def __check_for_new_manifest(self, args, config, initial_manifest, workspace_path):
-        global_manifest_directory = config['cfg_file'].manifest_repo_abs_local_path
+    def __check_for_new_manifest(self, args, config, initial_manifest, workspace_path, global_manifest_directory):
         #see if there is an entry in CiIndex.xml that matches the prject name of the current manifest
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
         ci_index_xml = CiIndexXml(index_path)

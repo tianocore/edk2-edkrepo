@@ -425,6 +425,7 @@ class ManifestXml(BaseXmlHelper):
         element = subroot.find('SourceManifestRepository')
         if element is None:
             element = ET.SubElement(subroot, 'SourceManifestRepository')
+            element.tail = '\n'
         element.attrib['manifest_repo'] = manifest_repo
         self._tree.write(filename)
         self.__general_config.source_manifest_repo = manifest_repo
@@ -549,7 +550,16 @@ class ManifestXml(BaseXmlHelper):
         if element1.text != element2.text:
             return False
         if element1.tail != element2.tail:
-            return False
+            if element1.tail is not None:
+                tail1 = element1.tail.strip()
+            else:
+                tail1 = ''
+            if element2.tail is not None:
+                tail2 = element2.tail.strip()
+            else:
+                tail2 = ''
+            if tail1 != tail2:
+                return False
         if element1.attrib != element2.attrib:
             return False
         if len(element1) != len(element2):
@@ -558,25 +568,37 @@ class ManifestXml(BaseXmlHelper):
 
     def equals(self, other, ignore_current_combo=False):
         status = self._compare_elements(self._tree.getroot(), other._tree.getroot())
-        if not status and ignore_current_combo:
+        if not status:
             tree1 = copy.deepcopy(self._tree.getroot())
             tree2 = copy.deepcopy(other._tree.getroot())
             subroot = tree1.find('GeneralConfig')
             if subroot is None:
                 return False
-            element = subroot.find('CurrentClonedCombo')
+            if ignore_current_combo:
+                element = subroot.find('CurrentClonedCombo')
+                if element is None:
+                    element = ET.SubElement(subroot, 'CurrentClonedCombo')
+                    element.tail = '\n'
+                element.attrib['combination'] = ''
+            element = subroot.find('SourceManifestRepository')
             if element is None:
-                element = ET.SubElement(subroot, 'CurrentClonedCombo')
-                element.tail = '\n'
-            element.attrib['combination'] = ''
+                element = ET.SubElement(subroot, 'SourceManifestRepository')
+                element.tail ='\n'
+            element.attrib['manifest_repo'] = ''
             subroot = tree2.find('GeneralConfig')
             if subroot is None:
                 return False
-            element = subroot.find('CurrentClonedCombo')
+            if ignore_current_combo:
+                element = subroot.find('CurrentClonedCombo')
+                if element is None:
+                    element = ET.SubElement(subroot, 'CurrentClonedCombo')
+                    element.tail = '\n'
+                element.attrib['combination'] = ''
+            element = subroot.find('SourceManifestRepository')
             if element is None:
-                element = ET.SubElement(subroot, 'CurrentClonedCombo')
-                element.tail = '\n'
-            element.attrib['combination'] = ''
+                element = ET.SubElement(subroot, 'SourceManifestRepository')
+                element.tail ='\n'
+            element.attrib['manifest_repo'] = ''
             status = self._compare_elements(tree1, tree2)
         return status
 
