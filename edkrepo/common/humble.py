@@ -41,7 +41,7 @@ SYNC_COMMITS_ON_MASTER = 'Commits were found on {0} branch.\n  (use the "--overr
 SYNC_ERROR = '\nError: Some repositories were not updated.'
 SYNC_MANIFEST_NOT_FOUND = 'A manifest for project, {0}, was not found.\nTo complete this operation please rerun the command with the --override flag\n' + SYNC_EXIT
 SYNC_URL_CHANGE = 'The URL for the remote, {0} has changed.\n' + SYNC_EXIT
-SYNC_COMBO_CHANGE = 'The current checked out combination, {0}, does not exist in the latest manifest for project, {1}\n' 
+SYNC_COMBO_CHANGE = 'The current checked out combination, {0}, does not exist in the latest manifest for project, {1}\n'
 SYNC_REPO_CHANGE = 'The latest manifest for project, {0}, requires a change in currently cloned repositories.\nTo complete this operation please rerun the command with the --override flag\n' + SYNC_EXIT
 SYNC_SOURCE_MOVE_WARNING = '{}{}WARNING:{}{} {{}} being moved to {{}}'.format(Style.BRIGHT, Fore.RED, Style.RESET_ALL, Fore.RED)
 SYNC_REMOVE_WARNING = '{}{}WARNING:{}{} The following repos no longer exist in the new manifest and can no \nlonger be used for submitting code. Please manually delete the following \ndirectories after saving any work you have in them:'.format(Style.BRIGHT, Fore.RED, Style.RESET_ALL, Fore.RED)
@@ -130,7 +130,7 @@ ERROR_WRITING_INCLUDE = 'An error occured while writting the URL redirection con
 #Error messages for squash.py
 SQUASH_COMMON_ANCESTOR_REQUIRED = '{} is not in the same branch history as {}, unable to operate on this commit range.'
 
-# Messages for common_repo_functions.verify_manifest_data()
+# Messages for common_repo_functions.
 VERIFY_GLOBAL = 'Verifying the active projects in the global manifest repository\n'
 VERIFY_ARCHIVED = 'Verifying the archived projects in the global manifest repository\n'
 VERIFY_GLOBAL_FAIL = 'Unable to verify the contents of the global manifest repository\n'

@@ -16,7 +16,7 @@ from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import ColorArgument
 import edkrepo.commands.arguments.manifest_args as arguments
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoManifestNotFoundException
-from edkrepo.common.common_repo_functions import pull_latest_manifest_repo, validate_manifest_repo
+from edkrepo.common.common_repo_functions import validate_manifest_repo
 from edkrepo.common.ui_functions import init_color_console
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos

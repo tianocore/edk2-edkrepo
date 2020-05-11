@@ -73,14 +73,6 @@ CLEAR_LINE = '\x1b[K'
 DEFAULT_REMOTE_NAME = 'origin'
 PRIMARY_REMOTE_NAME = 'primary'
 
-def pull_latest_manifest_repo(args, config, reset_hard=False):
-    repo_url = config['cfg_file'].manifest_repo_url
-    branch = config['cfg_file'].manifest_repo_branch
-    local_path = config['cfg_file'].manifest_repo_local_path
-    init_color_console(False)
-    pull_single_manifest_repo(repo_url, branch, local_path, reset_hard)
-
-
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, skip_submodule, manifest):
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
@@ -394,38 +386,6 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
 
         if repo_to_checkout.enable_submodule:
             maintain_submodules(repo_to_checkout, repo, verbose)
-
-def verify_manifest_data(global_manifest_directory, config, verbose=False, verify_all=False, verify_proj=None, verify_archived=False):
-    # Validate the project individual project selected
-    if verify_proj:
-        print(VERIFY_PROJ.format(verify_proj))
-        ci_index_path = os.path.join(config['cfg_file'].manifest_repo_abs_local_path, 'CiIndex.xml')
-        ci_index = CiIndexXml(ci_index_path)
-        try:
-            proj_path = find_project_in_index(verify_proj, ci_index, config['cfg_file'].manifest_repo_abs_local_path, VERIFY_PROJ_NOT_IN_INDEX.format(verify_proj))
-        except EdkrepoInvalidParametersException:
-            raise
-        if proj_path:
-            proj_val_data = validate_manifestfiles([proj_path])
-            proj_val_error = get_manifest_validation_status(proj_val_data)
-            if proj_val_error:
-                if verbose:
-                    print_manifest_errors(proj_val_data)
-                raise EdkrepoManifestInvalidException(VERIFY_PROJ_FAIL.format(verify_proj))
-
-    # Validate the entire global manifest repository.
-    if verify_all:
-        print(VERIFY_GLOBAL)
-        if verify_archived:
-            print(VERIFY_ARCHIVED)
-        # Attempt to make sure the manifest data is good
-        manifestfile_validation_data = validate_manifestrepo(global_manifest_directory, verify_archived)
-        manifest_repo_error = get_manifest_validation_status(manifestfile_validation_data)
-        # Display errors
-        if manifest_repo_error:
-            print(VERIFY_GLOBAL_FAIL)
-            if verbose:
-                print_manifest_errors(manifestfile_validation_data)
 
 def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
     print(VERIFY_GLOBAL)
