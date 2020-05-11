@@ -18,9 +18,11 @@ from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import ColorArgument
 import edkrepo.commands.arguments.list_repos_args as arguments
 import edkrepo.commands.humble.list_repos_humble as humble
-from edkrepo.common.common_repo_functions import pull_latest_manifest_repo
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
 from edkrepo.common.ui_functions import init_color_console
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 
 class ListReposCommand(EdkrepoCommand):
@@ -52,35 +54,80 @@ class ListReposCommand(EdkrepoCommand):
         print()
         init_color_console(args.color)
 
-        # Get path to global manifest file
-        global_manifest_directory = config['cfg_file'].manifest_repo_abs_local_path
-        if args.verbose:
-            print(humble.MANIFEST_DIRECTORY)
-            print(global_manifest_directory)
-            print()
-        index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
-
-        pull_latest_manifest_repo(args, config)
+        pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
         print()
 
-        #Create a dictionary containing all the manifests listed in the CiIndex.xml file
-        ci_index_xml = CiIndexXml(index_path)
+        cfg_manifest_repos, user_config_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+
+        found_manifests = {}
         manifests = {}
         repo_urls = set()
-        project_list = list(ci_index_xml.project_list)
-        if args.archived:
-            project_list.extend(ci_index_xml.archived_project_list)
-        for project in project_list:
-            xml_file = ci_index_xml.get_project_xml(project)
-            manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
-            manifests[project] = manifest
-            combo_list = [c.name for c in manifest.combinations]
+        config_manifest_repos_project_list = []
+        user_config_manifest_repos_project_list = []
+
+        for manifest_repo in cfg_manifest_repos:
+            # Get path to global manifest file
+            global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
+            if args.verbose:
+                print(humble.MANIFEST_DIRECTORY)
+                print(global_manifest_directory)
+                print()
+            #Create a dictionary containing all the manifests listed in the CiIndex.xml file
+            index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
+            print(index_path)
+            ci_index_xml = CiIndexXml(index_path)
+            config_manifest_repos_project_list = ci_index_xml.project_list
             if args.archived:
-                combo_list.extend([c.name for c in manifest.archived_combinations])
-            for combo in combo_list:
-                sources = manifest.get_repo_sources(combo)
-                for source in sources:
-                    repo_urls.add(self.get_repo_url(source.remote_url))
+                config_manifest_repos_project_list.extend(ci_index_xml.archived_project_list)
+            for project in config_manifest_repos_project_list:
+                xml_file = ci_index_xml.get_project_xml(project)
+                manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
+                found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
+                combo_list = [c.name for c in manifest.combinations]
+                if args.archived:
+                    combo_list.extend([c.name for c in manifest.archived_combinations])
+                for combo in combo_list:
+                    sources = manifest.get_repo_sources(combo)
+                    for source in sources:
+                        repo_urls.add(self.get_repo_url(source.remote_url))
+        for manifest_repo in user_config_manifest_repos:
+             # Get path to global manifest file
+            global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
+            if args.verbose:
+                print(humble.MANIFEST_DIRECTORY)
+                print(global_manifest_directory)
+                print()
+            #Create a dictionary containing all the manifests listed in the CiIndex.xml file
+            index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
+            ci_index_xml = CiIndexXml(index_path)
+            user_config_manifest_repos_project_list = ci_index_xml.project_list
+            if args.archived:
+                user_config_manifest_repos_project_list.extend(ci_index_xml.archived_project_list)
+            for project in user_config_manifest_repos_project_list:
+                xml_file = ci_index_xml.get_project_xml(project)
+                manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
+                found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
+                combo_list = [c.name for c in manifest.combinations]
+                if args.archived:
+                    combo_list.extend([c.name for c in manifest.archived_combinations])
+                for combo in combo_list:
+                    sources = manifest.get_repo_sources(combo)
+                    for source in sources:
+                        repo_urls.add(self.get_repo_url(source.remote_url))
+
+        #Remove the manifest repo portion of the key is there is not a duplicate project name
+        key_list = list(found_manifests)
+        for entry in key_list:
+            new_key = entry.split(':')[1]
+            value = found_manifests[entry]
+            del found_manifests[entry]
+            for found_manifest in list(found_manifests):
+                if found_manifest.split(':')[1] == new_key:
+                    new_key = 'Manifest Repository: {} Project: {}'.format(entry.split(':')[0], entry.split(':')[1])
+                    break
+            if new_key in manifests.keys():
+                new_key = 'Manifest Repository: {} Project: {}'.format(entry.split(':'[0]), entry.split(':')[1])
+            manifests[new_key] = value
 
         #Sort the manifests so projects will be displayed alphabetically
         manifests = collections.OrderedDict(sorted(manifests.items()))
