@@ -37,6 +37,7 @@ FolderToFolderMappingFolder = namedtuple('FolderToFolderMappingFolder', ['projec
 FolderToFolderMappingFolderExclude = namedtuple('FolderToFolderMappingFolderExclude', ['path'])
 
 SubmoduleAlternateRemote = namedtuple('SubmoduleAlternateRemote', ['remote_name', 'original_url', 'alternate_url'])
+SubmoduleInitPath = namedtuple('SubmoduleInitPath', ['remote_name', 'combo', 'recursive', 'path'])
 
 REQUIRED_ATTRIB_ERROR_MSG = "Required attribute malformed in <{}>: {}"
 NO_ASSOCIATED_REMOTE = 'There are no remotes associated with the ClientGitHook entry:\nsource:{} destination:{}' \
@@ -138,6 +139,7 @@ class ManifestXml(BaseXmlHelper):
         self._commit_templates = {}           # dict of commit message templates with the remote name as the key
         self._folder_to_folder_mappings = []  # List of FolderToFolderMapping objects
         self._submodule_alternate_remotes = []
+        self._submodule_init_list = []
 
         #
         # Append include XML's to the Manifest etree before parsing
@@ -190,6 +192,13 @@ class ManifestXml(BaseXmlHelper):
         for subroot in self._tree.iter(tag='SubmoduleAlternateRemotes'):
             for element in subroot.iter(tag='SubmoduleAlternateRemote'):
                 self._submodule_alternate_remotes.append(_SubmoduleAlternateRemote(element, self._remotes))
+
+        #
+        # Determine submodule initialization paths
+        #
+        for subroot in self._tree.iter(tag='SelectiveSubmoduleInitList'):
+            for element in subroot.iter(tag='Submodule'):
+                self._submodule_init_list.append(_SubmoduleInitEntry(element))
 
         #
         # parse <CombinationList> tags
@@ -386,6 +395,22 @@ class ManifestXml(BaseXmlHelper):
                 alternates.append(alternate.tuple)
         return alternates
 
+    def get_submodule_init_paths(self, remote_name=None, combo=None):
+        submodule_list = []
+        if remote_name is None and combo is None:
+            submodule_list = self._tuple_list(self._submodule_init_list)
+        elif remote_name is not None and combo is None:
+            submodule_list = self._tuple_list(
+                [x for x in self._submodule_init_list if x.remote_name == remote_name])
+        elif remote_name is None and combo is not None:
+            submodule_list = self._tuple_list(
+                [x for x in self._submodule_init_list if x.combo == combo or x.combo is None])
+        else:
+            submodule_list = self._tuple_list(
+                [x for x in self._submodule_init_list
+                 if x.remote_name == remote_name and (x.combo == combo or x.combo is None)])
+        return submodule_list
+
     def write_current_combo(self, combo_name, filename=None):
         #
         # Updates the CurrentClonedCombo tag of _tree attribute and writes the entire tree out to the
@@ -460,6 +485,10 @@ class ManifestXml(BaseXmlHelper):
         if self._tree.find('SubmoduleAlternateRemotes'):
             submodule_alt_url_root = ET.SubElement(pin_root, 'SubmoduleAlternateRemotes')
 
+        selective_submodules_root = None
+        if self._tree.find('SelectiveSubmoduleInitList'):
+            selective_submodules_root = ET.SubElement(pin_root, 'SelectiveSubmoduleInitList')
+
         remote_root = ET.SubElement(pin_root, 'RemoteList')
         source_root = ET.SubElement(pin_root, 'Combination')
         source_root.attrib['name'] = self._combinations[combo_name].name
@@ -486,6 +515,13 @@ class ManifestXml(BaseXmlHelper):
                 for alt_url_element in subroot_submodule_alt_url.iter('SubmoduleAlternateRemote'):
                     if alt_url_element.attrib['remote'] == src_tuple.remote_name:
                         submodule_alt_url_root.append(alt_url_element)
+
+            for subroot_selective_subs in self._tree.iter('SelectiveSubmoduleInitList'):
+                for selective_sub in subroot_selective_subs.iter('Submodule'):
+                    if selective_sub.attrib['remote'] == src_tuple.remote_name:
+                        if 'combo' in selective_sub.attrib and selective_sub.attrib['combo'] != combo_name:
+                            continue
+                        selective_submodules_root.append(selective_sub)
 
             sparse = 'true' if src_tuple.sparse else 'false'
             sub = 'true' if src_tuple.enable_submodule else 'false'
@@ -535,6 +571,10 @@ class ManifestXml(BaseXmlHelper):
             submodule_alt_url_root.text = '\n    '
             submodule_alt_url_root.tail = '\n\n  '
             list(submodule_alt_url_root)[-1].tail = '\n  '
+        if selective_submodules_root:
+            selective_submodules_root.text = '\n    '
+            selective_submodules_root.tail = '\n\n  '
+            list(selective_submodules_root)[-1].tail = '\n  '
         remote_root.text = '\n    '
         remote_root.tail = '\n\n  '
         list(remote_root)[-1].tail = '\n  '
@@ -882,6 +922,27 @@ class _SubmoduleAlternateRemote():
         return SubmoduleAlternateRemote(self.remote_name, self.originalUrl, self.altUrl)
 
 
+class _SubmoduleInitEntry():
+    def __init__(self, element):
+        try:
+            self.remote_name = element.attrib['remote']
+            self.path = element.text
+        except KeyError as k:
+            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        try:
+            self.combo = element.attrib['combo']
+        except Exception:
+            self.combo = None
+        try:
+            self.recursive = element.attrib['recursive'].lower() == 'true'
+        except Exception:
+            self.recursive = False
+
+    @property
+    def tuple(self):
+        return SubmoduleInitPath(self.remote_name, self.combo, self.recursive, self.path)
+
+
 #
 # Optional entry point for debug and validation of the CiIndexXml & ManifestXml classes
 #
@@ -955,6 +1016,23 @@ def main():
                 print('\nSubmodule Alternates for Remote: {}'.format(remote.name))
                 for alt in alts:
                     print(alt)
+
+        print('\nGet Submodule Init Objects')
+        print('\nAll:')
+        for entry in test_manifest.get_submodule_init_paths():
+            print('+ {}'.format(entry))
+        print('\nPer Remote:')
+        for remote in test_manifest.remotes:
+            for entry in test_manifest.get_submodule_init_paths(remote.name):
+                print('+ {}'.format(entry))
+        print('\nCurrent Combo:')
+        current_combo = test_manifest.general_config.current_combo
+        for entry in test_manifest.get_submodule_init_paths(combo=current_combo):
+            print('+ {}'.format(entry))
+        print('\nCurrent Combo Per Remote:')
+        for remote in test_manifest.remotes:
+            for entry in test_manifest.get_submodule_init_paths(remote.name, current_combo):
+                print('+ {}'.format(entry))
 
         if not test_manifest.is_pin_file():
             print('\nSparse settings:')
