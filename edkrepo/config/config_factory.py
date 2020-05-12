@@ -119,6 +119,8 @@ class BaseConfig():
         """Returns a list of available manifest repos"""
         if self.cfg.has_section('manifest-repos'):
             return self.cfg.options('manifest-repos')
+        else:
+            return []
 
     def manifest_repo_props(self, manifest_repo):
         """
