@@ -17,6 +17,7 @@ from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout, v
 from edkrepo.common.common_repo_functions import update_editor_config, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, write_conditional_include
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 from edkrepo.common.humble import CLONE_INVALID_WORKSPACE, CLONE_INVALID_PROJECT_ARG, CLONE_INVALID_COMBO_ARG
 from edkrepo.common.humble import SPARSE_CHECKOUT, CLONE_INVALID_LOCAL_ROOTS
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
@@ -81,12 +82,15 @@ class CloneCommand(EdkrepoCommand):
             os.makedirs(workspace_dir)
 
         cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
-        manifest_repo, source_cfg, global_manifest_path = find_project_in_all_indices(args.ProjectNameOrManifestFile,
-                                                                  config['cfg_file'],
-                                                                  config['user_cfg_file'],
-                                                                  PROJ_NOT_IN_REPO.format(args.ProjectNameOrManifestFile),
-                                                                  SOURCE_MANIFEST_REPO_NOT_FOUND.format(args.ProjectNameOrManifestFile),
-                                                                  args.source_manifest_repo)
+        try:
+            manifest_repo, source_cfg, global_manifest_path = find_project_in_all_indices(args.ProjectNameOrManifestFile,
+                                                                    config['cfg_file'],
+                                                                    config['user_cfg_file'],
+                                                                    PROJ_NOT_IN_REPO.format(args.ProjectNameOrManifestFile),
+                                                                    SOURCE_MANIFEST_REPO_NOT_FOUND.format(args.ProjectNameOrManifestFile),
+                                                                    args.source_manifest_repo)
+        except EdkrepoManifestNotFoundException:
+            raise EdkrepoInvalidParametersException(CLONE_INVALID_PROJECT_ARG)
 
         # If this manifest is in a defined manifest repository validate the manifest within the manifest repo
         if manifest_repo in cfg:
