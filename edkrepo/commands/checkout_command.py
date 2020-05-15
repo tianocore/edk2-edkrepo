@@ -3,7 +3,7 @@
 ## @file
 # checkout_command.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 # Standard modules
@@ -15,7 +15,10 @@ import os
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
 import edkrepo.commands.arguments.checkout_args as arguments
-from edkrepo.common.common_repo_functions import checkout
+import edkrepo.commands.humble.checkout_humble as humble
+from edkrepo.common.common_repo_functions import checkout, combination_is_in_manifest
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.config.config_factory import get_workspace_manifest
 
 
 class CheckoutCommand(EdkrepoCommand):
@@ -38,4 +41,7 @@ class CheckoutCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        checkout(args.Combination, args.verbose, args.override)
+        if combination_is_in_manifest(args.Combination, get_workspace_manifest()):
+            checkout(args.Combination, args.verbose, args.override)
+        else:
+            raise EdkrepoInvalidParametersException(humble.NO_COMBO)
