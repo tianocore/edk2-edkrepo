@@ -434,7 +434,7 @@ class ManifestXml(BaseXmlHelper):
 
         element.attrib['combination'] = combo_name
         self._tree.write(filename)
-        self._general_config.current_combo = combo_name
+        self._general_config.curr_combo = combo_name
 
     def write_source_manifest_repo(self, manifest_repo, filename=None):
         '''
@@ -453,7 +453,7 @@ class ManifestXml(BaseXmlHelper):
             element.tail = '\n'
         element.attrib['manifest_repo'] = manifest_repo
         self._tree.write(filename)
-        self.__general_config.source_manifest_repo = manifest_repo
+        self._general_config.source_manifest_repo = manifest_repo
 
     def generate_pin_xml(self, description, combo_name, repo_source_list, filename=None):
 
@@ -1070,6 +1070,7 @@ def main():
 
             print('\nAttempting to write TESTCOMBO to current combo field of TestManifest.xml')
             test_manifest.write_current_combo('TESTCOMBO', 'TestManifest.xml')
+            print('Updated current combo: {}'.format(test_manifest.general_config.current_combo))
 
         print(separator_string)
         if test_manifest.is_pin_file():
