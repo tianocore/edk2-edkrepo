@@ -197,7 +197,7 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
         except EdkrepoManifestNotFoundException:
             return None, None, project
     elif os.path.isfile(os.path.join(os.getcwd(), project)):
-        manifest = os.path.join(os.getcwd(), project)
+        manifest = ManifestXml(os.path.join(os.getcwd(), project))
         try:
             found_manifest_repo, found_cfg, found_project = find_project_in_all_indices(manifest.project_info.codename,
                                                                                         edkrepo_cfg,
