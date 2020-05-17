@@ -534,7 +534,7 @@ class ManifestXml(BaseXmlHelper):
                                                                      'branch': src_tuple.branch,
                                                                      'commit': src_tuple.commit,
                                                                      'sparseCheckout': sparse,
-                                                                     'enable_submodule': sub,
+                                                                     'enableSubmodule': sub,
                                                                      'tag': src_tuple.tag})
                     else:
                         elem = ET.SubElement(source_root, 'Source', {'localRoot': src_tuple.root,
@@ -542,20 +542,20 @@ class ManifestXml(BaseXmlHelper):
                                                                      'branch': src_tuple.branch,
                                                                      'commit': src_tuple.commit,
                                                                      'sparseCheckout': sparse,
-                                                                     'enable_submodule': sub})
+                                                                     'enableSubmodule': sub})
                 elif src_tuple.branch is None and src_tuple.tag:
                     elem = ET.SubElement(source_root, 'Source', {'localRoot': src_tuple.root,
                                                                  'remote': src_tuple.remote_name,
                                                                  'commit': src_tuple.commit,
                                                                  'sparseCheckout': sparse,
-                                                                 'enable_submodule': sub,
+                                                                 'enableSubmodule': sub,
                                                                  'tag': src_tuple.tag})
                 elif src_tuple.branch is None and src_tuple.tag is None:
                     elem = ET.SubElement(source_root, 'Source', {'localRoot': src_tuple.root,
                                                                  'remote': src_tuple.remote_name,
                                                                  'commit': src_tuple.commit,
                                                                  'sparseCheckout': sparse,
-                                                                 'enable_submodule': sub})
+                                                                 'enableSubmodule': sub})
             else:
                 raise ValueError('Pin.xml cannot be generated with an empty commit value')
 
