@@ -200,7 +200,7 @@ class SyncCommand(EdkrepoCommand):
                     # Perform submodule updates and url redirection
                     maintain_submodules(repo_to_sync, repo)
             # Update commit message templates
-            update_repo_commit_template(workspace_path, repo, repo_to_sync, config, source_global_manifest_repo)
+            update_repo_commit_template(workspace_path, repo, repo_to_sync, config, global_manifest_directory)
 
         if sync_error:
             print(SYNC_ERROR)
