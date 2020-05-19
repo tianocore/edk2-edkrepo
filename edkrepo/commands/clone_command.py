@@ -25,6 +25,7 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+from project_utils.submodule import maintain_submodules
 
 
 class CloneCommand(EdkrepoCommand):
@@ -108,7 +109,6 @@ class CloneCommand(EdkrepoCommand):
         manifest = ManifestXml(local_manifest_path)
 
         # Process the combination name and make sure it can be found in the manifest
-        combo_name = None
         if args.Combination is not None:
             try:
                 combo_name = case_insensitive_single_match(args.Combination, combinations_in_manifest(manifest))
@@ -122,13 +122,15 @@ class CloneCommand(EdkrepoCommand):
             # Since pin files are subset of manifest files they do not have a "default combo" it is set to None. In this
             # case use the current_combo instead.
             combo_name = manifest.general_config.current_combo
+        else:
+            # If a combo was not specified or a pin file used the default combo should be cloned.  Also ensure that the
+            # current combo is updated to match.
+            combo_name = manifest.general_config.default_combo
+            manifest.write_current_combo(combo_name)
 
         # Get the list of repos to clone and clone them
-        manifest_config = manifest.general_config
-        if combo_name:
-            repo_sources_to_clone = manifest.get_repo_sources(combo_name)
-        else:
-            repo_sources_to_clone = manifest.get_repo_sources(manifest_config.default_combo)
+        repo_sources_to_clone = manifest.get_repo_sources(combo_name)
+
         #check that the repo sources do not contain duplicated local roots
         local_roots = [r.root for r in repo_sources_to_clone]
         for root in local_roots:
@@ -141,7 +143,11 @@ class CloneCommand(EdkrepoCommand):
         # Set up submodule alt url config settings prior to cloning any repos
         submodule_included_configs = write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
         write_conditional_include(workspace_dir, repo_sources_to_clone, submodule_included_configs)
-        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, args.skip_submodule, manifest)
+        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest)
+
+        # Init submodules
+        if not args.skip_submodule:
+            maintain_submodules(workspace_dir, manifest, combo_name, args.verbose)
 
         # Perform a sparse checkout if requested.
         use_sparse = args.sparse

@@ -68,12 +68,13 @@ from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrep
 from edkrepo_manifest_parser.edk_manifest_validation import get_manifest_validation_status
 from edkrepo_manifest_parser.edk_manifest_validation import print_manifest_errors
 from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestfiles
+from project_utils.submodule import deinit_submodules, maintain_submodules
 
 CLEAR_LINE = '\x1b[K'
 DEFAULT_REMOTE_NAME = 'origin'
 PRIMARY_REMOTE_NAME = 'primary'
 
-def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, skip_submodule, manifest):
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest):
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -107,10 +108,6 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
             repo.heads[local_branch.name].checkout()
         else:
             raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
-
-        if not skip_submodule:
-            if repo_to_clone.enable_submodule:
-                maintain_submodules(repo_to_clone, repo, args.verbose)
 
         try:
             if 'source_manifest_repo' in vars(args).keys():
@@ -183,32 +180,6 @@ def write_conditional_include(workspace_path, repo_sources, included_configs):
                 with git.GitConfigParser(gitconfigpath, read_only=False) as gitglobalconfig:
                     gitglobalconfig.add_section(section)
                     gitglobalconfig.set(section, 'path', path)
-
-def maintain_submodules(repo_sources, repo, verbose = False):
-    try:
-        output_data = repo.git.execute(['git', 'submodule', 'init'], with_extended_output=True, with_stdout=True)
-        if verbose and output_data[0]:
-            print(output_data[0])
-        if output_data[1]:
-            print(output_data[1])
-        if verbose and output_data[2]:
-            print(output_data[2])
-        output_data = repo.git.execute(['git', 'submodule', 'sync', '--recursive'], with_extended_output=True, with_stdout=True)
-        if verbose and output_data[0]:
-            print(output_data[0])
-        if output_data[1]:
-            print(output_data[1])
-        if verbose and output_data[2]:
-            print(output_data[2])
-        output_data = repo.git.execute(['git', 'submodule', 'update', '--recursive'], with_extended_output=True, with_stdout=True)
-        if verbose and output_data[0]:
-            print(output_data[0])
-        if output_data[1]:
-            print(output_data[1])
-        if verbose and output_data[2]:
-            print(output_data[2])
-    except:
-        raise EdkrepoGitException(SUBMODULE_FAILURE.format(repo_sources.remote_name))
 
 def install_hooks(hooks, local_repo_path, repo_for_install, config, global_manifest_directory):
     # Determine the which hooks are for the repo in question and which are from a URL based source or are in a global
@@ -399,9 +370,6 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
         else:
             raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
 
-        if repo_to_checkout.enable_submodule:
-            maintain_submodules(repo_to_checkout, repo, verbose)
-
 def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
     print(VERIFY_GLOBAL)
     if archived:
@@ -514,9 +482,11 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
     # Create combo_or_sha so we have original input and do not introduce any
     # unintended behavior by messing with parameters.
     combo_or_sha = combination_or_sha
+    submodule_combo = manifest.general_config.current_combo
     try:
         # Try to handle normalize combo name to match the manifest file.
         combo_or_sha = case_insensitive_single_match(combo_or_sha, combinations_in_manifest(manifest))
+        submodule_combo = combo_or_sha
     except:
         # No match so leave it alone.  It must be a SHA1 or a bad combo name.
         pass
@@ -527,6 +497,10 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
         workspace_path,
         log=log)
     initial_repo_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
+
+    # Deinit any submodules that have been removed.
+    deinit_submodules(workspace_path, manifest, manifest.general_config.current_combo,
+                      manifest, submodule_combo, verbose)
 
     # Disable sparse checkout
     current_repos = initial_repo_sources
@@ -566,6 +540,7 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
         # Return to the initial combo, since there was an issue with cheking out the selected combo
         checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
     finally:
+        maintain_submodules(workspace_path, manifest, submodule_combo, verbose)
         if sparse_enabled or sparse_diff:
             print(SPARSE_CHECKOUT)
             sparse_checkout(workspace_path, current_repos, manifest)

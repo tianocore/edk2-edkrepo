@@ -38,7 +38,7 @@ from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_rep
 from edkrepo.common.common_repo_functions import update_editor_config
 from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
 from edkrepo.common.common_repo_functions import has_primary_repo_remote, fetch_from_primary_repo, in_sync_with_primary
-from edkrepo.common.common_repo_functions import update_hooks, maintain_submodules, combinations_in_manifest
+from edkrepo.common.common_repo_functions import update_hooks, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
@@ -48,6 +48,7 @@ from edkrepo.common.ui_functions import init_color_console
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
 from edkrepo.config.config_factory import get_workspace_manifest_file
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+from project_utils.submodule import deinit_submodules, maintain_submodules
 
 
 class SyncCommand(EdkrepoCommand):
@@ -84,6 +85,7 @@ class SyncCommand(EdkrepoCommand):
         current_combo = initial_manifest.general_config.current_combo
         initial_sources = initial_manifest.get_repo_sources(current_combo)
         initial_hooks = initial_manifest.repo_hooks
+        initial_combo = current_combo
 
         source_global_manifest_repo = find_source_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
         pull_workspace_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
@@ -100,6 +102,7 @@ class SyncCommand(EdkrepoCommand):
         if not args.update_local_manifest:
             self.__check_for_new_manifest(args, config, initial_manifest, workspace_path, global_manifest_directory)
         check_dirty_repos(initial_manifest, workspace_path)
+
         # Determine if sparse checkout needs to be disabled for this operation
         sparse_settings = initial_manifest.sparse_settings
         sparse_enabled = sparse_checkout_enabled(workspace_path, initial_sources)
@@ -113,7 +116,7 @@ class SyncCommand(EdkrepoCommand):
             reset_sparse_checkout(workspace_path, initial_sources)
 
         # Get the latest manifest if requested
-        if args.update_local_manifest: #NOTE: hyphens in arg name replaced with underscores due to argparse
+        if args.update_local_manifest:  # NOTE: hyphens in arg name replaced with underscores due to argparse
             self.__update_local_manifest(args, config, initial_manifest, workspace_path, global_manifest_directory)
         manifest = get_workspace_manifest()
         if args.update_local_manifest:
@@ -126,6 +129,12 @@ class SyncCommand(EdkrepoCommand):
         else:
             repo_sources_to_sync = manifest.get_repo_sources(current_combo)
         manifest.write_current_combo(current_combo)
+
+        # At this point both new and old manifest files are ready so we can deinit any
+        # submodules that are removed due to a manifest update.
+        if not args.skip_submodule:
+            deinit_submodules(workspace_path, initial_manifest, initial_combo,
+                              manifest, current_combo, args.verbose)
 
         sync_error = False
         # Calculate the hooks which need to be updated, added or removed for the sync
@@ -195,15 +204,15 @@ class SyncCommand(EdkrepoCommand):
             elif args.verbose:
                 print(NO_SYNC_DETACHED_HEAD.format(repo_to_sync.root))
 
-            if not args.skip_submodule:
-                if repo_to_sync.enable_submodule:
-                    # Perform submodule updates and url redirection
-                    maintain_submodules(repo_to_sync, repo)
             # Update commit message templates
             update_repo_commit_template(workspace_path, repo, repo_to_sync, config, global_manifest_directory)
 
         if sync_error:
             print(SYNC_ERROR)
+
+        # Initialize submodules
+        if not args.skip_submodule:
+            maintain_submodules(workspace_path, manifest, current_combo, args.verbose)
 
         # Restore sparse checkout state
         if sparse_enabled:
@@ -326,7 +335,7 @@ class SyncCommand(EdkrepoCommand):
                 print(path_to_source)
             if len(sources_to_remove) > 0:
                 print(SYNC_REMOVE_LIST_END_FORMATTING)
-            clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, args.skip_submodule, new_manifest_to_check)
+            clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check)
             # Make a list of and only checkout repos that were newly cloned. Sync keeps repos on their initial active branches
             # cloning the entire combo can prevent existing repos from correctly being returned to their proper branch
             repos_to_checkout = []
