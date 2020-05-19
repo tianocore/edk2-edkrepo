@@ -14,7 +14,7 @@ setup(name='edkrepo',
       packages=['edkrepo', 'edkrepo.commands', 'edkrepo.commands.arguments', 'edkrepo.commands.humble',
                 'edkrepo.git_automation', 'edkrepo.common', 'edkrepo.common.workspace_maintenance',
                 'edkrepo.common.workspace_maintenance.humble', 'edkrepo.config', 'edkrepo.config.humble',
-                'edkrepo_manifest_parser', 'project_utils'],
+                'edkrepo_manifest_parser', 'project_utils', 'project_utils.arguments'],
       package_data={
          },
       include_package_data=True,

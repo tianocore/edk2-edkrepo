@@ -30,3 +30,18 @@ def init_color_console(force_color_output):
         convert=None
     colorama.init(strip=strip, convert=convert)
     return strip, convert
+
+
+def display_git_output(output_data, verbose=False):
+    """
+    Displays output from GitPython git commands
+
+    output_data - Output from the git.execute method
+    verbose     - Enable verbose messages
+    """
+    if verbose and output_data[0]:
+        print(output_data[0])
+    if output_data[1]:
+        print(output_data[1])
+    if verbose and output_data[2]:
+        print(output_data[2])
