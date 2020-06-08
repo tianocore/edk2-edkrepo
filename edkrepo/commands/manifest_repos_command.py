@@ -95,13 +95,24 @@ class ManifestRepos(EdkrepoCommand):
             user_cfg_file = configparser.ConfigParser(allow_no_value=True)
             user_cfg_file.read(user_cfg_file_path)
             if args.action == 'add':
+                if not user_cfg_file.has_section('manifest-repos'):
+                    user_cfg_file.add_section('manifest-repos')
                 user_cfg_file.set('manifest-repos', args.name, None)
                 user_cfg_file.add_section(args.name)
                 user_cfg_file.set(args.name, 'URL', args.url)
                 user_cfg_file.set(args.name, 'Branch', args.branch)
                 user_cfg_file.set(args.name, 'LocalPath', args.path)
             if args.action == 'remove':
-                user_cfg_file.remove_option('manifest-repos', args.name)
-                user_cfg_file.remove_section(args.name)
+                if user_cfg_file.has_section('manifest-repos'):
+                    if user_cfg_file.has_option('manifest-repos', args.name):
+                        user_cfg_file.remove_option('manifest-repos', args.name)
+                    else:
+                        raise EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
+                else:
+                    raise EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
+                if user_cfg_file.has_section(args.name):
+                    user_cfg_file.remove_section(args.name)
+                else:
+                    raise EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
             with open(user_cfg_file_path, 'w') as cfg_stream:
                 user_cfg_file.write(cfg_stream)
