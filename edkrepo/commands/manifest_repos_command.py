@@ -80,7 +80,7 @@ class ManifestRepos(EdkrepoCommand):
 
         elif (args.action == ('add' or 'remove')) and not args.name:
             raise EdkrepoInvalidParametersException(humble.NAME_REQUIRED)
-        elif args.action == 'add' and not (args.branch or args.url or args.local_path):
+        elif args.action == 'add' and (not args.branch or not args.url or not args.path):
             raise EdkrepoInvalidParametersException(humble.ADD_REQUIRED)
         elif args.action == 'remove' and args.name and args.name in cfg_repos:
             raise EdkrepoInvalidParametersException(humble.CANNOT_REMOVE_CFG)
