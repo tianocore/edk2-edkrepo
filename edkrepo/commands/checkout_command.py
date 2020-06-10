@@ -44,4 +44,4 @@ class CheckoutCommand(EdkrepoCommand):
         if combination_is_in_manifest(args.Combination, get_workspace_manifest()):
             checkout(args.Combination, args.verbose, args.override)
         else:
-            raise EdkrepoInvalidParametersException(humble.NO_COMBO)
+            raise EdkrepoInvalidParametersException(humble.NO_COMBO.format(args.Combination))
