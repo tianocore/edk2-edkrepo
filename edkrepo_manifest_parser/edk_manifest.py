@@ -795,7 +795,11 @@ class _RepoSource():
             # If enableSubmodule is not set to True then default to False
             self.enableSub = (element.attrib['enableSubmodule'].lower() == 'true')
         except Exception:
-            self.enableSub = False
+            try:
+                # Adding backwards compatibility with pin files that used incorrect attribute
+                self.enableSub = (element.attrib['enable_submodule'].lower() == 'true')
+            except Exception:
+                self.enableSub = False
 
         if self.branch is None and self.commit is None and self.tag is None:
             raise KeyError(ATTRIBUTE_MISSING_ERROR)
