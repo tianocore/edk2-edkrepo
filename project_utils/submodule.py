@@ -48,14 +48,14 @@ def _deinit(repo, submodules=None, verbose=False):
     verbose    - Enable verbose messages
     """
     if submodules is None:
-        output_data = repo.git.execute(['git', 'submodule', 'deinit', '--all'],
+        output_data = repo.git.execute(['git', 'submodule', 'deinit', '-f', '--all'],
                                        with_extended_output=True, with_stdout=True)
         display_git_output(output_data, verbose)
     else:
         for sub in submodules:
             if verbose:
                 print(strings.SUBMOD_DEINIT_PATH.format(sub.path))
-            output_data = repo.git.execute(['git', 'submodule', 'deinit', '--', sub.path],
+            output_data = repo.git.execute(['git', 'submodule', 'deinit', '-f', '--', sub.path],
                                            with_extended_output=True, with_stdout=True)
             display_git_output(output_data, verbose)
     return
