@@ -68,7 +68,7 @@ from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrep
 from edkrepo_manifest_parser.edk_manifest_validation import get_manifest_validation_status
 from edkrepo_manifest_parser.edk_manifest_validation import print_manifest_errors
 from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestfiles
-from project_utils.submodule import deinit_submodules, maintain_submodules
+from project_utils.submodule import deinit_full, maintain_submodules
 
 CLEAR_LINE = '\x1b[K'
 DEFAULT_REMOTE_NAME = 'origin'
@@ -498,10 +498,6 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
         log=log)
     initial_repo_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
 
-    # Deinit any submodules that have been removed.
-    deinit_submodules(workspace_path, manifest, manifest.general_config.current_combo,
-                      manifest, submodule_combo, verbose)
-
     # Disable sparse checkout
     current_repos = initial_repo_sources
     sparse_enabled = sparse_checkout_enabled(workspace_path, initial_repo_sources)
@@ -523,6 +519,11 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
     if sparse_enabled or sparse_diff:
         print(SPARSE_RESET)
         reset_sparse_checkout(workspace_path, current_repos)
+
+    # Deinit all submodules due to the potential for issues when switching
+    # branches.
+    if combo_or_sha != manifest.general_config.current_combo:
+        deinit_full(workspace_path, manifest, verbose)
 
     print(CHECKING_OUT_COMBO.format(combo_or_sha))
 

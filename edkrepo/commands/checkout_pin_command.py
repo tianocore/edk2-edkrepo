@@ -22,7 +22,7 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
-from project_utils.submodule import deinit_submodules, maintain_submodules
+from project_utils.submodule import deinit_full, maintain_submodules
 
 
 class CheckoutPinCommand(EdkrepoCommand):
@@ -71,8 +71,7 @@ class CheckoutPinCommand(EdkrepoCommand):
             print(SPARSE_RESET)
             reset_sparse_checkout(workspace_path, manifest_sources)
         submodule_combo = pin.general_config.current_combo
-        deinit_submodules(workspace_path, manifest, manifest.general_config.current_combo,
-                          pin, submodule_combo, args.verbose)
+        deinit_full(workspace_path, manifest, args.verbose)
         pin_repo_sources = pin.get_repo_sources(pin.general_config.current_combo)
         try:
             checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest)
