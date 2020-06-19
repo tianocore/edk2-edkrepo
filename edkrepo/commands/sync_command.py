@@ -244,14 +244,9 @@ class SyncCommand(EdkrepoCommand):
         # the default combo
         initial_combos = combinations_in_manifest(initial_manifest)
         new_combos = combinations_in_manifest(new_manifest_to_check)
-        if (current_combo not in new_combos) or (set(new_combos) != set(initial_combos)):
-            if initial_manifest.get_repo_sources(current_combo) == new_manifest_to_check.get_repo_sources(new_manifest_to_check.general_config.default_combo):
-                new_sources_for_current_combo = new_manifest_to_check.get_repo_sources(new_manifest_to_check.general_config.default_combo)
-                new_sources = new_sources_for_current_combo
-            else:
-                # Since asymetric combinations are not supported error out with an IMCOMPATIBLE_COMBO warning
-                print(SYNC_COMBO_CHANGE.format(current_combo, initial_manifest.project_info.codename))
-                raise EdkrepoManifestChangedException(SYNC_INCOMPATIBLE_COMBO)
+        if current_combo not in new_combos:
+            new_sources_for_current_combo = new_manifest_to_check.get_repo_sources(new_manifest_to_check.general_config.default_combo)
+            new_sources = new_sources_for_current_combo
         else:
             new_sources_for_current_combo = new_manifest_to_check.get_repo_sources(current_combo)
             new_sources = new_manifest_to_check.get_repo_sources(current_combo)
