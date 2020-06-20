@@ -558,21 +558,34 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_m
     manifest = edk_manifest.ManifestXml(os.path.join(workspace_dir, 'repo', 'Manifest.xml'))
     templates = manifest.commit_templates
 
+    #Check for the presence of a gloablly defined commit template
+    global_template_in_use = False
+    global_gitconfig_path = os.path.normpath(os.path.expanduser("~/.gitconfig"))
+    with git.GitConfigParser(global_gitconfig_path, read_only=False) as gitglobalconfig:
+        if gitglobalconfig.has_option(section='commit', option='template'):
+            global_template = gitglobalconfig.get_value(section='commit', option='template')
+            global_template_in_use = True
+            print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
+
     # Apply the template based on current manifest
     with repo.config_writer() as cw:
-        if cw.has_option(section='commit', option='template'):
-            current_template = cw.get_value(section='commit', option='template').replace('"', '')
-            if not current_template.startswith(os.path.normpath(global_manifest_directory).replace('\\', '/')):
-                print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
-                return
+        if not global_template_in_use:
+            if cw.has_option(section='commit', option='template'):
+                current_template = cw.get_value(section='commit', option='template').replace('"', '')
+                if not current_template.startswith(os.path.normpath(global_manifest_directory).replace('\\', '/')):
+                    print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
+                    return
 
-        if repo_info.remote_name in templates:
-            template_path = os.path.normpath(os.path.join(global_manifest_directory, templates[repo_info.remote_name]))
-            if not os.path.isfile(template_path):
-                print(COMMIT_TEMPLATE_NOT_FOUND.format(template_path))
-                return
-            template_path = template_path.replace('\\', '/')    # Convert to git approved path
-            cw.set_value(section='commit', option='template', value='"{}"'.format(template_path))
+            if repo_info.remote_name in templates:
+                template_path = os.path.normpath(os.path.join(global_manifest_directory, templates[repo_info.remote_name]))
+                if not os.path.isfile(template_path):
+                    print(COMMIT_TEMPLATE_NOT_FOUND.format(template_path))
+                    return
+                template_path = template_path.replace('\\', '/')    # Convert to git approved path
+                cw.set_value(section='commit', option='template', value='"{}"'.format(template_path))
+            else:
+                if cw.has_option(section='commit', option='template'):
+                    cw.remove_option(section='commit', option='template')
         else:
             if cw.has_option(section='commit', option='template'):
                 cw.remove_option(section='commit', option='template')
