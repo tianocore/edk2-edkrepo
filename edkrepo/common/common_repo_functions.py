@@ -50,6 +50,7 @@ from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, I
 from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
 from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL
+from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
 from edkrepo.common.pathfix import get_actual_path
 from project_utils.sparse import BuildInfo, process_sparse_checkout
 from edkrepo.config.config_factory import get_workspace_path
@@ -523,7 +524,12 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
     # Deinit all submodules due to the potential for issues when switching
     # branches.
     if combo_or_sha != manifest.general_config.current_combo:
-        deinit_full(workspace_path, manifest, verbose)
+        try:
+            deinit_full(workspace_path, manifest, verbose)
+        except Exception as e:
+            print(SUBMODULE_DEINIT_FAILED)
+            if verbose:
+                print(e)
 
     print(CHECKING_OUT_COMBO.format(combo_or_sha))
 

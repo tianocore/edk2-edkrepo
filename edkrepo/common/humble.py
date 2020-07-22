@@ -155,3 +155,6 @@ BRANCH = '    Branch : {0}'
 COMMIT = '    Commit Id: {0}'
 WRITING_PIN_FILE = 'Writing pin file to {0} ...'
 COMMIT_MESSAGE = 'Pin file for project: {0} \nPin Description: {1}'
+
+# Common submodule error messages
+SUBMODULE_DEINIT_FAILED = 'Warning: Unable to remove all submodule content'

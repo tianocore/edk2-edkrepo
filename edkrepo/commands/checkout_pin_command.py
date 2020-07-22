@@ -16,7 +16,7 @@ import edkrepo.commands.arguments.checkout_pin_args as arguments
 import edkrepo.commands.humble.checkout_pin_humble as humble
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, reset_sparse_checkout, sparse_checkout
 from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest
-from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET
+from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET, SUBMODULE_DEINIT_FAILED
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoProjectMismatchException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
@@ -71,7 +71,12 @@ class CheckoutPinCommand(EdkrepoCommand):
             print(SPARSE_RESET)
             reset_sparse_checkout(workspace_path, manifest_sources)
         submodule_combo = pin.general_config.current_combo
-        deinit_full(workspace_path, manifest, args.verbose)
+        try:
+            deinit_full(workspace_path, manifest, args.verbose)
+        except Exception as e:
+            print(SUBMODULE_DEINIT_FAILED)
+            if args.verbose:
+                print(e)
         pin_repo_sources = pin.get_repo_sources(pin.general_config.current_combo)
         try:
             checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest)
