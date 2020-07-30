@@ -51,7 +51,7 @@ from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBU
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
 from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
-from edkrepo.common.pathfix import get_actual_path
+from edkrepo.common.pathfix import get_actual_path, expanduser
 from project_utils.sparse import BuildInfo, process_sparse_checkout
 from edkrepo.config.config_factory import get_workspace_path
 from edkrepo.config.config_factory import get_workspace_manifest
@@ -164,7 +164,7 @@ def remove_included_config(remotes, submodule_alt_remotes, repo_directory):
             os.remove(include_to_remove)
 
 def write_conditional_include(workspace_path, repo_sources, included_configs):
-    gitconfigpath = os.path.normpath(os.path.expanduser("~/.gitconfig"))
+    gitconfigpath = os.path.normpath(expanduser("~/.gitconfig"))
     for source in repo_sources:
         for included_config in included_configs:
             if included_config[0] == source.remote_name:
@@ -566,7 +566,7 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_m
 
     #Check for the presence of a gloablly defined commit template
     global_template_in_use = False
-    global_gitconfig_path = os.path.normpath(os.path.expanduser("~/.gitconfig"))
+    global_gitconfig_path = os.path.normpath(expanduser("~/.gitconfig"))
     with git.GitConfigParser(global_gitconfig_path, read_only=False) as gitglobalconfig:
         if gitglobalconfig.has_option(section='commit', option='template'):
             global_template = gitglobalconfig.get_value(section='commit', option='template')

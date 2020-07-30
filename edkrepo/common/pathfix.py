@@ -3,7 +3,7 @@
 ## @file
 # checkout_command.py
 #
-# Copyright (c) 2018- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 import os
@@ -159,3 +159,55 @@ def get_actual_path(path):
         return ''.join(actual_path)
     else:
         return path
+
+
+def _get_bothseps(path):
+    if isinstance(path, bytes):
+        return b'\\/'
+    else:
+        return '\\/'
+
+
+def expanduser(path):
+    """
+    Wrapper to consistently map the users HOME directory location.  Currently
+    three separate environment variable sets exist to do this mapping.  The default
+    python mapping in ntpath.py may not work because of different priority of decode.
+    This function is designed to remove any variation.
+
+    Note: This is a copy of the ntpath.py function with minor modifications.
+    """
+    if sys.platform != 'win32':
+        return os.path.expanduser(path)
+
+    path = os.fspath(path)
+    if isinstance(path, bytes):
+        tilde = b'~'
+    else:
+        tilde = '~'
+    if not path.startswith(tilde):
+        return path
+    i, n = 1, len(path)
+    while i < n and path[i] not in _get_bothseps(path):
+        i += 1
+
+    if 'HOME' in os.environ:
+        userhome = os.environ['HOME']
+    elif 'HOMEPATH' in os.environ:
+        try:
+            drive = os.environ['HOMEDRIVE']
+        except KeyError:
+            drive = ''
+        userhome = os.path.join(drive, os.environ['HOMEPATH'])
+    elif 'USERPROFILE' in os.environ:
+        userhome = os.environ['USERPROFILE']
+    else:
+        return path
+
+    if isinstance(path, bytes):
+        userhome = os.fsencode(userhome)
+
+    if i != 1:  # ~user
+        userhome = os.path.join(os.path.dirname(userhome), path[1:i])
+
+    return userhome + path[i:]

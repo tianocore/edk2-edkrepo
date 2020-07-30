@@ -31,7 +31,7 @@ from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_MASTER,
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL, SYNC_INCOMPATIBLE_COMBO
 from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL
-from edkrepo.common.pathfix import get_actual_path
+from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout_enabled
 from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_single_manifest
 from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
@@ -395,7 +395,7 @@ class SyncCommand(EdkrepoCommand):
             print(SYNC_MANIFEST_UPDATE)
 
     def __check_submodule_config(self, workspace_path, manifest, repo_sources):
-        gitconfigpath = os.path.normpath(os.path.expanduser("~/.gitconfig"))
+        gitconfigpath = os.path.normpath(expanduser("~/.gitconfig"))
         gitglobalconfig = git.GitConfigParser(gitconfigpath, read_only=False)
         try:
             local_manifest_dir = os.path.join(workspace_path, "repo")
@@ -448,7 +448,7 @@ class SyncCommand(EdkrepoCommand):
             gitglobalconfig.release()
 
     def __clean_git_globalconfig(self):
-        global_gitconfig_path = os.path.normpath(os.path.expanduser("~/.gitconfig"))
+        global_gitconfig_path = os.path.normpath(expanduser("~/.gitconfig"))
         with git.GitConfigParser(global_gitconfig_path, read_only=False) as git_globalconfig:
             includeif_regex = re.compile('^includeIf "gitdir:(/.+)/"$')
             for section in git_globalconfig.sections():
