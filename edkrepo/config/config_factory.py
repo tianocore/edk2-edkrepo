@@ -19,6 +19,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, E
 from edkrepo.common.edkrepo_exception import EdkrepoConfigFileReadOnlyException
 from edkrepo.common.humble import MIRROR_PRIMARY_REPOS_MISSING, MIRROR_DECODE_WARNING, MAX_PATCH_SET_INVALID
 from edkrepo_manifest_parser import edk_manifest
+from edkrepo.common.pathfix import expanduser
 
 def get_edkrepo_global_data_directory():
     global_data_dir = None
@@ -33,7 +34,7 @@ def get_edkrepo_global_data_directory():
         SHGetFolderPath(None, CSIDL_COMMON_APPDATA, None, SHGFP_TYPE_CURRENT, common_appdata)
         global_data_dir = os.path.join(common_appdata.value, "edkrepo")
     elif sys.platform == "darwin" or sys.platform.startswith("linux") or os.name == "posix":
-        global_data_dir = os.path.expanduser("~/.edkrepo")
+        global_data_dir = expanduser("~/.edkrepo")
     if not os.path.isdir(global_data_dir):
         if not os.path.exists(os.path.dirname(global_data_dir)):
             raise EdkrepoGlobalDataDirectoryNotFoundException(humble.GLOBAL_DATA_DIR_NOT_FOUND.format(os.path.dirname(global_data_dir)))

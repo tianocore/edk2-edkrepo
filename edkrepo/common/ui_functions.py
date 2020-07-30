@@ -3,7 +3,7 @@
 ## @file
 # ui_functions.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -15,8 +15,10 @@ import git
 
 import colorama
 
+from edkrepo.common.pathfix import expanduser
+
 def init_color_console(force_color_output):
-    config = git.GitConfigParser(os.path.normpath(os.path.expanduser("~/.gitconfig")))
+    config = git.GitConfigParser(os.path.normpath(expanduser("~/.gitconfig")))
     config_color = config.get("color", "ui", fallback="auto")
     strip = not sys.stdout.isatty()
     convert = sys.stdout.isatty()
