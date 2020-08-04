@@ -3,7 +3,7 @@
 ## @file
 # checkout_command.py
 #
-# Copyright (c) 2018- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 import os
@@ -11,6 +11,7 @@ import sys
 if sys.platform == "win32":
     from ctypes import windll, POINTER, byref, GetLastError, Structure, WinError
     from ctypes import c_void_p, c_ushort, c_int,  c_ulong, c_wchar, c_wchar_p
+    from ctypes import create_unicode_buffer
 
 def _is_wow64_process():
     kernel32 = windll.kernel32
@@ -211,3 +212,50 @@ def expanduser(path):
         userhome = os.path.join(os.path.dirname(userhome), path[1:i])
 
     return userhome + path[i:]
+
+def get_subst_drive_dict():
+    if sys.platform != "win32":
+        return {}
+    def _query_subst_drive(drive_letter):
+        kernel32 = windll.kernel32
+        QueryDosDevice = kernel32.QueryDosDeviceW
+        QueryDosDevice.argtypes = [c_wchar_p, c_wchar_p, c_ulong]
+        QueryDosDevice.restype = c_ulong
+        MAX_PATH = 260
+
+        if len(drive_letter) > 1 or len(drive_letter) == 0:
+            raise ValueError("Bad drive letter")
+        drive = '{}:'.format(drive_letter.upper())
+        drive_buffer = create_unicode_buffer(drive)
+        target_path_buffer_size = c_ulong(MAX_PATH)
+        target_path_buffer = create_unicode_buffer(target_path_buffer_size.value)
+        while True:
+            count = QueryDosDevice(drive_buffer, target_path_buffer, target_path_buffer_size)
+            if count == 0:
+                last_error = GetLastError()
+                if last_error == 122: #ERROR_INSUFFICIENT_BUFFER
+                    #Increase the buffer size and try again
+                    target_path_buffer_size = c_ulong((target_path_buffer_size.value * 161) / 100)
+                    target_path_buffer = create_unicode_buffer(target_path_buffer_size.value)
+                elif last_error == 2: #ERROR_FILE_NOT_FOUND
+                    #This is an invalid drive, return an empty string
+                    return ''
+                else:
+                    raise WinError(last_error)
+            else:
+                break
+        target_path = target_path_buffer.value
+        if len(target_path) > 4 and target_path[0:4] == '\\??\\':
+            if (ord(target_path[4]) >= ord('A') and ord(target_path[4]) <= ord('Z')) or \
+                (ord(target_path[4]) >= ord('a') and ord(target_path[4]) <= ord('z')):
+                #This is a SUBST'd drive, return the path
+                return target_path[4:].strip()
+        #This is a non-SUBST'd (aka real) drive, return an empty string
+        return ''
+    subst_dict = {}
+    for index in range(26):
+        drive_letter = chr(ord('A') + index)
+        target_path = _query_subst_drive(drive_letter)
+        if target_path != '':
+            subst_dict[drive_letter] = target_path
+    return subst_dict
