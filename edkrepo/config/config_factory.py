@@ -11,13 +11,16 @@ import os
 import sys
 import configparser
 import collections
-from ctypes import *
+if sys.platform == "win32":
+    from ctypes import oledll, c_void_p, c_uint32, c_wchar_p
+    from ctypes import create_unicode_buffer
 
 import edkrepo.config.humble.config_factory_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoGlobalConfigNotFoundException, EdkrepoConfigFileInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoGlobalDataDirectoryNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoConfigFileReadOnlyException
 from edkrepo.common.humble import MIRROR_PRIMARY_REPOS_MISSING, MIRROR_DECODE_WARNING, MAX_PATCH_SET_INVALID
+from edkrepo.common.pathfix import get_subst_drive_dict
 from edkrepo_manifest_parser import edk_manifest
 from edkrepo.common.pathfix import expanduser
 
@@ -238,6 +241,11 @@ def get_workspace_path():
     while True:
         if os.path.isdir(os.path.join(path, "repo")):
             if os.path.isfile(os.path.join(os.path.join(path, "repo"), "Manifest.xml")):
+                if sys.platform == "win32":
+                    subst = get_subst_drive_dict()
+                    drive = os.path.splitdrive(path)[0][0].upper()
+                    if drive in subst:
+                        path = os.path.join(subst[drive], os.path.splitdrive(path)[1][1:])
                 return path
         if os.path.dirname(path) == path:
             break

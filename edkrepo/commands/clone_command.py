@@ -9,6 +9,7 @@
 
 import os
 import shutil
+import sys
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
@@ -20,6 +21,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, 
 from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 from edkrepo.common.humble import CLONE_INVALID_WORKSPACE, CLONE_INVALID_PROJECT_ARG, CLONE_INVALID_COMBO_ARG
 from edkrepo.common.humble import SPARSE_CHECKOUT, CLONE_INVALID_LOCAL_ROOTS
+from edkrepo.common.pathfix import get_subst_drive_dict
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
@@ -77,6 +79,12 @@ class CloneCommand(EdkrepoCommand):
             workspace_dir = os.getcwd()
         else:
             workspace_dir = os.path.abspath(workspace_dir)
+        if sys.platform == "win32":
+            subst = get_subst_drive_dict()
+            drive = os.path.splitdrive(workspace_dir)[0][0].upper()
+            if drive in subst:
+                workspace_dir = os.path.join(subst[drive], os.path.splitdrive(workspace_dir)[1][1:])
+                workspace_dir = os.path.normpath(workspace_dir)
         if os.path.isdir(workspace_dir) and os.listdir(workspace_dir):
             raise EdkrepoInvalidParametersException(CLONE_INVALID_WORKSPACE)
         if not os.path.isdir(workspace_dir):
