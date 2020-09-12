@@ -148,6 +148,11 @@ def find_project_in_single_index (project, index_file, manifest_dir):
         proj_name = case_insensitive_single_match(project, index_file.project_list)
     except:
         proj_name = None
+    if proj_name is None:
+        try:
+            proj_name = case_insensitive_single_match(project, index_file.archived_project_list)
+        except:
+            proj_name = None
     if proj_name:
         ci_index_xml_rel_path = os.path.normpath(index_file.get_project_xml(proj_name))
         global_manifest_path = os.path.join(manifest_dir, ci_index_xml_rel_path)
@@ -219,6 +224,7 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
                 for dirpath, dirname, filenames in os.walk(edkrepo_user_cfg.manifest_repo_abs_path(repo)):
                     if project in filenames:
                         return repo, 'edkrepo_user_cfg', os.path.join(dirpath, project)
+        raise EdkrepoManifestNotFoundException(humble.PROJ_NOT_IN_REPO.format(project))
     else:
         raise EdkrepoManifestNotFoundException(humble.PROJ_NOT_IN_REPO.format(project))
 
