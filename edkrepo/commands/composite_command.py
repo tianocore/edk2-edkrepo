@@ -7,7 +7,8 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from edkrepo.commands.edkrepo_command import VerboseArgument
+from edkrepo.commands.edkrepo_command import VerboseArgument, PerformanceArgument
+
 
 class CompositeCommand(object):
     def __init__(self):
@@ -21,6 +22,7 @@ class CompositeCommand(object):
             if command.get_metadata()['name'] == command_name:
                 metadata = command.get_metadata()
                 args = metadata['arguments']
+                args.append(PerformanceArgument)
                 args.append(VerboseArgument)
                 metadata['arguments'] = args
                 return metadata

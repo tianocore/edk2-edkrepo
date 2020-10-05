@@ -20,6 +20,7 @@ import site
 import inspect
 import imp
 import importlib.util
+import datetime as dt
 
 from git.exc import GitCommandError
 
@@ -157,6 +158,7 @@ def generate_command_completion_script(script_filename, parser):
         f.write('    complete -F _edkrepo_completions edkrepo\nfi\n')
 
 def main():
+    start_time = dt.datetime.now()
     command = command_factory.create_composite_command()
     config = {}
     try:
@@ -207,6 +209,8 @@ def main():
             traceback.print_exc()
         print("Error: {}".format(str(e)))
         return 1
+    if parsed_args.performance:
+        print('\nExecution Time: {}'.format(dt.datetime.now() - start_time))
     return 0
 
 if __name__ == "__main__":

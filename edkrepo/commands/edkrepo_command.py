@@ -3,7 +3,7 @@
 ## @file
 # edkrepo_command.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -54,3 +54,8 @@ SourceManifestRepoArgument = {'name' : 'source-manifest-repo',
                          'required' : False,
                          'action' : 'store',
                          'help-text' : arguments.SOURCE_MANIFEST_REPO_HELP}
+
+PerformanceArgument = {'name': 'performance',
+                       'positional': False,
+                       'required': False,
+                       'help-text': arguments.PERFORMANCE_HELP}
