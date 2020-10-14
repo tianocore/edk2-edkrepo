@@ -79,9 +79,9 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
-        print ("Cloning from: " + str(local_repo_url))
-        repo = Repo.clone_from(local_repo_url, local_repo_path, progress=GitProgressHandler())
-        #Fetch notes
+        print("Cloning from: " + str(local_repo_url))
+        repo = Repo.clone_from(local_repo_url, local_repo_path, progress=GitProgressHandler(), no_checkout=True)
+        # Fetch notes
         repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
 
         # Add the primary remote so that a reference to the latest code is available when
