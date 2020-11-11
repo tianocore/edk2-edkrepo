@@ -8,7 +8,7 @@
 #
 
 import argparse
-import imp
+import importlib
 import importlib.util
 import inspect
 import json
@@ -37,7 +37,7 @@ for directory in sitepackages:
         edkrepo_site_dir = edkrepo_package_path
         break
 else:
-    imp.reload(edkrepo)
+    importlib.reload(edkrepo)
     edkrepo_package_path = os.path.dirname(os.path.dirname(edkrepo.__file__))
     for directory in sitepackages:
         if edkrepo_package_path == directory:

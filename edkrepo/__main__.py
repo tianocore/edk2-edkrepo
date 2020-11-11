@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import imp
+import importlib
 import os
 import sys
 import site
@@ -23,7 +23,7 @@ for directory in sitepackages:
         edkrepo_site_dir = edkrepo_package_path
         break
 else:
-    imp.reload(edkrepo)
+    importlib.reload(edkrepo)
 import edkrepo.edkrepo_entry_point
 
 if __name__ == '__main__':
