@@ -427,76 +427,22 @@ def combination_is_in_manifest(combination, manifest):
     return combination in combination_names
 
 
-def get_target_sources(combination_or_sha, manifest, workspace_path, log=None):
-    if combination_is_in_manifest(combination_or_sha, manifest):
-        return manifest.get_repo_sources(combination_or_sha)
-
-    current_combo = manifest.general_config.current_combo
-    # look for a pin file that is named combination_or_sha.xml
-    pin_filename = os.path.join(
-        workspace_path,
-        'repo',
-        combination_or_sha+'.xml')
-    if os.path.exists(pin_filename):
-        return ManifestXml(pin_filename).get_repo_sources(current_combo)
-
-    print ("Search repositories for '{}'".format(combination_or_sha))
-    commit_map = {
-        x.root : None
-        for x in manifest.get_repo_sources(current_combo)
-    }
-    found = False
-    if not log:
-        log = sort_commits(manifest, workspace_path)
-    for commit in log:
-        root = os.path.basename(commit.repo.working_dir)
-        if combination_or_sha == commit.hexsha:
-            found = True
-            commit_map[root] = commit.hexsha
-            continue
-        if not found:
-            continue
-        if not commit_map[root]:
-            commit_map[root] = commit.hexsha
-    if not found:
-        raise EdkrepoInvalidParametersException(CHECKOUT_INVALID_COMBO)
-
-    # Create a new pin file
-    old_sources = manifest.get_repo_sources(current_combo)
-    new_sources = []
-    for repo_source in old_sources:
-        new_sources.append(
-            repo_source._replace(commit=commit_map[repo_source.root]))
-    manifest.generate_pin_xml(
-        combination_or_sha,
-        current_combo,
-        new_sources,
-        filename=pin_filename)
-
-    return ManifestXml(pin_filename).get_repo_sources(current_combo)
-
-
-def checkout(combination_or_sha, verbose=False, override=False, log=None):
+def checkout(combination, verbose=False, override=False, log=None):
     workspace_path = get_workspace_path()
     manifest = get_workspace_manifest()
 
-    # Create combo_or_sha so we have original input and do not introduce any
+    # Create combo so we have original input and do not introduce any
     # unintended behavior by messing with parameters.
-    combo_or_sha = combination_or_sha
+    combo = combination
     submodule_combo = manifest.general_config.current_combo
     try:
         # Try to handle normalize combo name to match the manifest file.
-        combo_or_sha = case_insensitive_single_match(combo_or_sha, combinations_in_manifest(manifest))
-        submodule_combo = combo_or_sha
+        combo = case_insensitive_single_match(combo, combinations_in_manifest(manifest))
+        submodule_combo = combo
     except:
-        # No match so leave it alone.  It must be a SHA1 or a bad combo name.
-        pass
+        raise EdkrepoInvalidParametersException(CHECKOUT_INVALID_COMBO)
 
-    repo_sources = get_target_sources(
-        combo_or_sha,
-        manifest,
-        workspace_path,
-        log=log)
+    repo_sources = manifest.get_repo_sources(combo)
     initial_repo_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
 
     # Disable sparse checkout
@@ -523,7 +469,7 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
 
     # Deinit all submodules due to the potential for issues when switching
     # branches.
-    if combo_or_sha != manifest.general_config.current_combo:
+    if combo != manifest.general_config.current_combo:
         try:
             deinit_full(workspace_path, manifest, verbose)
         except Exception as e:
@@ -531,19 +477,19 @@ def checkout(combination_or_sha, verbose=False, override=False, log=None):
             if verbose:
                 print(e)
 
-    print(CHECKING_OUT_COMBO.format(combo_or_sha))
+    print(CHECKING_OUT_COMBO.format(combo))
 
     try:
         checkout_repos(verbose, override, repo_sources, workspace_path, manifest)
         current_repos = repo_sources
         # Update the current checkout combo in the manifest only if this
         # combination exists in the manifest
-        if combination_is_in_manifest(combo_or_sha, manifest):
-            manifest.write_current_combo(combo_or_sha)
+        if combination_is_in_manifest(combo, manifest):
+            manifest.write_current_combo(combo)
     except:
         if verbose:
             traceback.print_exc()
-        print (CHECKOUT_COMBO_UNSUCCESSFULL.format(combo_or_sha))
+        print (CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
         # Return to the initial combo, since there was an issue with cheking out the selected combo
         checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
     finally:
