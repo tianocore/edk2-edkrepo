@@ -98,3 +98,6 @@ class EdkrepoGitConfigSetupException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 131)
 
+class EdkrepoCacheException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 132)

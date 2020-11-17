@@ -225,9 +225,19 @@ class GlobalUserConfig(BaseConfig):
         self.filename = os.path.join(get_edkrepo_global_data_directory(), "edkrepo_user.cfg")
         self.prop_list = [
             CfgProp('scm', 'mirror_geo', 'geo', 'none', False),
-            CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False)
-            ]
+            CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False),
+            CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False)]
         super().__init__(self.filename, get_edkrepo_global_data_directory(), False)
+
+    @property
+    def caching_state(self):
+        return self.enable_caching_text.lower() == 'true'
+
+    def set_caching_state(self, enable):
+        if enable:
+            self.enable_caching_text = 'true'
+        else:
+            self.enable_caching_text = 'false'
 
     @property
     def max_patch_set_int(self):
