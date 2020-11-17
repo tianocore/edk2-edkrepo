@@ -14,6 +14,7 @@ from git import Repo
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.checkout_pin_args as arguments
 import edkrepo.commands.humble.checkout_pin_humble as humble
+from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, reset_sparse_checkout, sparse_checkout
 from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest
 from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET, SUBMODULE_DEINIT_FAILED
@@ -21,6 +22,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, 
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from project_utils.submodule import deinit_full, maintain_submodules
 
@@ -82,7 +84,11 @@ class CheckoutPinCommand(EdkrepoCommand):
             checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest)
             manifest.write_current_combo(humble.PIN_COMBO.format(args.pinfile))
         finally:
-            maintain_submodules(workspace_path, pin, submodule_combo, args.verbose)
+            cache_path = None
+            cache_obj = get_repo_cache_obj(config)
+            if cache_obj is not None:
+                cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
+            maintain_submodules(workspace_path, pin, submodule_combo, args.verbose, cache_path)
             if sparse_enabled:
                 print(SPARSE_CHECKOUT)
                 sparse_checkout(workspace_path, pin_repo_sources, manifest)

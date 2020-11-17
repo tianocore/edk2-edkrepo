@@ -61,7 +61,7 @@ def _deinit(repo, submodules=None, verbose=False):
     return
 
 
-def _update(repo, submodules=None, verbose=False, recursive=False):
+def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=None):
     """
     Performs the update of submodules.  This includes the sync and update operations.
 
@@ -82,6 +82,8 @@ def _update(repo, submodules=None, verbose=False, recursive=False):
         cmd = ['git', 'submodule', 'update', '--init']
         if recursive:
             cmd.append('--recursive')
+        if cache_path is not None:
+            cmd.extend(['--reference', cache_path])
         output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
         display_git_output(output_data, verbose)
     else:
@@ -99,6 +101,8 @@ def _update(repo, submodules=None, verbose=False, recursive=False):
             cmd = ['git', 'submodule', 'update', '--init']
             if sub.recursive:
                 cmd.append('--recursive')
+            if cache_path is not None:
+                cmd.extend(['--reference', cache_path])
             cmd.extend(['--', sub.path])
             output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
             display_git_output(output_data, verbose)
@@ -269,7 +273,7 @@ def deinit_submodules(workspace, start_manifest, start_combo,
             _deinit(repo, deinit_list, verbose)
 
 
-def maintain_submodules(workspace, manifest, combo_name, verbose=False):
+def maintain_submodules(workspace, manifest, combo_name, verbose=False, cache_path=None):
     """
     Updates the submodules for a specific repo.
 
@@ -277,6 +281,7 @@ def maintain_submodules(workspace, manifest, combo_name, verbose=False):
         manifest   - The manifest parser object for the project.
         combo_name - The combination name to use for submodule maintenance.
         verbose    - Enable verbose messages.
+        cache_path - Path to the submodule cache repo.  A value of None indicates that no cache repo exists.
     """
     # Process each repo that may have submodules enabled
     print(strings.SUBMOD_INIT_UPDATE)
@@ -303,9 +308,9 @@ def maintain_submodules(workspace, manifest, combo_name, verbose=False):
 
         # Perform sync/update
         if len(repo_subs) == 0:
-            _update(repo, None, verbose)
+            _update(repo, None, verbose, cache_path=cache_path)
         else:
-            _update(repo, repo_subs, verbose)
+            _update(repo, repo_subs, verbose, cache_path=cache_path)
 
 
 if __name__ == '__main__':

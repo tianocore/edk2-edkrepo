@@ -56,6 +56,7 @@ from project_utils.sparse import BuildInfo, process_sparse_checkout
 from edkrepo.config.config_factory import get_workspace_path
 from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
+from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException, EdkrepoWarningException
@@ -75,12 +76,25 @@ CLEAR_LINE = '\x1b[K'
 DEFAULT_REMOTE_NAME = 'origin'
 PRIMARY_REMOTE_NAME = 'primary'
 
-def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest):
+
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, cache_obj=None):
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
+        cache_path = None
+        if cache_obj is not None:
+            cache_path = cache_obj.get_cache_path(local_repo_url)
         print("Cloning from: " + str(local_repo_url))
-        repo = Repo.clone_from(local_repo_url, local_repo_path, progress=GitProgressHandler(), no_checkout=True)
+        if cache_path is not None:
+            print('+ Using cache at {}'.format(cache_path))
+            repo = Repo.clone_from(local_repo_url, local_repo_path,
+                                   progress=GitProgressHandler(),
+                                   reference_if_able=cache_path,
+                                   no_checkout=True)
+        else:
+            repo = Repo.clone_from(local_repo_url, local_repo_path,
+                                   progress=GitProgressHandler(),
+                                   no_checkout=True)
         # Fetch notes
         repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
 
@@ -427,7 +441,7 @@ def combination_is_in_manifest(combination, manifest):
     return combination in combination_names
 
 
-def checkout(combination, verbose=False, override=False, log=None):
+def checkout(combination, verbose=False, override=False, log=None, cache_obj=None):
     workspace_path = get_workspace_path()
     manifest = get_workspace_manifest()
 
@@ -493,7 +507,10 @@ def checkout(combination, verbose=False, override=False, log=None):
         # Return to the initial combo, since there was an issue with cheking out the selected combo
         checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
     finally:
-        maintain_submodules(workspace_path, manifest, submodule_combo, verbose)
+        cache_path = None
+        if cache_obj is not None:
+            cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
+        maintain_submodules(workspace_path, manifest, submodule_combo, verbose, cache_path)
         if sparse_enabled or sparse_diff:
             print(SPARSE_CHECKOUT)
             sparse_checkout(workspace_path, current_repos, manifest)

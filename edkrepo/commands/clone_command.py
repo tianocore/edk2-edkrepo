@@ -14,6 +14,8 @@ import sys
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.clone_args as arguments
+from edkrepo.common.common_cache_functions import get_repo_cache_obj
+from edkrepo.common.common_cache_functions import add_missing_cache_repos
 from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout, verify_single_manifest
 from edkrepo.common.common_repo_functions import update_editor_config, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, write_conditional_include
@@ -28,6 +30,7 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from project_utils.submodule import maintain_submodules
+from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 
 
 class CloneCommand(EdkrepoCommand):
@@ -151,11 +154,19 @@ class CloneCommand(EdkrepoCommand):
         # Set up submodule alt url config settings prior to cloning any repos
         submodule_included_configs = write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
         write_conditional_include(workspace_dir, repo_sources_to_clone, submodule_included_configs)
-        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest)
+
+        # Determine if caching is going to be used and then clone
+        cache_obj = get_repo_cache_obj(config)
+        if cache_obj is not None:
+            add_missing_cache_repos(cache_obj, manifest, args.verbose)
+        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, cache_obj)
 
         # Init submodules
         if not args.skip_submodule:
-            maintain_submodules(workspace_dir, manifest, combo_name, args.verbose)
+            cache_path = None
+            if cache_obj is not None:
+                cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
+            maintain_submodules(workspace_dir, manifest, combo_name, args.verbose, cache_path)
 
         # Perform a sparse checkout if requested.
         use_sparse = args.sparse
