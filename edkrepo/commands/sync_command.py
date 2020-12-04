@@ -41,6 +41,7 @@ from edkrepo.common.common_repo_functions import update_repo_commit_template, ge
 from edkrepo.common.common_repo_functions import has_primary_repo_remote, fetch_from_primary_repo, in_sync_with_primary
 from edkrepo.common.common_repo_functions import update_hooks, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
+from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
@@ -152,7 +153,7 @@ class SyncCommand(EdkrepoCommand):
         # Update submodule configuration
         if not args.update_local_manifest: #Performance optimization, __update_local_manifest() will do this
             self.__check_submodule_config(workspace_path, manifest, repo_sources_to_sync)
-        self.__clean_git_globalconfig()
+        clean_git_globalconfig()
         for repo_to_sync in repo_sources_to_sync:
             local_repo_path = os.path.join(workspace_path, repo_to_sync.root)
             # Update any hooks
@@ -453,22 +454,4 @@ class SyncCommand(EdkrepoCommand):
         finally:
             gitglobalconfig.release()
 
-    def __clean_git_globalconfig(self):
-        global_gitconfig_path = os.path.normpath(expanduser("~/.gitconfig"))
-        with git.GitConfigParser(global_gitconfig_path, read_only=False) as git_globalconfig:
-            includeif_regex = re.compile('^includeIf "gitdir:(/.+)/"$')
-            for section in git_globalconfig.sections():
-                data = includeif_regex.match(section)
-                if data:
-                    gitrepo_path = data.group(1)
-                    gitconfig_path = git_globalconfig.get(section, 'path')
-                    if sys.platform == "win32":
-                        gitrepo_path = gitrepo_path[1:]
-                        gitconfig_path = gitconfig_path[1:]
-                    gitrepo_path = os.path.normpath(gitrepo_path)
-                    gitconfig_path = os.path.normpath(gitconfig_path)
-                    (repo_manifest_path, _) = os.path.split(gitconfig_path)
-                    repo_manifest_path = os.path.join(repo_manifest_path, "Manifest.xml")
-                    if not os.path.isdir(gitrepo_path) and not os.path.isfile(gitconfig_path):
-                        if not os.path.isfile(repo_manifest_path):
-                            git_globalconfig.remove_section(section)
+
