@@ -33,4 +33,11 @@ def clean_git_globalconfig():
                 repo_manifest_path = os.path.join(repo_manifest_path, "Manifest.xml")
                 if not os.path.isdir(gitrepo_path) and not os.path.isfile(gitconfig_path):
                     if not os.path.isfile(repo_manifest_path):
-                        git_globalconfig.remove_section(section)
+                        git_globalconfig.remove_section(section)
+
+def set_long_path_support():
+    global_git_config_path = os.path.normpath(expanduser("~/.gitconfig"))
+    with git.GitConfigParser(global_git_config_path, read_only=False) as git_globalconfig:
+        if 'core' not in git_globalconfig.sections():
+            git_globalconfig.add_section('core')
+        git_globalconfig.set('core', 'longpaths', 'true')
