@@ -7,10 +7,10 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 -->
 <EdkRepoInstaller>
-  <Python MinVersion="3.6.0">
-    <Wheel Name="smmap" Path="smmap-3.0.1-py2.py3-none-any.whl" UninstallAllOtherCopies="false" Version="3.0.1" />
-    <Wheel Name="gitdb" Path="gitdb-4.0.2-py3-none-any.whl" UninstallAllOtherCopies="false" Version="4.0.2" />
-    <Wheel Name="GitPython" Path="GitPython-3.1.0-py3-none-any.whl" UninstallAllOtherCopies="false" Version="3.1.0" />
+  <Python MinVersion="3.8.6">
+    <Wheel Name="smmap" Path="smmap-3.0.4-py2.py3-none-any.whl" UninstallAllOtherCopies="false" Version="3.0.4" />
+    <Wheel Name="gitdb" Path="gitdb-4.0.5-py3-none-any.whl" UninstallAllOtherCopies="false" Version="4.0.5" />
+    <Wheel Name="GitPython" Path="GitPython-3.1.11-py3-none-any.whl" UninstallAllOtherCopies="false" Version="3.1.11" />
     <Wheel Name="colorama" Path="colorama-0.4.3-py2.py3-none-any.whl" UninstallAllOtherCopies="false" Version="0.4.3" />
     <Wheel Name="edkrepo" Path="edkrepo-0.1.0-py3-none-any.whl" Version="0.1.0" UninstallAllOtherCopies="true" />
   </Python>
