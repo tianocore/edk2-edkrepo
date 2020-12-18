@@ -576,6 +576,8 @@ namespace TianoCore.EdkRepoInstaller
             Action ReportFailure = new Action(delegate () { FailureReported = true; });
             Environment.SetEnvironmentVariable("PYTHONHOME", null);
             Environment.SetEnvironmentVariable("PYTHONPATH", null);
+            Environment.SetEnvironmentVariable("PIP_INDEX_URL", null);
+            Environment.SetEnvironmentVariable("PIP_TARGET", null);
             if (VendorCustomizer.Instance != null)
             {
                 VendorCustomizer.Instance.WriteToInstallLog = new Action<string>(InstallLogger.Log);
