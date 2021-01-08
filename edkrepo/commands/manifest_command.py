@@ -3,7 +3,7 @@
 ## @file
 # manifest_command.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -21,8 +21,9 @@ from edkrepo.common.ui_functions import init_color_console
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_single_index
 from edkrepo.config.config_factory import get_workspace_manifest
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 
 
 class ManifestCommand(EdkrepoCommand):
@@ -100,6 +101,8 @@ class ManifestCommand(EdkrepoCommand):
                     print("  {}".format(project))
                 if args.verbose:
                     print("   -> {}".format(ci_index_xml.get_project_xml(project)))
+                    proj_manifest = ManifestXml(find_project_in_single_index(project, ci_index_xml, man_repos[repo][0])[1])
+                    print("   -> DevLead: {}".format(' '.join(x for x in proj_manifest.project_info.dev_leads)))
 
             if args.archived:
                 print()
@@ -111,3 +114,5 @@ class ManifestCommand(EdkrepoCommand):
                         print("  {}".format(project))
                     if args.verbose:
                         print("   -> {}".format(ci_index_xml.get_project_xml(project)))
+                        proj_manifest = ManifestXml(find_project_in_single_index(project, ci_index_xml, man_repos[repo][0])[1])
+                        print("   -> DevLead: {}".format(' '.join(x for x in proj_manifest.project_info.dev_leads)))
