@@ -3,7 +3,7 @@
 ## @file
 # cache_command.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020-2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -17,6 +17,7 @@ from edkrepo.common.common_cache_functions import add_missing_cache_repos
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.edkrepo_exception import EdkrepoCacheException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 
@@ -69,6 +70,8 @@ class CacheCommand(EdkrepoCommand):
 
         # State is enabled so make sure cache directory exists
         cache_obj = get_repo_cache_obj(config)
+
+        pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
         # Check to see if a manifest was provided and add any missing remotes
         manifest = None
