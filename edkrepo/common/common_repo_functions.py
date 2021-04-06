@@ -3,7 +3,7 @@
 ## @file
 # common_repo_functions.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -519,10 +519,23 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
 
 def get_latest_sha(repo, branch, remote_or_url='origin'):
     try:
-        (latest_sha, ref) = repo.git.ls_remote(remote_or_url, 'refs/heads/{}'.format(branch)).split()
+        (latest_sha, _) = repo.git.ls_remote(remote_or_url, 'refs/heads/{}'.format(branch)).split()
     except:
         latest_sha = None
     return latest_sha
+
+def get_full_path(file_name):
+    paths = os.environ['PATH'].split(os.pathsep)
+    if sys.platform == "win32":
+        if os.environ['SystemRoot'] not in paths:
+            paths.append(os.environ['SystemRoot'])
+        if os.environ['windir'] not in paths:
+            paths.append(os.environ['windir'])
+    for path in paths:
+        file_path = os.path.join(path, file_name)
+        if os.path.isfile(file_path):
+            return file_path
+    return None
 
 def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_manifest_directory):
     # Open the local manifest and get any templates
@@ -534,7 +547,7 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_m
     global_gitconfig_path = os.path.normpath(expanduser("~/.gitconfig"))
     with git.GitConfigParser(global_gitconfig_path, read_only=False) as gitglobalconfig:
         if gitglobalconfig.has_option(section='commit', option='template'):
-            global_template = gitglobalconfig.get_value(section='commit', option='template')
+            gitglobalconfig.get_value(section='commit', option='template')
             global_template_in_use = True
             print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
 
@@ -594,7 +607,7 @@ def in_sync_with_primary(repo, repo_data, verbose=False):
 
 def check_single_remote_connection(remote_url):
     """
-    Checks the connection to a single remote using git ls-remote rmemote_url -q invoked via subprocess
+    Checks the connection to a single remote using git ls-remote remote_url -q invoked via subprocess
     instead of gitpython to ensure that ssh errors are caught and handled properly on both git bash
     and windows command line"""
     print(CHECKING_CONNECTION.format(remote_url))
@@ -620,7 +633,7 @@ def find_project_in_index(project, ci_index_file, global_manifest_dir, except_me
         elif os.path.isfile(os.path.join(global_manifest_dir, project)):
             global_manifest_path = os.path.join(global_manifest_dir, project)
         elif not os.path.dirname(project):
-            for dirpath, dirname, filenames in os.walk(global_manifest_dir):
+            for dirpath, _, filenames in os.walk(global_manifest_dir):
                 if project in filenames:
                     global_manifest_path = os.path.join(dirpath, project)
                     break
