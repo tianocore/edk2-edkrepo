@@ -32,7 +32,7 @@ from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, SYNC_REPO_CHANG
 from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_TARGET, SYNC_ERROR
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL, SYNC_INCOMPATIBLE_COMBO
-from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL
+from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL, SYNC_MOVE_FAILED
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout_enabled
@@ -294,12 +294,6 @@ class SyncCommand(EdkrepoCommand):
         write_included_config(new_manifest_to_check.remotes, new_manifest_to_check.submodule_alternate_remotes, local_manifest_dir)
 
         self.__check_submodule_config(workspace_path, new_manifest_to_check, new_sources_for_current_combo)
-        new_manifest_remotes = {name:url for name, url in new_manifest_to_check.remotes}
-        #check for changes to remote urls
-        for remote_name in initial_manifest_remotes.keys():
-            if remote_name in new_manifest_remotes.keys():
-                if initial_manifest_remotes[remote_name] != new_manifest_remotes[remote_name]:
-                    raise EdkrepoManifestChangedException(SYNC_URL_CHANGE.format(remote_name))
 
         # Check that the repo sources lists are the same. If they are not the same and the override flag is not set, throw an exception.
         if not args.override and set(initial_sources) != set(new_sources):
@@ -315,10 +309,13 @@ class SyncCommand(EdkrepoCommand):
                     if initial.root == new.root:
                         if initial.remote_name == new.remote_name:
                             if initial.remote_url == new.remote_url:
+                                # If the source is unchanged between the old and the new manifest,
+                                # add it to the common lists
                                 common = True
                                 initial_common.append(initial)
                                 new_common.append(new)
                                 break
+                # If the source is different between the old and the new manifest, add it to the uncommon list
                 if not common:
                     uncommon_sources.append(initial)
             for new in new_sources:
@@ -329,6 +326,7 @@ class SyncCommand(EdkrepoCommand):
                             if new.remote_url == initial.remote_url:
                                 common = True
                                 break
+                # If the source is different between the old and the new manifest, add it to the uncommon list
                 if not common:
                     uncommon_sources.append(new)
             uncommon_sources = set(uncommon_sources)
@@ -345,23 +343,34 @@ class SyncCommand(EdkrepoCommand):
                             if source_to_check.remote_url == source.remote_url:
                                 found_source = True
                                 break
+                # If the source that is different came from the old manifest, then it is now outdated and either needs
+                # to be deleted or moved to a archival location.
                 if found_source:
-                    sources_to_remove.append(source)
-                else:
-                    roots = [s.root for s in initial_sources]
+                    roots = [s.root for s in new_sources]
+                    # If there is a source in the new manifest that goes into the same folder name as a source in the
+                    # old manifest, then we need to move that old folder to an archival location.
                     if source.root in roots:
-                        #In theory, this should never happen, we should hit the SYNC_URL_CHANGE error
-                        #this is here as a catch all
                         sources_to_move.append(source)
                     else:
-                        sources_to_clone.append(source)
+                        # If it doesn't exist at all in the new manifest, tell the user it is old and no longer used.
+                        sources_to_remove.append(source)
+                else:
+                    # If the source that is different came from the new manifest, then we need to clone that new
+                    # Git repository.
+                    sources_to_clone.append(source)
             init_color_console(False)
+            # Move the obsolete Git repositories to archival locations.
             for source in sources_to_move:
                 old_dir = os.path.join(workspace_path, source.root)
                 new_dir = generate_name_for_obsolete_backup(old_dir)
                 print(SYNC_SOURCE_MOVE_WARNING.format(source.root, new_dir))
                 new_dir = os.path.join(workspace_path, new_dir)
-                shutil.move(old_dir, new_dir)
+                try:
+                    shutil.move(old_dir, new_dir)
+                except:
+                    print(SYNC_MOVE_FAILED.format(initial_dir=source.root, new_dir=new_dir))
+                    raise
+            # Tell the user about any Git repositories that are no longer used.
             if len(sources_to_remove) > 0:
                 print(SYNC_REMOVE_WARNING)
             for source in sources_to_remove:

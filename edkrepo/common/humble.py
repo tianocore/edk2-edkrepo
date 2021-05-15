@@ -58,6 +58,11 @@ FETCHING = 'Fetching latest code for {0} from {1} branch ...'
 NO_SYNC_DETACHED_HEAD = 'No need to sync repo {0} since it is in detached HEAD state'
 SYNC_MANIFEST_UPDATE = 'To update to the latest manifest please run edkrepo sync --update-local-manifest. {}'.format(Fore.RESET)
 SYNC_REMOVE_LIST_END_FORMATTING = '{}'.format(Style.RESET_ALL)
+SYNC_MOVE_FAILED = '''{}{}WARNING:{}{} Moving {{initial_dir}} to {{new_dir}} failed.
+{}{}{}Most likely files from the original directory are open in an editor or IDE.
+It is likely that {{new_dir}} contains your original code now.
+Please close any open editors to reconcile this problem.
+You may need to manually rename {{new_dir}} to {{initial_dir}} in some circumstances.\n{}'''.format(Style.BRIGHT, Fore.RED, Style.RESET_ALL, Fore.RED, Style.RESET_ALL, Style.BRIGHT, Fore.YELLOW, Style.RESET_ALL)
 
 #error messages for clone_command.py
 CLONE_EXIT = '\nExiting without performing clone operation.'
