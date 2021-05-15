@@ -3,7 +3,7 @@
 ## @file
 # humble.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -57,7 +57,7 @@ SYNCING = 'Syncing {0} to latest {1} branch ...'
 FETCHING = 'Fetching latest code for {0} from {1} branch ...'
 NO_SYNC_DETACHED_HEAD = 'No need to sync repo {0} since it is in detached HEAD state'
 SYNC_MANIFEST_UPDATE = 'To update to the latest manifest please run edkrepo sync --update-local-manifest. {}'.format(Fore.RESET)
-SYNC_REMOVE_LIST_END_FORMATTING = '{}'.format(Fore.RESET)
+SYNC_REMOVE_LIST_END_FORMATTING = '{}'.format(Style.RESET_ALL)
 
 #error messages for clone_command.py
 CLONE_EXIT = '\nExiting without performing clone operation.'
