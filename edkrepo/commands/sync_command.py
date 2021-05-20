@@ -3,7 +3,7 @@
 ## @file
 # sync_command.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,10 +11,12 @@ import itertools
 import os
 import shutil
 import sys
+import time
 import re
 
 import git
 from git import Repo
+from git.exc import GitCommandError
 
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
@@ -171,7 +173,22 @@ class SyncCommand(EdkrepoCommand):
                     print (SYNCING.format(repo_to_sync.root, repo.active_branch))
                 else:
                     print (FETCHING.format(repo_to_sync.root, repo.active_branch))
-                repo.remotes.origin.fetch()
+                try:
+                    repo.remotes.origin.fetch()
+                except GitCommandError as e:
+                    prune_needed = False
+                    prune_needed_heuristic_str = "error: some local refs could not be updated"
+                    if e.stdout.strip().find(prune_needed_heuristic_str) != -1:
+                        prune_needed = True
+                    if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
+                        prune_needed = True
+                    if prune_needed:
+                        time.sleep(1.0)
+                        repo.git.remote('prune', 'origin')
+                        time.sleep(1.0)
+                        repo.remotes.origin.fetch()
+                    else:
+                        raise
                 if has_primary_repo_remote(repo, args.verbose):
                     fetch_from_primary_repo(repo, repo_to_sync, args.verbose)
                 if not args.override and not repo.is_ancestor(ancestor_rev='HEAD', rev='origin/{}'.format(repo_to_sync.branch)):
@@ -235,7 +252,22 @@ class SyncCommand(EdkrepoCommand):
             local_repo_path = os.path.join(workspace_path, initial_repo.root)
             repo = Repo(local_repo_path)
             origin = repo.remotes.origin
-            origin.fetch()
+            try:
+                origin.fetch()
+            except GitCommandError as e:
+                prune_needed = False
+                prune_needed_heuristic_str = "error: some local refs could not be updated"
+                if e.stdout.strip().find(prune_needed_heuristic_str) != -1:
+                    prune_needed = True
+                if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
+                    prune_needed = True
+                if prune_needed:
+                    time.sleep(1.0)
+                    repo.git.remote('prune', 'origin')
+                    time.sleep(1.0)
+                    origin.fetch()
+                else:
+                    raise
 
         #see if there is an entry in CiIndex.xml that matches the prject name of the current manifest
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
