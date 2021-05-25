@@ -139,6 +139,8 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
                 global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
             else:
                 global_manifest_directory = None
+        else:
+            global_manifest_directory = None
         if global_manifest_directory:
             # Install git hooks if there is a manifest repo associated with the manifest being cloned
             install_hooks(project_client_side_hooks, local_repo_path, repo_to_clone, config, global_manifest_directory)
