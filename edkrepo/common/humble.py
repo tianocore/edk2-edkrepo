@@ -37,7 +37,7 @@ CHECKING_CONNECTION = 'Checking connection to remote url: {}\n'
 #Error messages for sync_command.py
 SYNC_EXIT = 'Exiting without performing sync operations.'
 SYNC_UNCOMMITED_CHANGES = UNCOMMITED_CHANGES + SYNC_EXIT
-SYNC_COMMITS_ON_MASTER = 'Commits were found on {0} branch.\n  (use the "--override" flag to overwrite these commits)\nRepo {1} was not updated.'
+SYNC_COMMITS_ON_TARGET = 'Commits were found on {0} branch.\n  (use the "--override" flag to overwrite these commits)\nRepo {1} was not updated.'
 SYNC_ERROR = '\nError: Some repositories were not updated.'
 SYNC_MANIFEST_NOT_FOUND = 'A manifest for project, {0}, was not found.\nTo complete this operation please rerun the command with the --override flag\n' + SYNC_EXIT
 SYNC_URL_CHANGE = 'The URL for the remote, {0} has changed.\n' + SYNC_EXIT

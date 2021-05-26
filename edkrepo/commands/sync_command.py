@@ -29,7 +29,7 @@ from edkrepo.common.humble import SYNC_UNCOMMITED_CHANGES, SYNC_MANIFEST_NOT_FOU
 from edkrepo.common.humble import SYNC_SOURCE_MOVE_WARNING, SYNC_REMOVE_WARNING, SYNC_REMOVE_LIST_END_FORMATTING
 from edkrepo.common.humble import SYNC_MANIFEST_DIFF_WARNING, SYNC_MANIFEST_UPDATE
 from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, SYNC_REPO_CHANGE, SYNCING, FETCHING, UPDATING_MANIFEST
-from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_MASTER, SYNC_ERROR
+from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_TARGET, SYNC_ERROR
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL, SYNC_INCOMPATIBLE_COMBO
 from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL
@@ -192,7 +192,7 @@ class SyncCommand(EdkrepoCommand):
                 if has_primary_repo_remote(repo, args.verbose):
                     fetch_from_primary_repo(repo, repo_to_sync, args.verbose)
                 if not args.override and not repo.is_ancestor(ancestor_rev='HEAD', rev='origin/{}'.format(repo_to_sync.branch)):
-                    print(SYNC_COMMITS_ON_MASTER.format(repo_to_sync.branch, repo_to_sync.root))
+                    print(SYNC_COMMITS_ON_TARGET.format(repo_to_sync.branch, repo_to_sync.root))
                     local_commits = True
                     sync_error = True
                 if not args.fetch and (not local_commits or args.override):
