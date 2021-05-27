@@ -1,5 +1,3 @@
-This branch is for integrating the EdkRepo tool in to EDK2
-
 # Introduction
 
 EdkRepo is the multi-repository tool for EDK II firmware development. EdkRepo is built on top of git. It is intended to automate common developer workflows for projects that use more than one git repository. For example many of the new projects in the edk2-platforms repository require the user to clone several git repositories. EdkRepo makes it easier to set up and upstream changes for these projects. EdkRepo does not replace git, rather it provides higher level extensions that make it easier to work with git. EdkRepo is written in Python and is compatible with Python 3.5 or later.
@@ -12,8 +10,8 @@ EdkRepo is the multi-repository tool for EDK II firmware development. EdkRepo is
 - Python SetupTools
 - Python Pip
 ### Ubuntu Specific Instructions
-Tested versions: 18.04 LTS, 16.04 LTS
-#### Install Dependencies (Ubuntu 16.04 & 18.04)
+Tested versions: 20.04 LTS, 18.04 LTS, 16.04 LTS
+#### Install Dependencies (Ubuntu 20.04, 18.04, 16.04)
 `sudo apt-get install git python3 python3-setuptools python3-pip`
 #### Upgrade git (Ubuntu 16.04 LTS Only)
 The version of git that is installed by default in Ubuntu 16.04 is too old for EdkRepo (16.04 includes git 2.7.4, the minimum is 2.13+). To upgrade git, run the following commands:
@@ -81,9 +79,9 @@ Run the following commands to install EdkRepo's dependencies:
 
 `brew install bash-completion git git-gui pyenv`
 
-`pyenv install 3.8.2`
+`pyenv install 3.8.8`
 
-`pyenv global 3.8.2`
+`pyenv global 3.8.8`
 
 During installation, you may be prompted to enter your password.
 
@@ -91,7 +89,7 @@ During installation, you may be prompted to enter your password.
 
 To enable usage of Pyenv installed Python interpreters and Git command completions, run the following command:
 
-`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/tianocore/edk2-staging/EdkRepo/edkrepo_installer/mac-scripts/setup_git_pyenv_mac.sh)"`
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/tianocore/edk2-edkrepo/main/edkrepo_installer/mac-scripts/setup_git_pyenv_mac.sh)"`
 
 Restart your shell so the Pyenv changes can take effect:
 
@@ -122,11 +120,11 @@ Restart your shell so the new Pyenv shim for EdkRepo can take effect:
 - Git 2.13.x or later
 - Python 3.5 or later
 
-Git 2.26.0 is the version that has received the most validation, though any version of Git 2.13 or later works fine. If you want to install 2.26.0, here are some links:
-- [Direct Link - Git for Windows 2.26.0 - 64 Bit](https://github.com/git-for-windows/git/releases/download/v2.26.0.windows.1/Git-2.26.0-64-bit.exe)
-- [Direct Link - Git for Windows 2.26.0 - 32 Bit](https://github.com/git-for-windows/git/releases/download/v2.26.0.windows.1/Git-2.26.0-32-bit.exe)
+Git 2.27.0 is the version that has received the most validation, though any version of Git 2.13 or later works fine. If you want to install 2.27.0, here are some links:
+- [Direct Link - Git for Windows 2.27.0 - 64 Bit](https://github.com/git-for-windows/git/releases/download/v2.27.0.windows.1/Git-2.27.0-64-bit.exe)
+- [Direct Link - Git for Windows 2.27.0 - 32 Bit](https://github.com/git-for-windows/git/releases/download/v2.27.0.windows.1/Git-2.27.0-32-bit.exe)
 
-Python 3.8 or later is recommended due to performance improvements. You can get Python from here: https://www.python.org/
+Python 3.8.8 or later is recommended due to performance improvements and [CVE-2021-3177](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3177). You can get Python from here: https://www.python.org/
 
 ### Install Process
 1. Run the installer .exe
@@ -139,7 +137,7 @@ To install from source, one must build and run the installer .exe using the inst
 
 ### Build Process
 #### Build Pre-Requisites
-- Visual Studio 2015 or later with the C# language installed
+- Visual Studio 2015 or later with the C# language and C++ compiler installed
 - Python Wheel
 
 Install Python wheel using the following:
@@ -153,26 +151,17 @@ Open a command prompt and type the following:
 # Timeline
 | Time | Event |
 |:----:|:-----:|
+| WW 10 2021 | Moved from edk2-staging to a dedicated repository |
 | WW 26 2019 | Initial commit of EdkRepo |
 |...|...|
 
-# Branch Owners
+# Maintainers
 - Ashley DeSimone <ashley.e.desimone@intel.com>
 - Nate DeSimone <nathaniel.l.desimone@intel.com>
 
-# Integration
-EdkRepo could live in several places:
-1. edk2-platforms
-2. edk2-pytool-library
-3. The edk2-toolenv repository proposed by Sean (assuming approval of Sean’s RFC)
-4. A new, separate repository created for EdkRepo
-
-This is a topic that requires community discussion to decide what the final location should be.
-
 # Known Issues
-| Issue | Status |
-|:-----:|:------:|
-|...|...|
+Please see https://github.com/tianocore/edk2-edkrepo/issues
 
 # Related Links
+- https://github.com/tianocore/edk2-edkrepo-manifest
 - https://github.com/tianocore/edk2-platforms
