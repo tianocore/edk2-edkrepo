@@ -333,8 +333,10 @@ def check_branches(sources, workspace_path):
         if not repo_to_check.branch:
             continue
         if repo_to_check.branch not in repo.remotes['origin'].refs:
-            raise EdkrepoManifestInvalidException(
-                CHECKOUT_NO_REMOTE.format(repo_to_check.root))
+            try:
+               repo.remotes.origin.fetch("refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_check.branch), progress=GitProgressHandler())
+            except:
+                raise EdkrepoManifestInvalidException(CHECKOUT_NO_REMOTE.format(repo_to_check.root))
 
 
 def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest):
@@ -609,7 +611,7 @@ def check_single_remote_connection(remote_url):
     instead of gitpython to ensure that ssh errors are caught and handled properly on both git bash
     and windows command line"""
     print(CHECKING_CONNECTION.format(remote_url))
-    check_output = subprocess.Popen('git ls-remote {} -q'.format(remote_url))
+    check_output = subprocess.Popen('git ls-remote {} -q'.format(remote_url), shell=True)
     check_output.communicate()
 
 def find_project_in_index(project, ci_index_file, global_manifest_dir, except_message):
