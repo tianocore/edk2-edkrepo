@@ -240,6 +240,10 @@ class GlobalUserConfig(BaseConfig):
             self.enable_caching_text = 'false'
 
     @property
+    def cfg_filename(self):
+        return self.filename
+
+    @property
     def max_patch_set_int(self):
         try:
             return int(self.max_patch_set)
