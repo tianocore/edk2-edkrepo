@@ -3,7 +3,7 @@
 ## @file
 # ui_functions.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,7 +12,6 @@ import sys
 import string
 
 import git
-
 import colorama
 
 from edkrepo.common.pathfix import expanduser
@@ -47,3 +46,14 @@ def display_git_output(output_data, verbose=False):
         print(output_data[1])
     if verbose and output_data[2]:
         print(output_data[2])
+
+def print_safe(input_string):
+    print(safe_str(input_string))
+
+def safe_str(input_string):
+    safe_str = ''
+    for char in input_string:
+        if char not in string.printable:
+            char = '?'
+        safe_str = ''.join((safe_str, str(char)))
+    return safe_str
