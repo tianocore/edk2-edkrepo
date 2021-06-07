@@ -645,3 +645,24 @@ def find_project_in_index(project, ci_index_file, global_manifest_dir, except_me
             raise EdkrepoInvalidParametersException(except_message)
 
     return global_manifest_path
+
+def find_less():
+    use_less = False
+    if sys.platform == 'win32':
+        git_path = get_full_path('git.exe')
+        if git_path is not None:
+            less_path = os.path.join(os.path.dirname(os.path.dirname(git_path)), 'usr', 'bin', 'less.exe')
+            if os.path.isfile(less_path):
+                use_less = True
+                return less_path, use_less
+            less_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(git_path))), 'usr', 'bin', 'less.exe')
+            if os.path.isfile(less_path):
+                use_less = True
+                return less_path, use_less
+        return None, use_less
+    else:
+        use_less = False
+        less_path = get_full_path('less')
+        if less_path:
+            use_less = True
+        return less_path, use_less
