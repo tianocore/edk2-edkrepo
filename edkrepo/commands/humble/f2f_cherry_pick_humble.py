@@ -45,3 +45,4 @@ F2F_CHERRY_PICK_NO_IN_PROGRESS_ABORT = 'A Folder to Folder Cherry Pick is not in
 F2F_CHERRY_PICK_NOT_IN_GIT_REPO = 'The path {} is not within the git repository'
 F2F_CHERRY_PICK_CHERRY_PICK_NUM = '{}Cherry Pick #{{}}{}'.format(Fore.MAGENTA, Fore.RESET)
 F2F_CHERRY_PICK_CHERRY_PICK_EXCLUDE_LIST = '\tExclude={}'
+F2F_CHERRY_PICK_ABORT_DETECTED = 'Abort detected. Exiting cherry pick'

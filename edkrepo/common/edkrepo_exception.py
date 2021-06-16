@@ -101,3 +101,7 @@ class EdkrepoGitConfigSetupException(EdkrepoException):
 class EdkrepoCacheException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 133)
+
+class EdkrepoAbortCherryPickException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 134)
