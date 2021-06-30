@@ -12,7 +12,7 @@ from colorama import Style
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import ColorArgument
 import edkrepo.commands.arguments.combo_args as arguments
-from edkrepo.common.ui_functions import init_color_console
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.config.config_factory import get_workspace_manifest
 
 
@@ -35,7 +35,7 @@ class ComboCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        init_color_console(args.color)
+        ui_functions.init_color_console(args.color)
 
         manifest = get_workspace_manifest()
         combo_archive = []
@@ -47,13 +47,13 @@ class ComboCommand(EdkrepoCommand):
             combo_list.append(manifest.general_config.current_combo)
         for combo in sorted(combo_list):
             if combo == manifest.general_config.current_combo:
-                print("* {}{}{}".format(Fore.GREEN, combo, Fore.RESET))
+                ui_functions.print_info_msg("* {}{}{}".format(Fore.GREEN, combo, Fore.RESET))
             elif combo in combo_archive:
-                print("  {}{}{}{}".format(Fore.YELLOW, Style.BRIGHT, combo, Style.RESET_ALL))
+                ui_functions.print_info_msg("  {}{}{}{}".format(Fore.YELLOW, Style.BRIGHT, combo, Style.RESET_ALL))
             else:
-                print("  {}".format(combo))
+                ui_functions.print_info_msg("  {}".format(combo))
             if args.verbose:
                 sources = manifest.get_repo_sources(combo)
                 length = len(max([source.root for source in sources], key=len))
                 for source in sources:
-                    print("    {} : {}".format(source.root.ljust(length), source.branch))
+                    ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.branch))
