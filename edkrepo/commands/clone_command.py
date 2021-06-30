@@ -28,6 +28,8 @@ from edkrepo.common.workspace_maintenance.workspace_maintenance import case_inse
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
+from edkrepo.common.ui_functions import init_color_console
+from edkrepo.common.ui_functions import print_info_msg, print_warning_msg, print_error_msg
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from project_utils.submodule import maintain_submodules
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
@@ -181,5 +183,5 @@ class CloneCommand(EdkrepoCommand):
             # Command line disables sparse checkout
             use_sparse = False
         if use_sparse:
-            print(SPARSE_CHECKOUT)
+            print_info_msg(SPARSE_CHECKOUT)
             sparse_checkout(workspace_dir, repo_sources_to_clone, manifest)
