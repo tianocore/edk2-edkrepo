@@ -15,6 +15,9 @@ from git import Repo
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.clean_args as arguments
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+from edkrepo.common.ui_functions import init_color_console
+from edkrepo.common.ui_functions import print_info_msg, print_warning_msg, print_error_msg
+
 
 class CleanCommand(EdkrepoCommand):
     def __init__(self):
@@ -56,4 +59,4 @@ class CleanCommand(EdkrepoCommand):
                                     n=(not args.force),
                                     q=(args.quiet and args.force))
             if result:
-                print(result)
+                print_info_msg(result, header=False)
