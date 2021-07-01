@@ -18,6 +18,7 @@ from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.edkrepo_exception import EdkrepoCacheException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 
@@ -64,7 +65,7 @@ class CacheCommand(EdkrepoCommand):
 
         # Get the current state now that we have processed enable/disable
         cache_state = config['user_cfg_file'].caching_state
-        print(CACHE_ENABLED.format(cache_state))
+        ui_functions.print_info_msg(CACHE_ENABLED.format(cache_state))
         if not cache_state:
             return
 
@@ -89,14 +90,14 @@ class CacheCommand(EdkrepoCommand):
 
         # Display all the cache information
         if args.info:
-            print(CACHE_INFO)
+            ui_functions.print_info_msg(CACHE_INFO)
             info = cache_obj.get_cache_info(args.verbose)
             for item in info:
-                print(CACHE_INFO_LINE.format(item.path, item.remote, item.url))
+                ui_functions.print_info_msg(CACHE_INFO_LINE.format(item.path, item.remote, item.url))
 
         # Do an update if requested
         if args.update:
-            print(CACHE_FETCH)
+            ui_functions.print_info_msg(CACHE_FETCH)
             cache_obj.update_cache(verbose=True)
 
         # Close the cache repos
