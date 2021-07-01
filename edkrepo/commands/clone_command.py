@@ -3,7 +3,7 @@
 ## @file
 # clone_command.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -28,6 +28,7 @@ from edkrepo.common.workspace_maintenance.workspace_maintenance import case_inse
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from project_utils.submodule import maintain_submodules
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
@@ -181,5 +182,5 @@ class CloneCommand(EdkrepoCommand):
             # Command line disables sparse checkout
             use_sparse = False
         if use_sparse:
-            print(SPARSE_CHECKOUT)
+            ui_functions.print_info_msg(SPARSE_CHECKOUT)
             sparse_checkout(workspace_dir, repo_sources_to_clone, manifest)

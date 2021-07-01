@@ -45,11 +45,11 @@ def display_git_output(output_data, verbose=False):
     verbose     - Enable verbose messages
     """
     if verbose and output_data[0]:
-        print(output_data[0])
+        print_info_msg(output_data[0])
     if output_data[1]:
-        print(output_data[1])
+        print_info_msg(output_data[1])
     if verbose and output_data[2]:
-        print(output_data[2])
+        print_info_msg(output_data[2])
 
 def print_info_msg(info_msg, header=True, force_color_output=None):
     """
