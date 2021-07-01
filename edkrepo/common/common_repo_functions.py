@@ -64,7 +64,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, Edkr
 from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
-from edkrepo.common.ui_functions import init_color_console
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser import edk_manifest
 from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
 from edkrepo_manifest_parser.edk_manifest_validation import get_manifest_validation_status
@@ -84,9 +84,9 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         cache_path = None
         if cache_obj is not None:
             cache_path = cache_obj.get_cache_path(local_repo_url)
-        print("Cloning from: " + str(local_repo_url))
+        ui_functions.print_info_msg("Cloning from: " + str(local_repo_url), header = False)
         if cache_path is not None:
-            print('+ Using cache at {}'.format(cache_path))
+            ui_functions.print_info_msg('+ Using cache at {}'.format(cache_path))
             repo = Repo.clone_from(local_repo_url, local_repo_path,
                                    progress=GitProgressHandler(),
                                    reference_if_able=cache_path,
@@ -108,11 +108,11 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # out
         if repo_to_clone.commit:
             if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
-                print(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
+                ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
             repo.git.checkout(repo_to_clone.commit)
         elif repo_to_clone.tag and repo_to_clone.commit is None:
             if args.verbose and repo_to_clone.branch:
-                print(TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
+                ui_functions.print_info_msg(TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
             repo.git.checkout(repo_to_clone.tag)
         elif repo_to_clone.branch and (repo_to_clone.commit is None and repo_to_clone.tag is None):
             if repo_to_clone.branch not in repo.remotes['origin'].refs:
@@ -150,7 +150,7 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
 
         # Check to see if mirror is in sync with primary repo
         if not in_sync_with_primary(repo, repo_to_clone, args.verbose):
-            print(MIRROR_BEHIND_PRIMARY_REPO)
+            ui_functions.print_warning_msg(MIRROR_BEHIND_PRIMARY_REPO)
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
