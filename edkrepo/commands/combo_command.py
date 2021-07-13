@@ -3,7 +3,7 @@
 ## @file
 # combo_command.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 from colorama import Fore
@@ -47,13 +47,13 @@ class ComboCommand(EdkrepoCommand):
             combo_list.append(manifest.general_config.current_combo)
         for combo in sorted(combo_list):
             if combo == manifest.general_config.current_combo:
-                ui_functions.print_info_msg("current combo: " + combo, header=False)
+                print("* {}{}{}".format(Fore.GREEN, combo, Fore.RESET))
             elif combo in combo_archive:
-                ui_functions.print_info_msg("archived combo: " + combo, header=False)
+                print("  {}{}{}{}".format(Fore.YELLOW, Style.BRIGHT, combo, Style.RESET_ALL))
             else:
-                ui_functions.print_info_msg(combo, header=False)
+                ui_functions.print_info_msg("  {}".format(combo), header=False)
             if args.verbose:
                 sources = manifest.get_repo_sources(combo)
                 length = len(max([source.root for source in sources], key=len))
                 for source in sources:
-                    ui_functions.print_info_msg(source.root.ljust(length) + " : " +source.branch, header=False)
+                    ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.branch), header=False)
