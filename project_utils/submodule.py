@@ -3,7 +3,7 @@
 ## @file
 # submodule.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 import argparse
@@ -13,7 +13,7 @@ import sys
 import traceback
 
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
-from edkrepo.common.ui_functions import display_git_output
+import edkrepo.common.ui_functions as ui_functions
 import project_utils.project_utils_strings as strings
 import project_utils.arguments.submodule_args as arguments
 
@@ -35,7 +35,7 @@ def _init(repo, submodules=None, verbose=False):
                 print(strings.SUBMOD_INIT_PATH.format(sub.path))
             output_data = repo.git.execute(['git', 'submodule', 'init', '--', sub.path],
                                            with_extended_output=True, with_stdout=True)
-            display_git_output(output_data, verbose)
+            ui_functions.display_git_output(output_data, verbose)
     return
 
 
@@ -50,14 +50,14 @@ def _deinit(repo, submodules=None, verbose=False):
     if submodules is None:
         output_data = repo.git.execute(['git', 'submodule', 'deinit', '-f', '--all'],
                                        with_extended_output=True, with_stdout=True)
-        display_git_output(output_data, verbose)
+        ui_functions.display_git_output(output_data, verbose)
     else:
         for sub in submodules:
             if verbose:
                 print(strings.SUBMOD_DEINIT_PATH.format(sub.path))
             output_data = repo.git.execute(['git', 'submodule', 'deinit', '-f', '--', sub.path],
                                            with_extended_output=True, with_stdout=True)
-            display_git_output(output_data, verbose)
+            ui_functions.display_git_output(output_data, verbose)
     return
 
 
@@ -78,14 +78,14 @@ def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=No
         if recursive:
             cmd.append('--recursive')
         output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
-        display_git_output(output_data, verbose)
+        ui_functions.display_git_output(output_data, verbose)
         cmd = ['git', 'submodule', 'update', '--init']
         if recursive:
             cmd.append('--recursive')
         if cache_path is not None:
             cmd.extend(['--reference', cache_path])
         output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
-        display_git_output(output_data, verbose)
+        ui_functions.display_git_output(output_data, verbose)
     else:
         for sub in submodules:
             if verbose:
@@ -95,7 +95,7 @@ def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=No
                 cmd.append('--recursive')
             cmd.extend(['--', sub.path])
             output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
-            display_git_output(output_data, verbose)
+            ui_functions.display_git_output(output_data, verbose)
             if verbose:
                 print(strings.SUBMOD_UPDATE_PATH.format(sub.path))
             cmd = ['git', 'submodule', 'update', '--init']
@@ -105,7 +105,7 @@ def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=No
                 cmd.extend(['--reference', cache_path])
             cmd.extend(['--', sub.path])
             output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
-            display_git_output(output_data, verbose)
+            ui_functions.display_git_output(output_data, verbose)
     return
 
 
@@ -284,7 +284,7 @@ def maintain_submodules(workspace, manifest, combo_name, verbose=False, cache_pa
         cache_path - Path to the submodule cache repo.  A value of None indicates that no cache repo exists.
     """
     # Process each repo that may have submodules enabled
-    print(strings.SUBMOD_INIT_UPDATE)
+    ui_functions.print_info_msg(strings.SUBMOD_INIT_UPDATE)
     repo_sources = manifest.get_repo_sources(combo_name)
     for source in repo_sources:
         # Open the repo and process submodules
@@ -292,7 +292,7 @@ def maintain_submodules(workspace, manifest, combo_name, verbose=False, cache_pa
             repo = git.Repo(os.path.join(workspace, source.root))
         except Exception as repo_error:
             if args.verbose:
-                print(strings.SUBMOD_EXCEPTION.format(repo_error))
+                ui_functions.print_error_msg(strings.SUBMOD_EXCEPTION.format(repo_error))
             continue
 
         # Collect the submodule initialization data from manifest as well as if submodules
