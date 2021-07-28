@@ -299,7 +299,7 @@ class F2fCherryPickCommand(EdkrepoCommand):
                 try:
                     squash_commits(start_commit, end_commit, f2f_cherry_pick_squash, commit_message, repo, False)
                     repo.heads[original_branch].checkout()
-                    repo.git.reset('--hard', '{}~'.format(start_commit))
+                    repo.git.reset('--hard', '{}'.format(start_commit))
                     repo.git.cherry_pick(str(repo.commit(f2f_cherry_pick_squash)))
                 finally:
                     if f2f_cherry_pick_squash in repo.heads:
