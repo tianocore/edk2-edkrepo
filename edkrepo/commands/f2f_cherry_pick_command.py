@@ -38,8 +38,8 @@ FolderCherryPick = namedtuple('FolderCherryPick', ['source', 'destination', 'int
 ChangeIdRegex = re.compile(r"^\s*[Cc]hange-Id:\s*(\S+)\s*$")
 
 RepoInfo = namedtuple('RepoInfo', ['repo_path', 'json_path', 'repo'])
-CommitInfo = namedtuple('CommitInfo', ['start_commit', 'end_commit', 'source_commit', 'single_commit', 'original_branch', 'original_head', 'append_sha'])
-CherryPickInfo = namedtuple('CherryPickInfo', ['f2f_cherry_pick_src', 'f2f_src_branch', 'f2f_dest_branch', 'num_cherry_picks', 'cherry_pick_operations'])
+CommitInfo = namedtuple('CommitInfo', ['start_commit', 'end_commit', 'source_commit', 'single_commit', 'original_branch', 'original_head', 'append_sha', 'squash', 'todo_commits', 'complete_commits'])
+CherryPickInfo = namedtuple('CherryPickInfo', ['f2f_cherry_pick_src', 'f2f_src_branch', 'f2f_dest_branch', 'num_cherry_picks', 'cherry_pick_operations', 'cherry_pick_operations_template'])
 
 class F2fCherryPickCommand(EdkrepoCommand):
     def __init__(self):
@@ -86,6 +86,10 @@ class F2fCherryPickCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.F2F_CHERRY_PICK_APPEND_COMMIT_HELP})
+        args.append({'name': 'squash',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.F2F_CHERRY_PICK_SQUASH_HELP})
         args.append(ColorArgument)
         return metadata
 
@@ -106,7 +110,8 @@ class F2fCherryPickCommand(EdkrepoCommand):
             f2f_dest_branch = None
             f2f_cherry_pick_src = None
             num_cherry_picks = None
-            cherry_pick_info = CherryPickInfo(f2f_cherry_pick_src, f2f_src_branch, f2f_dest_branch, num_cherry_picks, cherry_pick_operations)
+            cherry_pick_operations_template = None
+            cherry_pick_info = CherryPickInfo(f2f_cherry_pick_src, f2f_src_branch, f2f_dest_branch, num_cherry_picks, cherry_pick_operations, cherry_pick_operations_template)
         else:
             try:
                 (repo_info, commit_info, cherry_pick_info) = _resume_cherry_pick(args, json_path) # Continuing or aborting
@@ -124,44 +129,6 @@ def _start_new_cherry_pick(args, json_path):
     repo = Repo(repo_path)
     repo_info = RepoInfo(repo_path, json_path, repo)
     return (repo_info, cherry_pick_operations)
-
-def _resume_cherry_pick(args, json_path):
-    # Get path to Git repository
-    repo_path = get_git_repo_root()
-    json_path = os.path.join(repo_path, json_path)
-    # Initialize GitPython
-    repo = Repo(repo_path)
-    if not os.path.isfile(json_path):
-        if args.abort:
-            raise EdkrepoInvalidParametersException(humble.F2F_CHERRY_PICK_NO_IN_PROGRESS_ABORT)
-        else:
-            raise EdkrepoInvalidParametersException(humble.F2F_CHERRY_PICK_NO_IN_PROGRESS_CONTINUE)
-    (original_branch, original_head, single_commit,
-     cherry_pick_operations, f2f_src_branch, f2f_dest_branch,
-     f2f_cherry_pick_src, num_cherry_picks, source_commit, append_sha) = _restore_f2f_cherry_pick_state(repo_path)
-    if args.abort:
-        _abort_cherry_pick(repo, json_path, original_branch, original_head, f2f_src_branch, f2f_dest_branch, f2f_cherry_pick_src)
-        raise EdkrepoAbortCherryPickException(humble.F2F_CHERRY_PICK_ABORT_DETECTED)
-    else:
-        start_commit = None
-        end_commit = None
-        repo_info = RepoInfo(repo_path, json_path, repo)
-        commit_info = CommitInfo(start_commit, end_commit, source_commit, single_commit, original_branch, original_head, append_sha)
-        cherry_pick_info = CherryPickInfo(f2f_cherry_pick_src, f2f_src_branch, f2f_dest_branch, num_cherry_picks, cherry_pick_operations)
-        return (repo_info, commit_info, cherry_pick_info)
-
-def _abort_cherry_pick(repo, json_path, original_branch, original_head, f2f_src_branch, f2f_dest_branch, f2f_cherry_pick_src):
-    repo.git.reset('--hard')
-    repo.heads[original_branch].checkout()
-    repo.git.reset('--hard', original_head)
-    os.remove(json_path)
-    if f2f_src_branch in repo.heads:
-        repo.git.branch('-D', f2f_src_branch) # Note: Head.delete() in GitPython is broken
-    if f2f_dest_branch in repo.heads:
-        repo.git.branch('-D', f2f_dest_branch)
-    if f2f_cherry_pick_src in repo.heads:
-        repo.git.branch('-D', f2f_cherry_pick_src)
-    return
 
 def _prep_new_cherry_pick(args, repo, commit_ish, config, cherry_pick_operations):
     # Check for staged, unstaged, and untracked files
@@ -187,13 +154,20 @@ def _prep_new_cherry_pick(args, repo, commit_ish, config, cherry_pick_operations
             raise EdkrepoWorkspaceInvalidException(humble.F2F_CHERRY_PICK_NO_SPARSE)
     single_commit = True
     append_sha = args.append_sha
+    squash = args.squash
     source_commit = None
+    todo_commits = []
+    complete_commits = []
     try:
         repo.rev_parse(commit_ish)
         source_commit = str(repo.commit(commit_ish))
+        todo_commits = [source_commit]
     except:
         if len(split_commit_range(commit_ish)) <= 1:
             raise EdkrepoInvalidParametersException(COMMIT_NOT_FOUND.format(commit_ish))
+        todo_commits = repo.git.rev_list(commit_ish).split()
+        # git-rev-list returns commits in reverse chronological order
+        todo_commits.reverse()
         single_commit = False
         append_sha = False
     start_commit = None
@@ -205,26 +179,66 @@ def _prep_new_cherry_pick(args, repo, commit_ish, config, cherry_pick_operations
         source_commit = end_commit
     # Determine what needs to be done to complete the cherry pick
     cherry_pick_operations = _init_f2f_cherry_pick_operations(cherry_pick_operations, repo,
-                                                            source_commit, original_head, config)
-    commit_info = CommitInfo(start_commit, end_commit, source_commit, single_commit, original_branch, original_head, append_sha)
+                                                            original_head, original_head, config)
+    commit_info = CommitInfo(start_commit, end_commit, source_commit, single_commit, original_branch, original_head, append_sha, squash, todo_commits, complete_commits)
     return commit_info, cherry_pick_operations
+
+def _resume_cherry_pick(args, json_path):
+    # Get path to Git repository
+    repo_path = get_git_repo_root()
+    json_path = os.path.join(repo_path, json_path)
+    # Initialize GitPython
+    repo = Repo(repo_path)
+    if not os.path.isfile(json_path):
+        if args.abort:
+            raise EdkrepoInvalidParametersException(humble.F2F_CHERRY_PICK_NO_IN_PROGRESS_ABORT)
+        else:
+            raise EdkrepoInvalidParametersException(humble.F2F_CHERRY_PICK_NO_IN_PROGRESS_CONTINUE)
+    (original_branch, original_head, single_commit,
+     cherry_pick_operations, f2f_src_branch, f2f_dest_branch,
+     f2f_cherry_pick_src, num_cherry_picks, source_commit, append_sha,
+     cherry_pick_operations_template, complete_commits, todo_commits, squash) = _restore_f2f_cherry_pick_state(repo_path)
+    if args.abort:
+        _abort_cherry_pick(repo, json_path, original_branch, original_head, f2f_src_branch, f2f_dest_branch, f2f_cherry_pick_src)
+        raise EdkrepoAbortCherryPickException(humble.F2F_CHERRY_PICK_ABORT_DETECTED)
+    else:
+        start_commit = None
+        end_commit = None
+        repo_info = RepoInfo(repo_path, json_path, repo)
+        commit_info = CommitInfo(start_commit, end_commit, source_commit, single_commit, original_branch, original_head, append_sha, squash, todo_commits, complete_commits)
+        cherry_pick_info = CherryPickInfo(f2f_cherry_pick_src, f2f_src_branch, f2f_dest_branch, num_cherry_picks, cherry_pick_operations, cherry_pick_operations_template)
+        return (repo_info, commit_info, cherry_pick_info)
+
+def _abort_cherry_pick(repo, json_path, original_branch, original_head, f2f_src_branch, f2f_dest_branch, f2f_cherry_pick_src):
+    repo.git.reset('--hard')
+    repo.heads[original_branch].checkout()
+    repo.git.reset('--hard', original_head)
+    os.remove(json_path)
+    if f2f_src_branch in repo.heads:
+        repo.git.branch('-D', f2f_src_branch) # Note: Head.delete() in GitPython is broken
+    if f2f_dest_branch in repo.heads:
+        repo.git.branch('-D', f2f_dest_branch)
+    if f2f_cherry_pick_src in repo.heads:
+        repo.git.branch('-D', f2f_cherry_pick_src)
+    return
 
 def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cherry_pick_info):
     # Unpack namedtuples
+
     (repo_path, json_path, repo) = (repo_info.repo_path, repo_info.json_path, repo_info.repo)
-    (start_commit, end_commit, source_commit, single_commit, original_branch, original_head, append_sha) = \
+    (start_commit, end_commit, source_commit, single_commit, original_branch, original_head, append_sha, squash, todo_commits, complete_commits) = \
         (commit_info.start_commit, commit_info.end_commit, commit_info.source_commit, commit_info.single_commit,
-         commit_info.original_branch, commit_info.original_head, commit_info.append_sha)
-    (f2f_cherry_pick_src, f2f_src_branch, f2f_dest_branch, num_cherry_picks, cherry_pick_operations) = \
+         commit_info.original_branch, commit_info.original_head, commit_info.append_sha, commit_info.squash, commit_info.todo_commits, commit_info.complete_commits)
+    (f2f_cherry_pick_src, f2f_src_branch, f2f_dest_branch, num_cherry_picks, cherry_pick_operations, cherry_pick_operations_template) = \
         (cherry_pick_info.f2f_cherry_pick_src, cherry_pick_info.f2f_src_branch, cherry_pick_info.f2f_dest_branch,
-         cherry_pick_info.num_cherry_picks, cherry_pick_info.cherry_pick_operations)
+         cherry_pick_info.num_cherry_picks, cherry_pick_info.cherry_pick_operations, cherry_pick_info.cherry_pick_operations_template)
 
     merge_conflict = False
     try:
         #
         # Step 1 - If a range of commits was provided, squash them
         #
-        if not single_commit and not continue_operation:
+        if not single_commit and not continue_operation and squash:
             if args.template is not None:
                 projects = args.template[0].split(':')
                 commit_message = humble.F2F_CHERRY_PICK_TEMPLATE_COMMIT_MESSAGE.format(projects[0], projects[1])
@@ -239,123 +253,142 @@ def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cher
             f2f_cherry_pick_src = get_unique_branch_name('f2f-cherry-pick-src', repo)
             squash_commits(start_commit, end_commit, f2f_cherry_pick_src, commit_message, repo)
             source_commit = str(repo.commit(f2f_cherry_pick_src))
-        if not continue_operation:
-            # Now that the change delta is known, we can optimize the cherry pick operation
-            cherry_pick_operations = _optimize_f2f_cherry_pick_operations(cherry_pick_operations, repo, source_commit)
-            # Inform the user w.r.t. what is about to happen
-            if len(cherry_pick_operations) == 1:
-                print(humble.F2F_CHERRY_PICK_NUM_CHERRY_PICKS_SINGULAR.format(len(cherry_pick_operations)))
-            else:
-                print(humble.F2F_CHERRY_PICK_NUM_CHERRY_PICKS_PLURAL.format(len(cherry_pick_operations)))
-            for index in range(len(cherry_pick_operations)):
-                print(humble.F2F_CHERRY_PICK_CHERRY_PICK_NUM.format(index + 1))
-                for folder in cherry_pick_operations[index]:
-                    print("{} -> {} -> {}".format(folder.source, folder.intermediate, folder.destination))
-                    if len(folder.source_excludes) > 0:
-                        print(humble.F2F_CHERRY_PICK_CHERRY_PICK_EXCLUDE_LIST.format(repr(folder.source_excludes)))
-                print()
-            num_cherry_picks = len(cherry_pick_operations)
+            todo_commits = [source_commit]
+        if not cherry_pick_operations_template:
+            cherry_pick_operations_template = cherry_pick_operations
         if continue_operation:
-            #
-            # Finish up the last cherry pick operation now that merge conflicts are resolved
-            #
-            git_automation_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'git_automation')
-            if not os.path.isfile(os.path.join(git_automation_dir, "commit_msg.py")):
-                git_automation_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-                git_automation_dir = os.path.join(git_automation_dir, 'edkrepo', 'git_automation')
+            print(humble.F2F_CHERRY_PICK_NUM_COMMITS_CONTINUE.format(len(todo_commits)))
+        else:
+            print(humble.F2F_CHERRY_PICK_NUM_COMMITS_NEW.format(len(todo_commits)))
+        while todo_commits:
+            source_commit = todo_commits[0]
+            print(humble.F2F_CHERRY_PICK_ESTIMATE_REMAINING_OPERATIONS.format(len(todo_commits), len(todo_commits) * len(cherry_pick_operations_template)))
+            print(humble.F2F_CHERRY_PICK_CURRENT_COMMIT.format(source_commit))
+            if not continue_operation:
+                # Now that the change delta is known, we can optimize the cherry pick operation
+                cherry_pick_operations = _optimize_f2f_cherry_pick_operations(cherry_pick_operations_template, repo, source_commit)
+                num_cherry_picks = len(cherry_pick_operations)
+                f2f_src_branch = get_unique_branch_name('f2f-src', repo)
+                f2f_dest_branch = get_unique_branch_name('f2f-dest', repo)
+
+                # Inform the user w.r.t. what is about to happen
+                if num_cherry_picks == 1:
+                    print(humble.F2F_CHERRY_PICK_NUM_CHERRY_PICKS_SINGULAR.format(len(cherry_pick_operations)))
+                else:
+                    print(humble.F2F_CHERRY_PICK_NUM_CHERRY_PICKS_PLURAL.format(len(cherry_pick_operations)))
+                for index in range(len(cherry_pick_operations)):
+                    print(humble.F2F_CHERRY_PICK_CHERRY_PICK_NUM.format(index + 1))
+                    for folder in cherry_pick_operations[index]:
+                        print("{} -> {} -> {}".format(folder.source, folder.intermediate, folder.destination))
+                        if len(folder.source_excludes) > 0:
+                            print(humble.F2F_CHERRY_PICK_CHERRY_PICK_EXCLUDE_LIST.format(repr(folder.source_excludes)))
+                    print()
+            if continue_operation:
+                #
+                # Finish up the current cherry pick operation now that merge conflicts are resolved
+                #
+                git_automation_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'git_automation')
                 if not os.path.isfile(os.path.join(git_automation_dir, "commit_msg.py")):
-                    raise EdkrepoNotFoundException(humble.F2F_CHERRY_PICK_COMMIT_MSG_PY_NOT_FOUND)
-            if sys.platform == "win32":
-                os.environ['GIT_EDITOR'] = 'py "{}"'.format(os.path.join(git_automation_dir, "commit_msg.py"))
-            else:
-                os.environ['GIT_EDITOR'] = os.path.join(git_automation_dir, "commit_msg.py")
-            os.environ['COMMIT_MESSAGE_NO_EDIT'] = '1'
-            try:
-                repo.git.commit('--allow-empty')
-            finally:
-                del os.environ['GIT_EDITOR']
-                del os.environ['COMMIT_MESSAGE_NO_EDIT']
-            try:
-                _post_cherry_pick_processing(repo, cherry_pick_operations.pop(0), f2f_dest_branch, single_commit,
-                                                original_branch, source_commit, append_sha)
-                os.remove(json_path)
-            finally:
-                repo.heads[original_branch].checkout()
-                repo.git.reset('--hard')
-                if f2f_src_branch in repo.heads:
-                    repo.git.branch('-D', f2f_src_branch)
-                if f2f_dest_branch in repo.heads:
-                    repo.git.branch('-D', f2f_dest_branch)
-        for index in range(len(cherry_pick_operations)):
-            f2f_src_branch = get_unique_branch_name('f2f-src', repo)
-            f2f_dest_branch = get_unique_branch_name('f2f-dest', repo)
-            try:
-                cherry_pick_operation = cherry_pick_operations[index]
-                #
-                # Transform the source commit into a cherry-pick'able commit
-                #
-                repo.create_head(f2f_src_branch, source_commit)
-                repo.heads[f2f_src_branch].checkout()
-                repo.git.reset('--hard')
-                _prepare_source_branch(cherry_pick_operation, f2f_src_branch, repo)
-                if len(repo.commit(f2f_src_branch).stats.files) <= 0:
-                    # After the filter-branch, there is nothing left to cherry pick, so move on to the next cherry pick
-                    repo.heads[original_branch].checkout()
-                    repo.git.reset('--hard')
-                    num_cherry_picks -= 1
-                    continue
-                #
-                # Transform the destination to recieve the cherry pick
-                #
-                repo.heads[original_branch].checkout()
-                repo.git.reset('--hard')
-                repo.create_head(f2f_dest_branch, str(repo.commit('HEAD')))
-                repo.heads[f2f_dest_branch].checkout()
-                _prepare_destination_branch(cherry_pick_operation, f2f_dest_branch, repo)
-                #
-                # Step 6 - Do the cherry pick
-                #
-                merge_conflict = _perform_cherry_pick(str(repo.commit(f2f_src_branch)), repo, args.verbose)
-                if merge_conflict:
-                    _save_f2f_cherry_pick_state(
-                        repo_path, original_branch, original_head,
-                        single_commit, cherry_pick_operations[index:], f2f_src_branch,
-                        f2f_dest_branch, f2f_cherry_pick_src, num_cherry_picks, source_commit, append_sha)
-                    return
-                #
-                # Cherry Pick the results to the target branch
-                #
-                _post_cherry_pick_processing(repo, cherry_pick_operation, f2f_dest_branch, single_commit,
-                                                original_branch, source_commit, append_sha)
-            finally:
-                if not merge_conflict:
+                    git_automation_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+                    git_automation_dir = os.path.join(git_automation_dir, 'edkrepo', 'git_automation')
+                    if not os.path.isfile(os.path.join(git_automation_dir, "commit_msg.py")):
+                        raise EdkrepoNotFoundException(humble.F2F_CHERRY_PICK_COMMIT_MSG_PY_NOT_FOUND)
+                if sys.platform == "win32":
+                    os.environ['GIT_EDITOR'] = 'py "{}"'.format(os.path.join(git_automation_dir, "commit_msg.py"))
+                else:
+                    os.environ['GIT_EDITOR'] = os.path.join(git_automation_dir, "commit_msg.py")
+                os.environ['COMMIT_MESSAGE_NO_EDIT'] = '1'
+                try:
+                    repo.git.commit('--allow-empty')
+                finally:
+                    del os.environ['GIT_EDITOR']
+                    del os.environ['COMMIT_MESSAGE_NO_EDIT']
+                try:
+                    _post_cherry_pick_processing(repo, cherry_pick_operations.pop(0), f2f_dest_branch, single_commit,
+                                                    original_branch, source_commit, append_sha)
+                    os.remove(json_path)
+                finally:
                     repo.heads[original_branch].checkout()
                     repo.git.reset('--hard')
                     if f2f_src_branch in repo.heads:
                         repo.git.branch('-D', f2f_src_branch)
                     if f2f_dest_branch in repo.heads:
                         repo.git.branch('-D', f2f_dest_branch)
-        # If there are multiple cherry-pick operations, we need to squash the results
-        if num_cherry_picks > 1:
-            start_commit = str(repo.commit('HEAD~{}'.format(num_cherry_picks)))
-            end_commit = str(repo.commit('HEAD'))
-            commit_message = repo.commit('HEAD').message
-            print(commit_message)
-            f2f_cherry_pick_squash = get_unique_branch_name('f2f-cherry-pick-squash', repo)
-            try:
-                squash_commits(start_commit, end_commit, f2f_cherry_pick_squash, commit_message, repo, False)
-                repo.heads[original_branch].checkout()
-                repo.git.reset('--hard', '{}'.format(start_commit))
-                repo.git.cherry_pick(str(repo.commit(f2f_cherry_pick_squash)))
-            finally:
-                if f2f_cherry_pick_squash in repo.heads:
-                    repo.git.branch('-D', f2f_cherry_pick_squash)
-        print()
-        print(humble.F2F_CHERRY_PICK_SUCCESSFUL)
+                continue_operation = False
+            for index in range(len(cherry_pick_operations)):
+                f2f_src_branch = get_unique_branch_name('f2f-src', repo)
+                f2f_dest_branch = get_unique_branch_name('f2f-dest', repo)
+                try:
+                    cherry_pick_operation = cherry_pick_operations[index]
+                    #
+                    # Transform the source commit into a cherry-pick'able commit
+                    #
+                    repo.create_head(f2f_src_branch, source_commit)
+                    repo.heads[f2f_src_branch].checkout()
+                    repo.git.reset('--hard')
+                    _prepare_source_branch(cherry_pick_operation, f2f_src_branch, repo)
+                    if len(repo.commit(f2f_src_branch).stats.files) <= 0:
+                        # After the filter-branch, there is nothing left to cherry pick, so move on to the next cherry pick
+                        repo.heads[original_branch].checkout()
+                        repo.git.reset('--hard')
+                        num_cherry_picks -= 1
+                        continue
+                    #
+                    # Transform the destination to receive the cherry pick
+                    #
+                    repo.heads[original_branch].checkout()
+                    repo.git.reset('--hard')
+                    repo.create_head(f2f_dest_branch, str(repo.commit('HEAD')))
+                    repo.heads[f2f_dest_branch].checkout()
+                    _prepare_destination_branch(cherry_pick_operation, f2f_dest_branch, repo)
+                    #
+                    # Step 6 - Do the cherry pick
+                    #
+                    merge_conflict = _perform_cherry_pick(str(repo.commit(f2f_src_branch)), repo, args.verbose)
+                    if merge_conflict:
+                        _save_f2f_cherry_pick_state(
+                            repo_path, original_branch, original_head,
+                            single_commit, cherry_pick_operations[index:], f2f_src_branch,
+                            f2f_dest_branch, f2f_cherry_pick_src, num_cherry_picks, source_commit, append_sha,
+                            todo_commits, complete_commits, cherry_pick_operations_template, squash)
+                        return
+                    #
+                    # Cherry Pick the results to the target branch
+                    #
+                    _post_cherry_pick_processing(repo, cherry_pick_operation, f2f_dest_branch, single_commit,
+                                                    original_branch, source_commit, append_sha)
+                finally:
+                    if not merge_conflict:
+                        repo.heads[original_branch].checkout()
+                        repo.git.reset('--hard')
+                        if f2f_src_branch in repo.heads:
+                            repo.git.branch('-D', f2f_src_branch)
+                        if f2f_dest_branch in repo.heads:
+                            repo.git.branch('-D', f2f_dest_branch)
+            # If there are multiple cherry-pick operations, we need to squash the results
+            if num_cherry_picks > 1:
+                start_commit = str(repo.commit('HEAD~{}'.format(num_cherry_picks)))
+                end_commit = str(repo.commit('HEAD'))
+                commit_message = repo.commit('HEAD').message
+                print(commit_message)
+                f2f_cherry_pick_squash = get_unique_branch_name('f2f-cherry-pick-squash', repo)
+                try:
+                    squash_commits(start_commit, end_commit, f2f_cherry_pick_squash, commit_message, repo, False)
+                    repo.heads[original_branch].checkout()
+                    repo.git.reset('--hard', '{}'.format(start_commit))
+                    repo.git.cherry_pick(str(repo.commit(f2f_cherry_pick_squash)))
+                finally:
+                    if f2f_cherry_pick_squash in repo.heads:
+                        repo.git.branch('-D', f2f_cherry_pick_squash)
+            # Current source_commit is successful, let user know and move the commit to the completed list
+            print()
+            print(humble.F2F_CHERRY_PICK_SUCCESSFUL)
+            todo_commits.remove(source_commit)
+            complete_commits.append(source_commit)
     finally:
         if not merge_conflict:
             repo.heads[original_branch].checkout()
-            repo.git.reset('--hard')
+            repo.git.reset('--hard')  # Removed reference to original_head so we're just resetting on the original branch...
             if f2f_cherry_pick_src in repo.heads:
                 repo.git.branch('-D', f2f_cherry_pick_src)
 
@@ -675,7 +708,8 @@ def git_path_exists(path, tree_ish, repo, case_insensitive=False):
     return False
 
 def _save_f2f_cherry_pick_state(repo_path, original_branch, original_head, single_commit, remaining_cp_operations,
-                                f2f_src_branch, f2f_dest_branch, f2f_cp_src_branch, num_cherry_picks, source_commit, append_sha):
+                                f2f_src_branch, f2f_dest_branch, f2f_cp_src_branch, num_cherry_picks, source_commit,
+                                append_sha, todo_commits, complete_commits, cp_operations_template, squash):
     if not os.path.isdir(os.path.join(repo_path, '.git')):
         raise EdkrepoWorkspaceInvalidException(NOT_GIT_REPO)
     json_path = os.path.join(repo_path, '.git', 'f2f_cherry_pick_status.json')
@@ -692,13 +726,29 @@ def _save_f2f_cherry_pick_state(repo_path, original_branch, original_head, singl
         for folder in operation:
             remaining_operation.append(folder._asdict())
         remaining_cherry_pick_operations.append(remaining_operation)
-    data['remaining_cherry_pick_operations'] = remaining_cherry_pick_operations
+
+    cherry_pick_operations_template = []
+    for cp_operation in cp_operations_template:
+        op = []
+        for folder in cp_operation:
+            op.append(folder._asdict())
+        cherry_pick_operations_template.append(op)
+
+    data['in_progress_commit'] = {}
+    data['in_progress_commit']['source_commit'] = source_commit
+    data['in_progress_commit']['num_cherry_picks'] = num_cherry_picks
+    data['in_progress_commit']['remaining_cherry_pick_operations'] = remaining_cherry_pick_operations
+
     data['f2f_src_branch'] = f2f_src_branch
     data['f2f_dest_branch'] = f2f_dest_branch
     data['f2f_cherry_pick_src'] = f2f_cp_src_branch
-    data['num_cherry_picks'] = num_cherry_picks
-    data['source_commit'] = source_commit
+
     data['append_sha'] = append_sha
+    data['squash'] = squash
+    data['all_cherry_pick_operations'] = cherry_pick_operations_template
+    data['complete_commits'] = complete_commits
+    data['todo_commits'] = todo_commits
+
     with open(json_path, 'w') as f:
         json.dump(data, f, indent=2, sort_keys=True)
 
@@ -710,16 +760,23 @@ def _restore_f2f_cherry_pick_state(repo_path):
         data = json.load(f)
     # Convert the dictionaries to namedtuples
     remaining_cp_operations = []
-    for operation in data['remaining_cherry_pick_operations']:
+    for operation in data['in_progress_commit']['remaining_cherry_pick_operations']:
         remaining_operation = []
         for folder in operation:
             remaining_operation.append(FolderCherryPick(**folder))
         remaining_cp_operations.append(remaining_operation)
+    cp_operations_template = []
+    for operation in data['all_cherry_pick_operations']:
+        remaining_operation = []
+        for folder in operation:
+            remaining_operation.append(FolderCherryPick(**folder))
+        cp_operations_template.append(remaining_operation)
     return (data['original_branch'], data['original_head'],
             data['single_commit'], remaining_cp_operations,
             data['f2f_src_branch'], data['f2f_dest_branch'],
-            data['f2f_cherry_pick_src'], data['num_cherry_picks'],
-            data['source_commit'], data['append_sha'])
+            data['f2f_cherry_pick_src'], data['in_progress_commit']['num_cherry_picks'],
+            data['in_progress_commit']['source_commit'], data['append_sha'],
+            cp_operations_template, data['complete_commits'], data['todo_commits'], data['squash'])
 
 def _init_f2f_cherry_pick_operations(cherry_pick_operations, repo, src_commit, dest_commit, config):
     repo_path = repo.working_tree_dir
