@@ -3,7 +3,7 @@
 ## @file
 # manifest_repos_maintenance.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -234,16 +234,30 @@ def find_source_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, m
     Finds the source manifest repo for a given project.
     '''
     if project_manifest.general_config.source_manifest_repo:
-       return project_manifest.general_config.source_manifest_repo
-    else:
-        src_man_repo, src_config, src_man_path = find_project_in_all_indices(project_manifest.project_info.codename,
-                                                                             edkrepo_cfg,
-                                                                             edkrepo_user_cfg,
-                                                                             humble.PROJ_NOT_IN_REPO.format(project_manifest.project_info.codename),
-                                                                             humble.SOURCE_MANIFEST_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
-                                                                             man_repo)
+        source_manifest_repo = project_manifest.general_config.source_manifest_repo
+        cfg_manifest_repos, user_cfg_manifest_repos, _ = list_available_manifest_repos(edkrepo_cfg, edkrepo_user_cfg)
+        manifest_dir = None
+        if source_manifest_repo in cfg_manifest_repos:
+            manifest_dir = edkrepo_cfg.manifest_repo_abs_path(source_manifest_repo)
+        elif source_manifest_repo in user_cfg_manifest_repos:
+            manifest_dir = edkrepo_user_cfg.manifest_repo_abs_path(source_manifest_repo)
+        if manifest_dir is not None:
+            index_file_path = os.path.join(manifest_dir, CI_INDEX_FILE_NAME)
+            if os.path.isfile(index_file_path):
+                index_file = CiIndexXml(index_file_path)
+                found, _ = find_project_in_single_index(project_manifest.project_info.codename, index_file, manifest_dir)
+                if found:
+                    return source_manifest_repo
+
+    src_man_repo, _, _ = find_project_in_all_indices(project_manifest.project_info.codename,
+                                                     edkrepo_cfg,
+                                                     edkrepo_user_cfg,
+                                                     humble.PROJ_NOT_IN_REPO.format(project_manifest.project_info.codename),
+                                                     humble.SOURCE_MANIFEST_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
+                                                     man_repo)
+    if src_man_repo is not None:
         project_manifest.write_source_manifest_repo(src_man_repo)
-        return src_man_repo
+    return src_man_repo
 
 def pull_workspace_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None, reset_hard=False):
     '''
