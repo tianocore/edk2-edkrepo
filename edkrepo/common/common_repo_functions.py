@@ -126,9 +126,9 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
 
         try:
             if 'source_manifest_repo' in vars(args).keys():
-                src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+                src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
             else:
-                src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], None)
+                src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], None, False)
         except EdkrepoManifestNotFoundException:
             src_manifest_repo = None
         if src_manifest_repo:
