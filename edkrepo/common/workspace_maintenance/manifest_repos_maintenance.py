@@ -229,7 +229,7 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
         raise EdkrepoManifestNotFoundException(humble.PROJ_NOT_IN_REPO.format(project))
 
 
-def find_source_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None):
+def find_source_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, man_repo=None, update_source_manifest_repo=True):
     '''
     Finds the source manifest repo for a given project.
     '''
@@ -255,7 +255,7 @@ def find_source_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, m
                                                      humble.PROJ_NOT_IN_REPO.format(project_manifest.project_info.codename),
                                                      humble.SOURCE_MANIFEST_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
                                                      man_repo)
-    if src_man_repo is not None:
+    if src_man_repo is not None and update_source_manifest_repo:
         project_manifest.write_source_manifest_repo(src_man_repo)
     return src_man_repo
 

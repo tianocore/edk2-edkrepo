@@ -27,6 +27,7 @@ from edkrepo.common.pathfix import get_subst_drive_dict
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
@@ -119,6 +120,15 @@ class CloneCommand(EdkrepoCommand):
         local_manifest_path = os.path.join(local_manifest_dir, "Manifest.xml")
         shutil.copy(global_manifest_path, local_manifest_path)
         manifest = ManifestXml(local_manifest_path)
+
+        # Update the source manifest repository tag in the local copy of the manifest XML
+        try:
+            if 'source_manifest_repo' in vars(args).keys():
+                find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+            else:
+                find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], None)
+        except EdkrepoManifestNotFoundException:
+            pass
 
         # Process the combination name and make sure it can be found in the manifest
         if args.Combination is not None:

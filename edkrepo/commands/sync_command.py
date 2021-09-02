@@ -397,6 +397,16 @@ class SyncCommand(EdkrepoCommand):
         os.remove(local_manifest_path)
         shutil.copy(global_manifest_path, local_manifest_path)
 
+        # Update the source manifest repository tag in the local copy of the manifest XML
+        new_manifest = ManifestXml(local_manifest_path)
+        try:
+            if 'source_manifest_repo' in vars(args).keys():
+                find_source_manifest_repo(new_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+            else:
+                find_source_manifest_repo(new_manifest, config['cfg_file'], config['user_cfg_file'], None)
+        except EdkrepoManifestNotFoundException:
+            pass
+
     def __check_combo_sha_tag_branch(self, workspace_path, initial_sources, new_sources):
         # Checks for changes in the defined SHAs, Tags or branches in the checked out combo. Returns
         # a list of repos to checkout. Checks to see if user is on appropriate SHA, tag or branch and
