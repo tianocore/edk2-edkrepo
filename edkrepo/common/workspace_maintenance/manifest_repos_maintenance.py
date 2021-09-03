@@ -263,5 +263,3 @@ def pull_workspace_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg
                                   reset_hard)
     elif src_man_repo in conflicts:
         raise EdkrepoInvalidParametersException(humble.CONFLICT_NO_CLONE.format(src_man_repo))
-
-

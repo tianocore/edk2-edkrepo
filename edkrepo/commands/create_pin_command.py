@@ -3,7 +3,7 @@
 ## @file
 # create_pin_command.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -15,10 +15,11 @@ from git import Repo
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument
 import edkrepo.commands.arguments.create_pin_args as arguments
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException, EdkrepoInvalidParametersException
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceCorruptException
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceCorruptException, EdkrepoManifestNotFoundException
 from edkrepo.common.humble import WRITING_PIN_FILE, GENERATING_PIN_DATA, GENERATING_REPO_DATA, BRANCH, COMMIT
 from edkrepo.common.humble import COMMIT_MESSAGE, PIN_PATH_NOT_PRESENT, PIN_FILE_ALREADY_EXISTS, PATH_AND_FILEPATH_USED
 from edkrepo.common.humble import MISSING_REPO
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
@@ -66,10 +67,13 @@ class CreatePinCommand(EdkrepoCommand):
             src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
             pull_workspace_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
             cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+            manifest_repo_path = None
             if src_manifest_repo in cfg:
                 manifest_repo_path = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
             elif src_manifest_repo in user_cfg:
                 manifest_repo_path = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+            if manifest_repo_path is None:
+                raise EdkrepoManifestNotFoundException(SOURCE_MANIFEST_REPO_NOT_FOUND.format(manifest.project_info.codename))
         # If the push flag is enabled use general_config.pin_path to determine global manifest relative location to save
         # pin file to.
         if args.push and manifest.general_config.pin_path is not None:
