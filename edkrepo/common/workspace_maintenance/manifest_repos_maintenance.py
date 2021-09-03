@@ -249,12 +249,15 @@ def find_source_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg, m
                 if found:
                     return source_manifest_repo
 
-    src_man_repo, _, _ = find_project_in_all_indices(project_manifest.project_info.codename,
-                                                     edkrepo_cfg,
-                                                     edkrepo_user_cfg,
-                                                     humble.PROJ_NOT_IN_REPO.format(project_manifest.project_info.codename),
-                                                     humble.SOURCE_MANIFEST_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
-                                                     man_repo)
+    try:
+        src_man_repo, _, _ = find_project_in_all_indices(project_manifest.project_info.codename,
+                                                        edkrepo_cfg,
+                                                        edkrepo_user_cfg,
+                                                        humble.PROJ_NOT_IN_REPO.format(project_manifest.project_info.codename),
+                                                        humble.SOURCE_MANIFEST_REPO_NOT_FOUND.format(project_manifest.project_info.codename),
+                                                        man_repo)
+    except EdkrepoManifestNotFoundException:
+        src_man_repo = None
     if src_man_repo is not None and update_source_manifest_repo:
         project_manifest.write_source_manifest_repo(src_man_repo)
     return src_man_repo
@@ -277,5 +280,3 @@ def pull_workspace_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg
                                   reset_hard)
     elif src_man_repo in conflicts:
         raise EdkrepoInvalidParametersException(humble.CONFLICT_NO_CLONE.format(src_man_repo))
-
-

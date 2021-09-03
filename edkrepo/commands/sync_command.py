@@ -33,6 +33,7 @@ from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_TARGET,
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL, SYNC_INCOMPATIBLE_COMBO
 from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL, SYNC_MOVE_FAILED
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout_enabled
@@ -101,8 +102,11 @@ class SyncCommand(EdkrepoCommand):
         elif source_global_manifest_repo in user_cfg_manifest_repos:
             global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
             verify_single_manifest(config['user_cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
+        else:
+            global_manifest_directory = None
 
-        update_editor_config(config, global_manifest_directory)
+        if global_manifest_directory is not None:
+            update_editor_config(config, global_manifest_directory)
 
         if not args.update_local_manifest:
             self.__check_for_new_manifest(args, config, initial_manifest, workspace_path, global_manifest_directory)
@@ -159,7 +163,8 @@ class SyncCommand(EdkrepoCommand):
         for repo_to_sync in repo_sources_to_sync:
             local_repo_path = os.path.join(workspace_path, repo_to_sync.root)
             # Update any hooks
-            update_hooks(hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo_to_sync, config, global_manifest_directory)
+            if global_manifest_directory is not None:
+                update_hooks(hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo_to_sync, config, global_manifest_directory)
             repo = Repo(local_repo_path)
             #Fetch notes
             repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
@@ -225,7 +230,8 @@ class SyncCommand(EdkrepoCommand):
                 print(NO_SYNC_DETACHED_HEAD.format(repo_to_sync.root))
 
             # Update commit message templates
-            update_repo_commit_template(workspace_path, repo, repo_to_sync, config, global_manifest_directory)
+            if global_manifest_directory is not None:
+                update_repo_commit_template(workspace_path, repo, repo_to_sync, config, global_manifest_directory)
 
         if sync_error:
             print(SYNC_ERROR)
@@ -244,6 +250,11 @@ class SyncCommand(EdkrepoCommand):
             sparse_checkout(workspace_path, repo_sources_to_sync, manifest)
 
     def __update_local_manifest(self, args, config, initial_manifest, workspace_path, global_manifest_directory):
+        #if the manifest repository for the current manifest was not found then there is no project with the manifest
+        #specified project name in the index file for any of the manifest repositories
+        if global_manifest_directory is None:
+            raise EdkrepoManifestNotFoundException(SOURCE_MANIFEST_REPO_NOT_FOUND.format(initial_manifest.project_info.codename))
+
         local_manifest_dir = os.path.join(workspace_path, 'repo')
         current_combo = initial_manifest.general_config.current_combo
         initial_sources = initial_manifest.get_repo_sources(current_combo)
@@ -262,6 +273,7 @@ class SyncCommand(EdkrepoCommand):
                 if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
                     prune_needed = True
                 if prune_needed:
+                    # The sleep is to give the operating system time to close all the file handles that Git has open
                     time.sleep(1.0)
                     repo.git.remote('prune', 'origin')
                     time.sleep(1.0)
@@ -344,7 +356,7 @@ class SyncCommand(EdkrepoCommand):
                                 found_source = True
                                 break
                 # If the source that is different came from the old manifest, then it is now outdated and either needs
-                # to be deleted or moved to a archival location.
+                # to be deleted or moved to an archival location.
                 if found_source:
                     roots = [s.root for s in new_sources]
                     # If there is a source in the new manifest that goes into the same folder name as a source in the
@@ -378,6 +390,7 @@ class SyncCommand(EdkrepoCommand):
                 print(path_to_source)
             if len(sources_to_remove) > 0:
                 print(SYNC_REMOVE_LIST_END_FORMATTING)
+            # Clone any new Git repositories
             clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check)
             # Make a list of and only checkout repos that were newly cloned. Sync keeps repos on their initial active branches
             # cloning the entire combo can prevent existing repos from correctly being returned to their proper branch
@@ -436,6 +449,14 @@ class SyncCommand(EdkrepoCommand):
         return repos_to_checkout
 
     def __check_for_new_manifest(self, args, config, initial_manifest, workspace_path, global_manifest_directory):
+        #if the manifest repository for the current manifest was not found then there is no project with the manifest
+        #specified project name in the index file for any of the manifest repositories
+        if global_manifest_directory is None:
+            if args.override:
+                return
+            else:
+                raise EdkrepoManifestNotFoundException(SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
+
         #see if there is an entry in CiIndex.xml that matches the prject name of the current manifest
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
         ci_index_xml = CiIndexXml(index_path)

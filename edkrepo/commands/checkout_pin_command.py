@@ -57,6 +57,8 @@ class CheckoutPinCommand(EdkrepoCommand):
             manifest_repo_path = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
         elif manifest_repo in user_cfg:
             manifest_repo_path = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
+        else:
+            manifest_repo_path = None
 
         pin_path = self.__get_pin_path(args, workspace_path, manifest_repo_path, manifest)
         pin = ManifestXml(pin_path)
@@ -96,9 +98,9 @@ class CheckoutPinCommand(EdkrepoCommand):
     def __get_pin_path(self, args, workspace_path, manifest_repo_path, manifest):
         if os.path.isabs(args.pinfile) and os.path.isfile(args.pinfile):
             return os.path.normpath(args.pinfile)
-        elif os.path.isfile(os.path.join(manifest_repo_path, os.path.normpath(manifest.general_config.pin_path), args.pinfile)):
+        elif manifest_repo_path is not None and os.path.isfile(os.path.join(manifest_repo_path, os.path.normpath(manifest.general_config.pin_path), args.pinfile)):
             return os.path.join(manifest_repo_path, os.path.normpath(manifest.general_config.pin_path), args.pinfile)
-        elif os.path.isfile(os.path.join(manifest_repo_path, args.pinfile)):
+        elif manifest_repo_path is not None and os.path.isfile(os.path.join(manifest_repo_path, args.pinfile)):
             return os.path.join(manifest_repo_path, args.pinfile)
         elif os.path.isfile(os.path.join(workspace_path, args.pinfile)):
             return os.path.join(workspace_path, args.pinfile)
