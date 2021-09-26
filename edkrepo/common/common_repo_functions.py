@@ -666,3 +666,19 @@ def find_less():
         if less_path:
             use_less = True
         return less_path, use_less
+
+
+def find_curl():
+    if sys.platform == 'win32':
+        git_path = get_full_path('git.exe')
+        if git_path is not None:
+            curl_path = os.path.join(os.path.dirname(os.path.dirname(git_path)), 'mingw64', 'bin', 'curl.exe')
+            if os.path.isfile(curl_path):
+                return curl_path
+            curl_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(git_path))), 'mingw64', 'bin', 'curl.exe')
+            if os.path.isfile(curl_path):
+                return curl_path
+        return None
+    else:
+        curl_path = get_full_path('curl')
+        return curl_path
