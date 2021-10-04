@@ -57,9 +57,9 @@ def print_info_msg(info_msg, header=True, force_color_output=None):
     """
     init_color_console(force_color_output)
     if header:
-        info_msg_formatted = "{}{}Info: {}{}{}".format(Style.BRIGHT, Fore.CYAN, Style.RESET_ALL, Fore.CYAN, info_msg)
+        info_msg_formatted = "Info: {}".format(info_msg)
     else:
-        info_msg_formatted = "{}{}".format(Fore.CYAN, info_msg)
+        info_msg_formatted = "{}".format(info_msg)
     print(info_msg_formatted)
 
 def print_warning_msg(warning_msg, header=True, force_color_output=None):
