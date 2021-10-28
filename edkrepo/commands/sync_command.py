@@ -49,12 +49,12 @@ from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.ui_functions import init_color_console
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
 from edkrepo.config.config_factory import get_workspace_manifest_file
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from project_utils.submodule import deinit_submodules, maintain_submodules
+import edkrepo.common.ui_functions as ui_functions
 
 
 class SyncCommand(EdkrepoCommand):
@@ -121,7 +121,7 @@ class SyncCommand(EdkrepoCommand):
         elif args.update_local_manifest:
             sparse_reset_required = True
         if sparse_enabled and sparse_reset_required:
-            print(SPARSE_RESET)
+            ui_functions.print_info_msg(SPARSE_RESET, header = False)
             reset_sparse_checkout(workspace_path, initial_sources)
 
         # Get the latest manifest if requested
@@ -175,9 +175,9 @@ class SyncCommand(EdkrepoCommand):
                 #The new branch may not exist in the heads list yet if it is a new branch
                 repo.git.checkout(repo_to_sync.branch)
                 if not args.fetch:
-                    print (SYNCING.format(repo_to_sync.root, repo.active_branch))
+                    ui_functions.print_info_msg(SYNCING.format(repo_to_sync.root, repo.active_branch), header = False)
                 else:
-                    print (FETCHING.format(repo_to_sync.root, repo.active_branch))
+                    ui_functions.print_info_msg(FETCHING.format(repo_to_sync.root, repo.active_branch), header = False)
                 try:
                     repo.remotes.origin.fetch()
                 except GitCommandError as e:
@@ -197,7 +197,7 @@ class SyncCommand(EdkrepoCommand):
                 if has_primary_repo_remote(repo, args.verbose):
                     fetch_from_primary_repo(repo, repo_to_sync, args.verbose)
                 if not args.override and not repo.is_ancestor(ancestor_rev='HEAD', rev='origin/{}'.format(repo_to_sync.branch)):
-                    print(SYNC_COMMITS_ON_TARGET.format(repo_to_sync.branch, repo_to_sync.root))
+                    ui_functions.print_info_msg(SYNC_COMMITS_ON_TARGET.format(repo_to_sync.branch, repo_to_sync.root), header = False)
                     local_commits = True
                     sync_error = True
                 if not args.fetch and (not local_commits or args.override):
@@ -205,7 +205,7 @@ class SyncCommand(EdkrepoCommand):
 
                 # Check to see if mirror is up to date
                 if not in_sync_with_primary(repo, repo_to_sync, args.verbose):
-                    print(MIRROR_BEHIND_PRIMARY_REPO)
+                    ui_functions.print_info_msg(MIRROR_BEHIND_PRIMARY_REPO, header = False)
 
                 # Switch back to the initially active branch before exiting
                 repo.heads[initial_active_branch.name].checkout()
@@ -217,24 +217,23 @@ class SyncCommand(EdkrepoCommand):
                     branch_origin = next(itertools.islice(repo.iter_commits(), commit_count, commit_count + 1))
                     behind_count = int(repo.git.rev_list('--count', '{}..{}'.format(branch_origin.hexsha, latest_sha)))
                     if behind_count:
-                        print(SYNC_NEEDS_REBASE.format(
+                        ui_functions.print_info_msg(SYNC_NEEDS_REBASE.format(
                             behind_count=behind_count,
                             target_remote='origin',
                             target_branch=repo_to_sync.branch,
                             local_branch=initial_active_branch.name,
-                            repo_folder=repo_to_sync.root))
-                        print()
+                            repo_folder=repo_to_sync.root), header = False)
                 except:
-                    print(SYNC_REBASE_CALC_FAIL)
+                    ui_functions.print_error_msg(SYNC_REBASE_CALC_FAIL, header = False)
             elif args.verbose:
-                print(NO_SYNC_DETACHED_HEAD.format(repo_to_sync.root))
+                ui_functions.print_warning_msg(NO_SYNC_DETACHED_HEAD.format(repo_to_sync.root), header = False)
 
             # Update commit message templates
             if global_manifest_directory is not None:
                 update_repo_commit_template(workspace_path, repo, repo_to_sync, config, global_manifest_directory)
 
         if sync_error:
-            print(SYNC_ERROR)
+            ui_functions.print_error_msg(SYNC_ERROR, header = False)
 
         # Initialize submodules
         if not args.skip_submodule:
@@ -246,7 +245,7 @@ class SyncCommand(EdkrepoCommand):
 
         # Restore sparse checkout state
         if sparse_enabled:
-            print(SPARSE_CHECKOUT)
+            ui_functions.print_info_msg(SPARSE_CHECKOUT, header = False)
             sparse_checkout(workspace_path, repo_sources_to_sync, manifest)
 
     def __update_local_manifest(self, args, config, initial_manifest, workspace_path, global_manifest_directory):
@@ -370,26 +369,25 @@ class SyncCommand(EdkrepoCommand):
                     # If the source that is different came from the new manifest, then we need to clone that new
                     # Git repository.
                     sources_to_clone.append(source)
-            init_color_console(False)
             # Move the obsolete Git repositories to archival locations.
             for source in sources_to_move:
                 old_dir = os.path.join(workspace_path, source.root)
                 new_dir = generate_name_for_obsolete_backup(old_dir)
-                print(SYNC_SOURCE_MOVE_WARNING.format(source.root, new_dir))
+                ui_functions.print_warning_msg(SYNC_SOURCE_MOVE_WARNING.format(source.root, new_dir), header = False)
                 new_dir = os.path.join(workspace_path, new_dir)
                 try:
                     shutil.move(old_dir, new_dir)
                 except:
-                    print(SYNC_MOVE_FAILED.format(initial_dir=source.root, new_dir=new_dir))
+                    ui_functions.print_error_msg(SYNC_MOVE_FAILED.format(initial_dir=source.root, new_dir=new_dir), header = False)
                     raise
             # Tell the user about any Git repositories that are no longer used.
             if len(sources_to_remove) > 0:
-                print(SYNC_REMOVE_WARNING)
+                ui_functions.print_warning_msg(SYNC_REMOVE_WARNING, header = False)
             for source in sources_to_remove:
                 path_to_source = os.path.join(workspace_path, source.root)
-                print(path_to_source)
+                ui_functions.print_warning_msg(path_to_source, header = False)
             if len(sources_to_remove) > 0:
-                print(SYNC_REMOVE_LIST_END_FORMATTING)
+                ui_functions.print_warning_msg(SYNC_REMOVE_LIST_END_FORMATTING, header = False)
             # Clone any new Git repositories
             clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check)
             # Make a list of and only checkout repos that were newly cloned. Sync keeps repos on their initial active branches
@@ -405,7 +403,7 @@ class SyncCommand(EdkrepoCommand):
                 checkout_repos(args.verbose, args.override, repos_to_checkout, workspace_path, new_manifest_to_check)
 
         #remove the old manifest file and copy the new one
-        print(UPDATING_MANIFEST)
+        ui_functions.print_info_msg(UPDATING_MANIFEST, header = False)
         local_manifest_path = os.path.join(local_manifest_dir, 'Manifest.xml')
         os.remove(local_manifest_path)
         shutil.copy(global_manifest_path, local_manifest_path)
@@ -432,18 +430,18 @@ class SyncCommand(EdkrepoCommand):
                     repo = Repo(local_repo_path)
                     if initial_source.commit and initial_source.commit != new_source.commit:
                         if repo.head.object.hexsha != initial_source.commit:
-                            print(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root))
+                            ui_functions.print_info_msg(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header = False)
                         repos_to_checkout.append(new_source)
                         break
                     elif initial_source.tag and initial_source.tag != new_source.tag:
                         tag_sha = repo.git.rev_list('-n 1', initial_source.tag) #according to gitpython docs must change - to _
                         if tag_sha != repo.head.object.hexsha:
-                            print(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root))
+                            ui_functions.print_info_msg(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header = False)
                         repos_to_checkout.append(new_source)
                         break
                     elif initial_source.branch and initial_source.branch != new_source.branch:
                         if repo.active_branch.name != initial_source.branch:
-                            print(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root))
+                            ui_functions.print_info_msg(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header = False)
                         repos_to_checkout.append(new_source)
                         break
         return repos_to_checkout
@@ -469,9 +467,8 @@ class SyncCommand(EdkrepoCommand):
         global_manifest_path = os.path.join(global_manifest_directory, os.path.normpath(ci_index_xml_rel_path))
         global_manifest = ManifestXml(global_manifest_path)
         if not initial_manifest.equals(global_manifest, True):
-            init_color_console(False)
-            print(SYNC_MANIFEST_DIFF_WARNING)
-            print(SYNC_MANIFEST_UPDATE)
+            ui_functions.print_warning_msg(SYNC_MANIFEST_DIFF_WARNING, header = False)
+            ui_functions.print_info_msg(SYNC_MANIFEST_UPDATE, header = False)
 
     def __check_submodule_config(self, workspace_path, manifest, repo_sources):
         gitconfigpath = os.path.normpath(expanduser("~/.gitconfig"))
