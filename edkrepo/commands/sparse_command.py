@@ -16,6 +16,8 @@ from edkrepo.common.edkrepo_exception import EdkrepoSparseException
 from edkrepo.common.humble import SPARSE_ENABLE_DISABLE, SPARSE_NO_CHANGE, SPARSE_ENABLE, SPARSE_DISABLE
 from edkrepo.common.humble import SPARSE_STATUS, SPARSE_CHECKOUT_STATUS
 from edkrepo.common.humble import SPARSE_BY_DEFAULT_STATUS, SPARSE_ENABLED_REPOS
+import edkrepo.common.ui_functions as ui_functions
+
 
 class SparseCommand(EdkrepoCommand):
     def __init__(self):
@@ -57,18 +59,17 @@ class SparseCommand(EdkrepoCommand):
             check_dirty_repos(manifest, workspace_path)
 
             if args.enable and not sparse_enabled:
-                print(SPARSE_ENABLE)
+                ui_functions.print_info_msg(SPARSE_ENABLE, header = False)
                 sparse_checkout(workspace_path, repo_list, manifest)
             elif args.disable and sparse_enabled:
-                print(SPARSE_DISABLE)
+                ui_functions.print_info_msg(SPARSE_DISABLE, header = False)
                 reset_sparse_checkout(workspace_path, repo_list, True)
         else:
             # Display the current status of the project
-            print(SPARSE_STATUS)
-            print(SPARSE_CHECKOUT_STATUS.format(sparse_enabled))
+            ui_functions.print_info_msg(SPARSE_STATUS, header = False)
+            ui_functions.print_info_msg(SPARSE_CHECKOUT_STATUS.format(sparse_enabled), header = False)
             if sparse_settings is not None:
-                print(SPARSE_BY_DEFAULT_STATUS.format(sparse_settings.sparse_by_default))
-            print()
-            print(SPARSE_ENABLED_REPOS.format(current_combo))
+                ui_functions.print_info_msg(SPARSE_BY_DEFAULT_STATUS.format(sparse_settings.sparse_by_default), header = False)
+            ui_functions.print_info_msg(SPARSE_ENABLED_REPOS.format(current_combo), header = False)
             for repo in [x for x in repo_list if x.sparse]:
-                print('- {}: {}'.format(repo.root, repo.remote_url))
+                ui_functions.print_info_msg('- {}: {}'.format(repo.root, repo.remote_url), header = False)
