@@ -20,6 +20,7 @@ from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_gi
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
+import edkrepo.common.ui_functions as ui_functions
 
 
 class MaintenanceCommande(EdkrepoCommand):
@@ -38,12 +39,12 @@ class MaintenanceCommande(EdkrepoCommand):
     def run_command(self, args, config):
 
         # Configure git long path support
-        print(humble.LONGPATH_CONFIG)
+        ui_functions.print_info_msg(humble.LONGPATH_CONFIG, header = False)
         set_long_path_support()
         print()
 
         # Remove unneeded instead of entries from git global config
-        print(humble.CLEAN_INSTEAD_OFS)
+        ui_functions.print_info_msg(humble.CLEAN_INSTEAD_OFS, header = False)
         print()
 
         # If in a valid workspace run the following for each repo:
@@ -51,8 +52,8 @@ class MaintenanceCommande(EdkrepoCommand):
         try:
             workspace_path = get_workspace_path()
         except EdkrepoWorkspaceInvalidException:
-            workspace_path - None
-            print(humble.NO_WOKKSPACE)
+            workspace_path = None
+            ui_functions.print_error_msg(humble.NO_WOKKSPACE, header = False)
             print()
 
         if workspace_path:
@@ -61,11 +62,11 @@ class MaintenanceCommande(EdkrepoCommand):
             for repo_to_maintain in repos_to_maintain:
                 local_repo_path = os.path.join(workspace_path, repo_to_maintain.root)
                 repo = Repo(local_repo_path)
-                print(humble.REPO_MAINTENANCE.format(repo_to_maintain.root))
-                print(humble.REFLOG_EXPIRE)
+                ui_functions.print_info_msg(humble.REPO_MAINTENANCE.format(repo_to_maintain.root), header = False))
+                ui_functions.print_info_msg(humble.REFLOG_EXPIRE, header = False)
                 repo.git.reflog('expire', '--expire=now', '--all')
-                print(humble.GC_AGGRESSIVE)
+                ui_functions.print_info_msg(humble.GC_AGGRESSIVE, header = False)
                 repo.git.gc('--aggressive', '--prune=now')
-                print(humble.REMOTE_PRUNE)
+                ui_functions.print_info_msg(humble.REMOTE_PRUNE, header = False)
                 repo.git.remote('prune', 'origin')
                 print()
