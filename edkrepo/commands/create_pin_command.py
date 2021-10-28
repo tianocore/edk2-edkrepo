@@ -25,6 +25,8 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
 from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
+import edkrepo.common.ui_functions as ui_functions
+
 
 
 class CreatePinCommand(EdkrepoCommand):
@@ -96,7 +98,7 @@ class CreatePinCommand(EdkrepoCommand):
         repo_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
 
         # get the repo sources and commit ids for the pin
-        print(GENERATING_PIN_DATA.format(manifest.project_info.codename, manifest.general_config.current_combo))
+        ui_functions.print_info_msg(GENERATING_PIN_DATA.format(manifest.project_info.codename, manifest.general_config.current_combo), header = False)
         updated_repo_sources = []
         for repo_source in repo_sources:
             local_repo_path = os.path.join(workspace_path, repo_source.root)
@@ -105,14 +107,14 @@ class CreatePinCommand(EdkrepoCommand):
             repo = Repo(local_repo_path)
             commit_id = repo.head.commit.hexsha
             if args.verbose:
-                print(GENERATING_REPO_DATA.format(repo_source.root))
-                print(BRANCH.format(repo_source.branch))
-                print(COMMIT.format(commit_id))
+                ui_functions.print_info_msg(GENERATING_REPO_DATA.format(repo_source.root), header = False)
+                ui_functions.print_info_msg(BRANCH.format(repo_source.branch), header = False)
+                ui_functions.print_info_msg(COMMIT.format(commit_id), header = False)
             updated_repo_source = repo_source._replace(commit=commit_id)
             updated_repo_sources.append(updated_repo_source)
 
         # create the pin
-        print(WRITING_PIN_FILE.format(pin_file_name))
+        ui_functions.print_info_msg(WRITING_PIN_FILE.format(pin_file_name), header = False)
         manifest.generate_pin_xml(args.Description, manifest.general_config.current_combo, updated_repo_sources,
                                   filename=pin_file_name)
 
