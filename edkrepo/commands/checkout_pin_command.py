@@ -25,6 +25,8 @@ from edkrepo.config.config_factory import get_workspace_path, get_workspace_mani
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from project_utils.submodule import deinit_full, maintain_submodules
+import edkrepo.common.ui_functions as ui_functions
+
 
 
 class CheckoutPinCommand(EdkrepoCommand):
@@ -72,15 +74,15 @@ class CheckoutPinCommand(EdkrepoCommand):
         self.__pin_matches_project(pin, manifest, workspace_path)
         sparse_enabled = sparse_checkout_enabled(workspace_path, manifest_sources)
         if sparse_enabled:
-            print(SPARSE_RESET)
+            ui_functions.print_info_msg(SPARSE_RESET, header = False)
             reset_sparse_checkout(workspace_path, manifest_sources)
         submodule_combo = pin.general_config.current_combo
         try:
             deinit_full(workspace_path, manifest, args.verbose)
         except Exception as e:
-            print(SUBMODULE_DEINIT_FAILED)
+            ui_functions.print_error_msg(SUBMODULE_DEINIT_FAILED, header = False)
             if args.verbose:
-                print(e)
+                ui_functions.print_error_msg(e, header = False)
         pin_repo_sources = pin.get_repo_sources(pin.general_config.current_combo)
         try:
             checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest)
@@ -92,7 +94,7 @@ class CheckoutPinCommand(EdkrepoCommand):
                 cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
             maintain_submodules(workspace_path, pin, submodule_combo, args.verbose, cache_path)
             if sparse_enabled:
-                print(SPARSE_CHECKOUT)
+                ui_functions.print_info_msg(SPARSE_CHECKOUT, header = False)
                 sparse_checkout(workspace_path, pin_repo_sources, manifest)
 
     def __get_pin_path(self, args, workspace_path, manifest_repo_path, manifest):
@@ -119,7 +121,7 @@ class CheckoutPinCommand(EdkrepoCommand):
         elif not set(pin.remotes).issubset(set(manifest.remotes)):
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
         elif pin.general_config.current_combo not in combinations_in_manifest(manifest):
-            print(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo))
+            ui_functions.print_warning_msg(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo), header = False)
         combo_name = pin.general_config.current_combo
         pin_sources = pin.get_repo_sources(combo_name)
         pin_root_remote = {source.root:source.remote_name for source in pin_sources}
