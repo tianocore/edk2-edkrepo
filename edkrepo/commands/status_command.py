@@ -15,6 +15,7 @@ from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.status_args as arguments
 import edkrepo.commands.humble.status_humble as humble
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+import edkrepo.common.ui_functions as ui_functions
 
 class StatusCommand(EdkrepoCommand):
 
@@ -33,8 +34,8 @@ class StatusCommand(EdkrepoCommand):
         initial_manifest = get_workspace_manifest()
         current_combo = initial_manifest.general_config.current_combo
         current_sources = initial_manifest.get_repo_sources(current_combo)
-        print(humble.STATUS_CURRENT_COMBO.format(current_combo))
+        ui_functions.print_info_msg(humble.STATUS_CURRENT_COMBO.format(current_combo), header = False)
         for current_repo in current_sources:
             local_repo_path = os.path.join(workspace_path, current_repo.root)
             repo = Repo(local_repo_path)
-            print("{}: {}\n".format(current_repo.root, repo.git.status()))
+            ui_functions.print_info_msg("{}: {}\n".format(current_repo.root, repo.git.status()), header = False)
