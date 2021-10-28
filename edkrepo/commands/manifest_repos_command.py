@@ -14,6 +14,8 @@ import edkrepo.commands.arguments.manifest_repo_args as arguments
 import edkrepo.commands.humble.manifest_repos_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+import edkrepo.common.ui_functions as ui_functions
+
 
 
 
@@ -74,9 +76,10 @@ class ManifestRepos(EdkrepoCommand):
 
         if args.action == 'list':
             for repo in cfg_repos:
-                print(humble.CFG_LIST_ENTRY.format(repo))
+                ui_functions.print_info_msg(humble.CFG_LIST_ENTRY.format(repo), header = False)
             for repo in user_cfg_repos:
-                print(humble.USER_CFG_LIST_ENTRY.format(repo))
+                ui_functions.print_info_msg(humble.USER_CFG_LIST_ENTRY.format(repo), header = False)
+
 
         elif (args.action == ('add' or 'remove')) and not args.name:
             raise EdkrepoInvalidParametersException(humble.NAME_REQUIRED)
