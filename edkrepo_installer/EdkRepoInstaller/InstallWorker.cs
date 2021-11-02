@@ -622,6 +622,13 @@ namespace TianoCore.EdkRepoInstaller
             }
             InstallLogger.Log(string.Format("Git Version: {0}", gitVersion));
             //
+            // Run git lfs install
+            //
+            InstallLogger.Log("Running git lfs install");
+            SilentProcess.StdoutDataCapture lfsCapture = new SilentProcess.StdoutDataCapture();
+            SilentProcess lfsProcess = SilentProcess.StartConsoleProcessSilently(GitPath, "lfs install", lfsCapture.DataReceivedHandler);
+            lfsProcess.WaitForExit();
+            //
             // Step 4 - Determine list of exclusive packages
             //
             List<Tuple<string, PythonVersion>> ExclusivePackages = new List<Tuple<string, PythonVersion>>();
