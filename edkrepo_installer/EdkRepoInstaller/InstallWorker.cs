@@ -309,7 +309,7 @@ namespace TianoCore.EdkRepoInstaller
             }
         }
 
-        public void CreatePythonLaunchers(string GitPath, List<PythonVersion> PythonVersions)
+        public void CreatePythonLaunchers(string GitPath, List<PythonVersion> PythonVersions, PythonVersion EdkRepoPythonVersion)
         {
             bool HasPy2 = false;
             bool HasPy3 = false;
@@ -348,7 +348,8 @@ namespace TianoCore.EdkRepoInstaller
                     }
                     using (BinaryWriter writer = new BinaryWriter(File.Open(Python3ScriptPath, FileMode.Create)))
                     {
-                        string sanitized = EdkrepoPython3Launcher.Replace("\r\n", "\n");
+                        string EdkRepoPython3LauncherWithVersion = string.Format(EdkrepoPython3Launcher, EdkRepoPythonVersion.Major, EdkRepoPythonVersion.Minor);
+                        string sanitized = EdkRepoPython3LauncherWithVersion.Replace("\r\n", "\n");
                         writer.Write(Encoding.UTF8.GetBytes(sanitized));
                     }
                 }
@@ -708,6 +709,7 @@ namespace TianoCore.EdkRepoInstaller
             // Step 8 - Install all Wheels
             //
             string EdkrepoPythonPath = null;
+            PythonVersion? EdkRepoPythonVersion = null;
             foreach (PythonInstance PyInstance in PythonWheelsToInstall)
             {
                 string PythonPath;
@@ -779,6 +781,7 @@ namespace TianoCore.EdkRepoInstaller
                     if (Wheel.Package.Name == InstallerStrings.EdkrepoPackageName)
                     {
                         EdkrepoPythonPath = PythonPath;
+                        EdkRepoPythonVersion = PyInstance.Version;
                     }
                 }
             }
@@ -792,7 +795,7 @@ namespace TianoCore.EdkRepoInstaller
             // Step 10 - Setup symlink to edkrepo and bash script to launch edkrepo from git bash
             //
             string EdkrepoSymlinkPath = null;
-            if (!string.IsNullOrEmpty(EdkrepoPythonPath))
+            if (!string.IsNullOrEmpty(EdkrepoPythonPath) && EdkRepoPythonVersion != null)
             {
                 string EdkrepoScriptPath = Path.Combine(Path.GetDirectoryName(EdkrepoPythonPath), "Scripts", InstallerStrings.EdkrepoCliExecutable);
                 EdkrepoSymlinkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), InstallerStrings.EdkrepoCliExecutable);
@@ -833,7 +836,7 @@ namespace TianoCore.EdkRepoInstaller
                             string sanitized = EdkrepoBashLauncher.Replace("\r\n", "\n");
                             writer.Write(Encoding.UTF8.GetBytes(sanitized));
                         }
-                        CreatePythonLaunchers(GitPath, PythonVersions);
+                        CreatePythonLaunchers(GitPath, PythonVersions, (PythonVersion) EdkRepoPythonVersion);
                     }
                 }
             }
@@ -1354,9 +1357,9 @@ fi
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 if [ -t 0 -a -t 1 ]; then
-  winpty py.exe -3 ""$@""
+  winpty py.exe -{0}.{1} ""$@""
 else
-  py.exe -3 ""$@""
+  py.exe -{0}.{1} ""$@""
 fi
 ";
 
