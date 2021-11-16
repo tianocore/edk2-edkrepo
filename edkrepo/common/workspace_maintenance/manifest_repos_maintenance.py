@@ -167,16 +167,29 @@ def find_project_in_all_indices (project, edkrepo_cfg, edkrepo_user_cfg, except_
     edkrepo_user.cfg. If a project with the same name is found uses man_repo to select
     the correct entry
     '''
+
     cfg_man_repos, user_cfg_man_repos, conflicts = list_available_manifest_repos(edkrepo_cfg, edkrepo_user_cfg)
     projects = {}
     for repo in cfg_man_repos:
         manifest_dir = edkrepo_cfg.manifest_repo_abs_path(repo)
+        # If the manifest directory does not exist clone it.
+        if not os.path.exists(manifest_dir):
+            pull_single_manifest_repo(edkrepo_cfg.get_manifest_repo_url(repo),
+                                      edkrepo_cfg.get_manifest_repo_branch(repo),
+                                      edkrepo_cfg.get_manifest_repo_local_path(repo),
+                                      reset_hard=False)
+
         index_file = CiIndexXml(os.path.join(manifest_dir, CI_INDEX_FILE_NAME))
         found, man_path = find_project_in_single_index(project, index_file, manifest_dir)
         if found:
             projects[repo] = ('edkrepo_cfg', man_path)
     for repo in user_cfg_man_repos:
         manifest_dir = edkrepo_user_cfg.manifest_repo_abs_path(repo)
+        if not os.path.exists(manifest_dir):
+            pull_single_manifest_repo(edkrepo_user_cfg.get_manifest_repo_url(repo),
+                                      edkrepo_user_cfg.get_manifest_repo_branch(repo),
+                                      edkrepo_user_cfg.get_manifest_repo_local_path(repo),
+                                      reset_hard=False)
         index_file = CiIndexXml(os.path.join(manifest_dir, CI_INDEX_FILE_NAME))
         found, man_path = find_project_in_single_index(project, index_file, manifest_dir)
         if found:
