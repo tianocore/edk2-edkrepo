@@ -150,7 +150,6 @@ GIT_CMD_ERROR = 'The git command: {} failed to complete successfully with the fo
 CREATE_PIN_EXIT = 'Exiting without creating pin file ...'
 PIN_PATH_NOT_PRESENT = 'Pin Path not present in Manifest.xml ' + CREATE_PIN_EXIT
 PIN_FILE_ALREADY_EXISTS = 'A pin file with that name already exists for this project. Please rerun the command with a new filename. ' + CREATE_PIN_EXIT
-PATH_AND_FILEPATH_USED = 'Providing a file path for the PinFileName argument is not supported when using the --push flag. ' + CREATE_PIN_EXIT
 MISSING_REPO = 'The {} repository is missing from your workspace. ' + CREATE_PIN_EXIT
 
 # Informational messages for create_pin_command.py
