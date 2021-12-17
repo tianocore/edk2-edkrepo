@@ -92,10 +92,11 @@ def is_prompt_customization_installed(user_home_dir):
     script_files = [os.path.join(user_home_dir, '.bashrc'), os.path.join(user_home_dir, '.zshrc')]
     customization_installed = True
     for script_file in script_files:
+        data = None
         if os.path.isfile(script_file):
             with open(script_file, 'r') as f:
                 script = f.read().strip()
-        data = prompt_regex.search(script)
+                data = prompt_regex.search(script)
         if not data:
             customization_installed = False
             break
