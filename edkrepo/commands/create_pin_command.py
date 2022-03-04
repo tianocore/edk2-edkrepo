@@ -3,7 +3,7 @@
 ## @file
 # create_pin_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -26,7 +26,6 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull
 from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 import edkrepo.common.ui_functions as ui_functions
-
 
 
 class CreatePinCommand(EdkrepoCommand):
@@ -54,6 +53,7 @@ class CreatePinCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
 
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
@@ -92,4 +92,3 @@ class CreatePinCommand(EdkrepoCommand):
         ui_functions.print_info_msg(WRITING_PIN_FILE.format(pin_file_name), header = False)
         manifest.generate_pin_xml(args.Description, manifest.general_config.current_combo, updated_repo_sources,
                                   filename=pin_file_name)
-

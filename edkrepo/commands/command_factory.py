@@ -3,7 +3,7 @@
 ## @file
 # command_factory.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -14,6 +14,7 @@ import sys
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.composite_command import CompositeCommand
 from edkrepo.config.config_factory import GlobalConfig
+
 
 def _is_command(CommandClass):
     if CommandClass == EdkrepoCommand:

@@ -3,7 +3,7 @@
 ## @file
 # clean_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,11 +11,11 @@ import os
 
 from git import Repo
 
-
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.clean_args as arguments
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.common.ui_functions as ui_functions
+
 
 class CleanCommand(EdkrepoCommand):
     def __init__(self):
@@ -45,6 +45,8 @@ class CleanCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
+
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
         manifest_config = manifest.general_config

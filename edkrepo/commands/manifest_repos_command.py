@@ -3,7 +3,7 @@
 ## @file
 # manifest_repos_command.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -15,9 +15,6 @@ import edkrepo.commands.humble.manifest_repos_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 import edkrepo.common.ui_functions as ui_functions
-
-
-
 
 
 class ManifestRepos(EdkrepoCommand):
@@ -72,6 +69,8 @@ class ManifestRepos(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
+
         cfg_repos, user_cfg_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
         if args.action == 'list':

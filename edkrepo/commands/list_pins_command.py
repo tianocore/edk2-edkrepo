@@ -3,7 +3,7 @@
 ## @file
 # list_pins_command.py
 #
-# Copyright (c) 2018 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -28,6 +28,8 @@ import edkrepo.commands.arguments.list_pins_args as arguments
 import edkrepo.commands.humble.list_pins_humble as humble
 from edkrepo.common.common_repo_functions import find_less
 from edkrepo_manifest_parser.edk_manifest import ManifestXml, CiIndexXml
+import edkrepo.common.ui_functions as ui_functions
+
 
 class ListPinsCommand(EdkrepoCommand):
     def __init__(self):
@@ -53,6 +55,8 @@ class ListPinsCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
+
         less_path, use_less = find_less()
         if use_less:
             output_string = ''

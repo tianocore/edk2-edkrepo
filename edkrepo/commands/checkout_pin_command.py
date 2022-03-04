@@ -3,7 +3,7 @@
 ## @file
 # checkout_pin_command.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -28,7 +28,6 @@ from project_utils.submodule import deinit_full, maintain_submodules
 import edkrepo.common.ui_functions as ui_functions
 
 
-
 class CheckoutPinCommand(EdkrepoCommand):
     def __init__(self):
         super().__init__()
@@ -50,6 +49,8 @@ class CheckoutPinCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
+
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
 

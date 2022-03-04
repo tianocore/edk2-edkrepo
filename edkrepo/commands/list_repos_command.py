@@ -3,7 +3,7 @@
 ## @file
 # list_repos_command.py
 #
-# Copyright (c) 2019 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2019 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -19,11 +19,12 @@ from edkrepo.commands.edkrepo_command import ColorArgument
 import edkrepo.commands.arguments.list_repos_args as arguments
 import edkrepo.commands.humble.list_repos_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
-from edkrepo.common.ui_functions import init_color_console
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+
 
 class ListReposCommand(EdkrepoCommand):
     def __init__(self):
@@ -52,7 +53,7 @@ class ListReposCommand(EdkrepoCommand):
 
     def run_command(self, args, config):
         print()
-        init_color_console(args.color)
+        ui_functions.init_color_console(args.color)
 
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
         print()

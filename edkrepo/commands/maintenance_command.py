@@ -3,7 +3,7 @@
 ## @file
 # maintenance_command.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -37,6 +37,7 @@ class MaintenanceCommande(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
 
         # Configure git long path support
         ui_functions.print_info_msg(humble.LONGPATH_CONFIG, header = False)

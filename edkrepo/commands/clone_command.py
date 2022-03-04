@@ -3,7 +3,7 @@
 ## @file
 # clone_command.py
 #
-# Copyright (c) 2017- 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -74,6 +74,8 @@ class CloneCommand(EdkrepoCommand):
 
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
+
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
 
         name_or_manifest = args.ProjectNameOrManifestFile

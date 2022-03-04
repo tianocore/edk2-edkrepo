@@ -3,7 +3,7 @@
 ## @file
 # squash_command.py
 #
-# Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -17,6 +17,8 @@ import edkrepo.commands.humble.squash_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
 from edkrepo.common.squash import get_git_repo_root, split_commit_range, get_start_and_end_commit
 from edkrepo.common.squash import commit_list_to_message, squash_commits
+import edkrepo.common.ui_functions as ui_functions
+
 
 class SquashCommand(EdkrepoCommand):
     def __init__(self):
@@ -47,6 +49,8 @@ class SquashCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
+
         commit_ish = vars(args)['commit-ish']
         new_branch = vars(args)['new-branch']
         one_line = vars(args)['oneline']

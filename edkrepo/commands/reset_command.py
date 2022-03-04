@@ -8,7 +8,7 @@
 ## @file
 # reset_command.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.
 # This software and associated documentation (if any) is furnished
 # under a license and may only be used or copied in accordance
 # with the terms of the license. Except as permitted by such
@@ -26,6 +26,8 @@ from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.reset_args as arguments
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.common.ui_functions as ui_functions
+
+
 class ResetCommand(EdkrepoCommand):
     def __init__(self):
         super().__init__()
@@ -43,6 +45,8 @@ class ResetCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
+
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
         manifest_config = manifest.general_config

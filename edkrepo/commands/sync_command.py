@@ -3,7 +3,7 @@
 ## @file
 # sync_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -86,6 +86,8 @@ class SyncCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        ui_functions.init_color_console(args.color)
+
         workspace_path = get_workspace_path()
         initial_manifest = get_workspace_manifest()
         current_combo = initial_manifest.general_config.current_combo
@@ -522,5 +524,3 @@ class SyncCommand(EdkrepoCommand):
                 write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
         finally:
             gitglobalconfig.release()
-
-
