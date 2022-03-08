@@ -3,7 +3,7 @@
 ## @file
 # sync_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -47,6 +47,7 @@ from edkrepo.common.common_repo_functions import write_included_config, remove_i
 from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
@@ -93,8 +94,11 @@ class SyncCommand(EdkrepoCommand):
         initial_hooks = initial_manifest.repo_hooks
         initial_combo = current_combo
 
+        try:
+            pull_workspace_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
+        except:
+            pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
         source_global_manifest_repo = find_source_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
-        pull_workspace_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
         cfg_manifest_repos, user_cfg_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
         if source_global_manifest_repo in cfg_manifest_repos:
             global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
