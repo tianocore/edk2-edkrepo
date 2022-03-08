@@ -3,7 +3,7 @@
 ## @file
 # humble.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -117,6 +117,7 @@ GEN_FOUND_MULT_A_IN_B = 'Found multiple matches for {} in {}'
 # Messages for commit templates
 COMMIT_TEMPLATE_NOT_FOUND = 'WARNING: Missing template file: {}'
 COMMIT_TEMPLATE_CUSTOM_VALUE = 'WARNING: Custom commit template in use for: {}'
+COMMIT_TEMPLATE_RESETTING_VALUE = 'Resetting commit template to the default value'
 
 # Primary repo support strings
 ADD_PRIMARY_REMOTE = 'Adding remote: {}'

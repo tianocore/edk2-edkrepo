@@ -3,7 +3,7 @@
 ## @file
 # common_repo_functions.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -43,6 +43,7 @@ from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
 from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
 from edkrepo.common.humble import GEN_A_NOT_IN_B, GEN_FOUND_MULT_A_IN_B
 from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
+from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
 from edkrepo.common.humble import ADD_PRIMARY_REMOTE, REMOVE_PRIMARY_REMOTE
 from edkrepo.common.humble import FETCH_PRIMARY_REMOTE, MIRROR_PRIMARY_SHA, TAG_AND_BRANCH_SPECIFIED
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR, SUBMODULE_FAILURE
@@ -544,7 +545,7 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_m
     manifest = edk_manifest.ManifestXml(os.path.join(workspace_dir, 'repo', 'Manifest.xml'))
     templates = manifest.commit_templates
 
-    #Check for the presence of a gloablly defined commit template
+    #Check for the presence of a globally defined commit template
     global_template_in_use = False
     global_gitconfig_path = os.path.normpath(expanduser("~/.gitconfig"))
     with git.GitConfigParser(global_gitconfig_path, read_only=False) as gitglobalconfig:
@@ -559,8 +560,12 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_m
             if cw.has_option(section='commit', option='template'):
                 current_template = cw.get_value(section='commit', option='template').replace('"', '')
                 if not current_template.startswith(os.path.normpath(global_manifest_directory).replace('\\', '/')):
-                    print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
-                    return
+                    if os.path.isfile(current_template):
+                        print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
+                        return
+                    else:
+                        print(COMMIT_TEMPLATE_NOT_FOUND.format(current_template))
+                        print(COMMIT_TEMPLATE_RESETTING_VALUE)
 
             if repo_info.remote_name in templates:
                 template_path = os.path.normpath(os.path.join(global_manifest_directory, templates[repo_info.remote_name]))
