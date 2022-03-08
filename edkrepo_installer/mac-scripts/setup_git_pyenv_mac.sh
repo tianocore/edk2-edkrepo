@@ -40,6 +40,7 @@ pyenv_init = '''
 # Use the pyenv intalled Python interperter
 if command -v pyenv 1>/dev/null 2>&1; then
   eval "$(pyenv init -)"
+  eval "$(pyenv init --path)"
 fi
 '''
 
