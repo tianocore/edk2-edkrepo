@@ -62,7 +62,7 @@ class MaintenanceCommande(EdkrepoCommand):
             for repo_to_maintain in repos_to_maintain:
                 local_repo_path = os.path.join(workspace_path, repo_to_maintain.root)
                 repo = Repo(local_repo_path)
-                ui_functions.print_info_msg(humble.REPO_MAINTENANCE.format(repo_to_maintain.root), header = False))
+                ui_functions.print_info_msg(humble.REPO_MAINTENANCE.format(repo_to_maintain.root), header = False)
                 ui_functions.print_info_msg(humble.REFLOG_EXPIRE, header = False)
                 repo.git.reflog('expire', '--expire=now', '--all')
                 ui_functions.print_info_msg(humble.GC_AGGRESSIVE, header = False)
