@@ -90,7 +90,6 @@ class F2fCherryPickCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.F2F_CHERRY_PICK_SQUASH_HELP})
-        args.append(ColorArgument)
         return metadata
 
     def run_command(self, args, config):

@@ -48,7 +48,6 @@ class ListReposCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.ARCHIVED_HELP})
-        args.append(ColorArgument)
         return metadata
 
     def run_command(self, args, config):

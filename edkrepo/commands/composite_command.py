@@ -30,7 +30,9 @@ class CompositeCommand(object):
                 return metadata
 
     def run_command(self, command_name, args, config):
-        ui_functions.init_color_console(args.color)
+        strip_color, convert_ansi = ui_functions.init_color_console(args.color)
+        args.strip_color = strip_color
+        args.convert_ansi = convert_ansi
         for command in self._commands:
             if command.get_metadata()['name'] == command_name:
                 return command.run_command(args, config)

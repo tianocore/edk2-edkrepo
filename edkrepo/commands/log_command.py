@@ -44,7 +44,6 @@ class LogCommand(EdkrepoCommand):
                      'positional' : False,
                      'required' : False,
                      'help-text' : arguments.ONELINE_HELP})
-        args.append(ColorArgument)
         return metadata
 
     def run_command(self, args, config):
