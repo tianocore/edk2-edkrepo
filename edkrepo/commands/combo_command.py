@@ -35,8 +35,6 @@ class ComboCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         manifest = get_workspace_manifest()
         combo_archive = []
         combo_list = [c.name for c in manifest.combinations]

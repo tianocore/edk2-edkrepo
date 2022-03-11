@@ -49,8 +49,6 @@ class CheckoutPinCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
 

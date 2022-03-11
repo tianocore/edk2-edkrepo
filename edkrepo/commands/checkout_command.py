@@ -43,8 +43,6 @@ class CheckoutCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-        
         if combination_is_in_manifest(args.Combination, get_workspace_manifest()):
             checkout(args.Combination, args.verbose, args.override, get_repo_cache_obj(config))
         else:

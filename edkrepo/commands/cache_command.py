@@ -57,8 +57,6 @@ class CacheCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-        
         # Process enable disable requests
         if args.disable:
             config['user_cfg_file'].set_caching_state(False)

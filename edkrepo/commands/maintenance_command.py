@@ -37,8 +37,6 @@ class MaintenanceCommande(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         # Configure git long path support
         ui_functions.print_info_msg(humble.LONGPATH_CONFIG, header = False)
         set_long_path_support()

@@ -94,8 +94,6 @@ class F2fCherryPickCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         if args.list_templates:
             _list_templates()
             return

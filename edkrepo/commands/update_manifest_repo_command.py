@@ -33,6 +33,4 @@ class UpdateManifestRepoCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], reset_hard=args.hard)

@@ -55,8 +55,6 @@ class ListPinsCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         less_path, use_less = find_less()
         if use_less:
             output_string = ''

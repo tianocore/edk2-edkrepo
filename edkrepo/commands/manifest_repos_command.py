@@ -69,8 +69,6 @@ class ManifestRepos(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         cfg_repos, user_cfg_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
         if args.action == 'list':

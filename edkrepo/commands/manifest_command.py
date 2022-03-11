@@ -46,8 +46,6 @@ class ManifestCommand(EdkrepoCommand):
 
     def run_command(self, args, config):
         print()
-        ui_functions.init_color_console(args.color)
-
         cfg_file = config['cfg_file']
         user_cfg = config['user_cfg_file']
         cfg_man_repos, user_cfg_man_repos, conflicts = list_available_manifest_repos(cfg_file, user_cfg)

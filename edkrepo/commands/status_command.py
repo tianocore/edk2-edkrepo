@@ -32,8 +32,6 @@ class StatusCommand(EdkrepoCommand):
         return metadata
     
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         workspace_path = get_workspace_path()
         initial_manifest = get_workspace_manifest()
         current_combo = initial_manifest.general_config.current_combo

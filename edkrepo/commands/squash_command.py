@@ -49,8 +49,6 @@ class SquashCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        ui_functions.init_color_console(args.color)
-
         commit_ish = vars(args)['commit-ish']
         new_branch = vars(args)['new-branch']
         one_line = vars(args)['oneline']
