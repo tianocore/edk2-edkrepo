@@ -3,7 +3,7 @@
 ## @file
 # manifest_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -13,7 +13,6 @@ import os
 from colorama import Fore
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import ColorArgument
 import edkrepo.commands.arguments.manifest_args as arguments
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoManifestNotFoundException
 from edkrepo.common.common_repo_functions import validate_manifest_repo
@@ -41,7 +40,6 @@ class ManifestCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.ARCHIVED_HELP})
-        args.append(ColorArgument)
         return metadata
 
     def run_command(self, args, config):

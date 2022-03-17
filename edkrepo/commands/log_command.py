@@ -3,7 +3,7 @@
 ## @file
 # log_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -16,10 +16,9 @@ from datetime import datetime
 from colorama import Fore
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import ColorArgument
 import edkrepo.commands.arguments.log_args as arguments
 from edkrepo.common.common_repo_functions import sort_commits, find_less
-from edkrepo.common.ui_functions import init_color_console, print_safe, safe_str
+from edkrepo.common.ui_functions import print_safe, safe_str
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 
 class LogCommand(EdkrepoCommand):
@@ -43,7 +42,6 @@ class LogCommand(EdkrepoCommand):
                      'positional' : False,
                      'required' : False,
                      'help-text' : arguments.ONELINE_HELP})
-        args.append(ColorArgument)
         return metadata
 
     def run_command(self, args, config):
@@ -53,8 +51,6 @@ class LogCommand(EdkrepoCommand):
             except ValueError:
                 print("Error: \'{}\' is not an integer".format(args.number))
                 return
-
-        init_color_console(args.color)
 
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()

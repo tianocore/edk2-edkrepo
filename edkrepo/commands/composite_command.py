@@ -3,11 +3,12 @@
 ## @file
 # composite_command.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from edkrepo.commands.edkrepo_command import VerboseArgument, PerformanceArgument
+from edkrepo.commands.edkrepo_command import VerboseArgument, PerformanceArgument, ColorArgument
+import edkrepo.common.ui_functions as ui_functions
 
 
 class CompositeCommand(object):
@@ -24,10 +25,14 @@ class CompositeCommand(object):
                 args = metadata['arguments']
                 args.append(PerformanceArgument)
                 args.append(VerboseArgument)
+                args.append(ColorArgument)
                 metadata['arguments'] = args
                 return metadata
 
     def run_command(self, command_name, args, config):
+        strip_color, convert_ansi = ui_functions.init_color_console(args.color)
+        args.strip_color = strip_color
+        args.convert_ansi = convert_ansi
         for command in self._commands:
             if command.get_metadata()['name'] == command_name:
                 return command.run_command(args, config)

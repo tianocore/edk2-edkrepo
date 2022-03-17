@@ -3,7 +3,7 @@
 ## @file
 # f2f_cherry_pick_command.py
 #
-# Copyright (c) 2018 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -21,13 +21,12 @@ from git import Repo
 from colorama import Fore
 
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, get_full_path
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, ColorArgument
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.common.edkrepo_exception import EdkrepoAbortCherryPickException, EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException
 from edkrepo.common.humble import NOT_GIT_REPO, COMMIT_NOT_FOUND
 from edkrepo.common.squash import get_git_repo_root, split_commit_range, get_start_and_end_commit
 from edkrepo.common.squash import commit_list_to_message, squash_commits
-from edkrepo.common.ui_functions import init_color_console
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_equal
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 
@@ -90,11 +89,9 @@ class F2fCherryPickCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.F2F_CHERRY_PICK_SQUASH_HELP})
-        args.append(ColorArgument)
         return metadata
 
     def run_command(self, args, config):
-        init_color_console(args.color)
         if args.list_templates:
             _list_templates()
             return
