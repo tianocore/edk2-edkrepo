@@ -24,9 +24,9 @@ ProjectInfo = namedtuple('ProjectInfo', ['codename', 'description', 'dev_leads',
 GeneralConfig = namedtuple('GeneralConfig', ['default_combo', 'current_combo', 'pin_path', 'source_manifest_repo'])
 RemoteRepo = namedtuple('RemoteRepo', ['name', 'url'])
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
-Combination = namedtuple('Combination', ['name', 'description'])
+Combination = namedtuple('Combination', ['name', 'description', 'venv_enable'])
 RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
-                                       'enable_submodule', 'tag'])
+                                       'enable_submodule', 'tag', 'venv_cfg'])
 
 SparseSettings = namedtuple('SparseSettings', ['sparse_by_default'])
 SparseData = namedtuple('SparseData', ['combination', 'remote_name', 'always_include', 'always_exclude'])
@@ -764,10 +764,14 @@ class _Combination():
             self.archived = (element.attrib['archived'].lower() == 'true')
         except Exception:
             self.archived = False
+        try:
+            self.venv_enable = (element.attrib['venv_enable'].lower() == 'true')
+        except Exception:
+            self.venv_enable = False
 
     @property
     def tuple(self):
-        return Combination(self.name, self.description)
+        return Combination(self.name, self.description, self.venv_enable)
 
 
 class _RepoSource():
@@ -804,6 +808,10 @@ class _RepoSource():
                 self.enableSub = (element.attrib['enable_submodule'].lower() == 'true')
             except Exception:
                 self.enableSub = False
+        try:
+            self.venv_cfg = (element.attrib['venv_cfg'])
+        except:
+            self.venv_cfg = None
 
         if self.branch is None and self.commit is None and self.tag is None:
             raise KeyError(ATTRIBUTE_MISSING_ERROR)
@@ -811,7 +819,7 @@ class _RepoSource():
     @property
     def tuple(self):
         return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
-                          self.commit, self.sparse, self.enableSub, self.tag)
+                          self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg)
 
 
 class _SparseSettings():
