@@ -84,24 +84,24 @@ class EdkrepoWorkspaceCorruptException(EdkrepoException):
 
 class EdkrepoWarningException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 123)
+        super().__init__(message, 119)
 
 class EdkrepoGitException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 129)
+        super().__init__(message, 120)
 
 class EdkrepoHookNotFoundException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 130)
+        super().__init__(message, 121)
 
 class EdkrepoGitConfigSetupException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 131)
+        super().__init__(message, 122)
 
 class EdkrepoCacheException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 133)
+        super().__init__(message, 123)
 
 class EdkrepoAbortCherryPickException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 134)
+        super().__init__(message, 124)
