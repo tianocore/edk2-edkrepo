@@ -24,3 +24,4 @@ REPOSITORIES = 'Repositories:'
 REPO_NAME_AND_URL = '{}{}{{}}{} - [{}{}{{}}{}]'.format(Fore.MAGENTA, Style.BRIGHT, Style.RESET_ALL, Fore.RED, Style.BRIGHT, Style.RESET_ALL)
 REPO_NAME_NOT_FOUND = 'repo_name not found'
 REPO_NOT_FOUND_IN_MANIFEST = 'Repo(s) {} not found in any manifest file'
+FORMAT_TYPE_INVALID = 'format must be text or json'

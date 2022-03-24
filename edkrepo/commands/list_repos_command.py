@@ -8,7 +8,9 @@
 #
 
 import collections
+import json
 import os
+import sys
 
 #from git import Repo
 from colorama import Fore, Style
@@ -45,92 +47,119 @@ class ListReposCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.ARCHIVED_HELP})
+        args.append({'name': 'format',
+                     'positional': False,
+                     'required': False,
+                     'action': 'store',
+                     'nargs': 1,
+                     'help-text': arguments.FORMAT_HELP})
         return metadata
 
     def run_command(self, args, config):
-        print()
-        pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
-        print()
+        json_output = False
+        if args.format is not None:
+            if args.format[0] not in ['text', 'json']:
+                raise EdkrepoInvalidParametersException(humble.FORMAT_TYPE_INVALID)
+            if args.format[0] == 'json':
+                json_output = True
+        stdout_backup = None
 
-        cfg_manifest_repos, user_config_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        #If the user selected json output than suppress all debug messages
+        #coming from the manifest parser so that the output from edkrepo will
+        #be a machine parsable json string
+        if json_output:
+            devnull = open(os.devnull, 'w')
+            sys.stdout.flush()
+            stdout_backup = sys.stdout
+            sys.stdout = devnull
+        try:
+            print()
+            pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+            print()
 
-        found_manifests = {}
-        manifests = {}
-        repo_urls = set()
-        config_manifest_repos_project_list = []
-        user_config_manifest_repos_project_list = []
+            cfg_manifest_repos, user_config_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
-        for manifest_repo in cfg_manifest_repos:
-            # Get path to global manifest file
-            global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
-            if args.verbose:
-                print(humble.MANIFEST_DIRECTORY)
-                print(global_manifest_directory)
-                print()
-            #Create a dictionary containing all the manifests listed in the CiIndex.xml file
-            index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
-            print(index_path)
-            ci_index_xml = CiIndexXml(index_path)
-            config_manifest_repos_project_list = ci_index_xml.project_list
-            if args.archived:
-                config_manifest_repos_project_list.extend(ci_index_xml.archived_project_list)
-            for project in config_manifest_repos_project_list:
-                xml_file = ci_index_xml.get_project_xml(project)
-                manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
-                found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
-                combo_list = [c.name for c in manifest.combinations]
+            found_manifests = {}
+            manifests = {}
+            repo_urls = set()
+            config_manifest_repos_project_list = []
+            user_config_manifest_repos_project_list = []
+            repos_list = []
+
+            for manifest_repo in cfg_manifest_repos:
+                # Get path to global manifest file
+                global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
+                if args.verbose:
+                    print(humble.MANIFEST_DIRECTORY)
+                    print(global_manifest_directory)
+                    print()
+                #Create a dictionary containing all the manifests listed in the CiIndex.xml file
+                index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
+                ci_index_xml = CiIndexXml(index_path)
+                config_manifest_repos_project_list = ci_index_xml.project_list
                 if args.archived:
-                    combo_list.extend([c.name for c in manifest.archived_combinations])
-                for combo in combo_list:
-                    sources = manifest.get_repo_sources(combo)
-                    for source in sources:
-                        repo_urls.add(self.get_repo_url(source.remote_url))
-        for manifest_repo in user_config_manifest_repos:
-             # Get path to global manifest file
-            global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
-            if args.verbose:
-                print(humble.MANIFEST_DIRECTORY)
-                print(global_manifest_directory)
-                print()
-            #Create a dictionary containing all the manifests listed in the CiIndex.xml file
-            index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
-            ci_index_xml = CiIndexXml(index_path)
-            user_config_manifest_repos_project_list = ci_index_xml.project_list
-            if args.archived:
-                user_config_manifest_repos_project_list.extend(ci_index_xml.archived_project_list)
-            for project in user_config_manifest_repos_project_list:
-                xml_file = ci_index_xml.get_project_xml(project)
-                manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
-                found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
-                combo_list = [c.name for c in manifest.combinations]
+                    config_manifest_repos_project_list.extend(ci_index_xml.archived_project_list)
+                for project in config_manifest_repos_project_list:
+                    xml_file = ci_index_xml.get_project_xml(project)
+                    manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
+                    found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
+                    combo_list = [c.name for c in manifest.combinations]
+                    if args.archived:
+                        combo_list.extend([c.name for c in manifest.archived_combinations])
+                    for combo in combo_list:
+                        sources = manifest.get_repo_sources(combo)
+                        for source in sources:
+                            repo_urls.add(self.get_repo_url(source.remote_url))
+            for manifest_repo in user_config_manifest_repos:
+                # Get path to global manifest file
+                global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
+                if args.verbose:
+                    print(humble.MANIFEST_DIRECTORY)
+                    print(global_manifest_directory)
+                    print()
+                #Create a dictionary containing all the manifests listed in the CiIndex.xml file
+                index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
+                ci_index_xml = CiIndexXml(index_path)
+                user_config_manifest_repos_project_list = ci_index_xml.project_list
                 if args.archived:
-                    combo_list.extend([c.name for c in manifest.archived_combinations])
-                for combo in combo_list:
-                    sources = manifest.get_repo_sources(combo)
-                    for source in sources:
-                        repo_urls.add(self.get_repo_url(source.remote_url))
+                    user_config_manifest_repos_project_list.extend(ci_index_xml.archived_project_list)
+                for project in user_config_manifest_repos_project_list:
+                    xml_file = ci_index_xml.get_project_xml(project)
+                    manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
+                    found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
+                    combo_list = [c.name for c in manifest.combinations]
+                    if args.archived:
+                        combo_list.extend([c.name for c in manifest.archived_combinations])
+                    for combo in combo_list:
+                        sources = manifest.get_repo_sources(combo)
+                        for source in sources:
+                            repo_urls.add(self.get_repo_url(source.remote_url))
 
-        #Remove the manifest repo portion of the key is there is not a duplicate project name
-        key_list = list(found_manifests)
-        for entry in key_list:
-            new_key = entry.split(':')[1]
-            value = found_manifests[entry]
-            del found_manifests[entry]
-            for found_manifest in list(found_manifests):
-                if found_manifest.split(':')[1] == new_key:
-                    new_key = 'Manifest Repository: {} Project: {}'.format(entry.split(':')[0], entry.split(':')[1])
-                    break
-            if new_key in manifests.keys():
-                new_key = 'Manifest Repository: {} Project: {}'.format(entry.split(':'[0]), entry.split(':')[1])
-            manifests[new_key] = value
+            #The possibility exists for two (or more) manifest repositories to contain manifest
+            #files with the same project name. This is unlikely however. If a project name is
+            #unique (no duplicate names in any of the other manifest repositories), then the
+            #identifier for the manifest repository can be removed from dictionary key string.
+            key_list = list(found_manifests)
+            for entry in key_list:
+                new_key = entry.split(':')[1]
+                value = found_manifests.pop(entry)
+                for found_manifest in list(found_manifests):
+                    if found_manifest.split(':')[1] == new_key:
+                        new_key = 'Manifest Repository: {} Project: {}'.format(entry.split(':')[0], entry.split(':')[1])
+                        break
+                if new_key in manifests.keys():
+                    new_key = 'Manifest Repository: {} Project: {}'.format(entry.split(':'[0]), entry.split(':')[1])
+                manifests[new_key] = value
 
-        #Sort the manifests so projects will be displayed alphabetically
-        manifests = collections.OrderedDict(sorted(manifests.items()))
-        project_justify = len(max(manifests.keys(), key=len))
+            #Sort the manifests so projects will be displayed alphabetically
+            manifests = collections.OrderedDict(sorted(manifests.items()))
+        finally:
+            if json_output:
+                sys.stdout = stdout_backup
+                devnull.close()
 
         #Determine the names of the repositories
         self.generate_repo_names(repo_urls, manifests, args.archived)
-        print(humble.REPOSITORIES)
 
         #If the user provided a list of repositories to view, check to make sure
         #at least one repository will be shown, if not provide an error
@@ -142,8 +171,7 @@ class ListReposCommand(EdkrepoCommand):
             if args.repos and repo_name not in args.repos:
                 continue
             repo = self.repo_names[repo_name][0]
-            print(humble.REPO_NAME_AND_URL.format(repo_name, repo))
-            print(humble.BRANCHES)
+            repo_data = { 'name': repo_name, 'url': repo, 'branches': [] }
 
             #Determine the list of branches that used by any branch combination in any manifest
             branches = set()
@@ -158,16 +186,24 @@ class ListReposCommand(EdkrepoCommand):
                             branches.add(source.branch)
 
             #Sort the branch names so they will be displayed alphabetically
-            #with the exception that if a branch named "master" exists, then it
-            #will be displayed first
+            #with the exception of branches named "main" or "master".
+            #
+            # 1. If a branch named "main" exists, then it will be displayed first.
+            # 2. If a branch named "master" exists and a branch named "main" does
+            #    NOT exist, then "master" will be displayed first.
+            # 3. If both "main" and "master" exist, then "main" will be shown
+            #    first and "master" will be shown second.
             branches = sorted(branches, key=str.casefold)
             if 'master' in branches:
                 branches.remove('master')
                 branches.insert(0, 'master')
+            if 'main' in branches:
+                branches.remove('main')
+                branches.insert(0, 'main')
 
             #For each interesting branch in the current git repository...
             for branch in branches:
-                print(humble.BRANCH_FORMAT_STRING.format(branch))
+                branch_data = { 'name': branch, 'projects': [] }
 
                 #Determine the branch combinations that use that branch
                 for project_name in manifests:
@@ -190,20 +226,48 @@ class ListReposCommand(EdkrepoCommand):
                         if default_combo in combos:
                             combos.remove(default_combo)
                             combos.insert(0, default_combo)
-                        first_combo = True
+
+                        project_data = { 'name': project_name, 'branch_combinations': [] }
                         for combo in combos:
+                            project_data['branch_combinations'].append(
+                                { 'name': combo,
+                                'project_default_combination': default_combo == combo })
+                        branch_data['projects'].append(project_data)
+                repo_data['branches'].append(branch_data)
+            repos_list.append(repo_data)
+
+        if json_output:
+            sys.stdout.flush()
+            sys.stdout.write(json.dumps(repos_list, separators=(',', ':')))
+            sys.stdout.flush()
+        else:
+            project_names = set()
+            for repo_data in repos_list:
+                for branch_data in repo_data['branches']:
+                    for project_data in branch_data['projects']:
+                        project_names.add(project_data['name'])
+            project_justify = len(max(project_names, key=len))
+            print(humble.REPOSITORIES)
+            for repo_data in repos_list:
+                print(humble.REPO_NAME_AND_URL.format(repo_data['name'], repo_data['url']))
+                print(humble.BRANCHES)
+                for branch_data in repo_data['branches']:
+                    print(humble.BRANCH_FORMAT_STRING.format(branch_data['name']))
+                    for project_data in branch_data['projects']:
+                        first_combo = True
+                        for combo_data in project_data['branch_combinations']:
                             #Print the project name
                             if first_combo:
-                                project_name_print = humble.PROJECT_NAME_FORMAT_STRING.format(project_name.ljust(project_justify))
+                                project_name_print = humble.PROJECT_NAME_FORMAT_STRING.format(project_data['name'].ljust(project_justify))
                                 first_combo = False
                             else:
-                                project_name_print = '{} '.format((' ' * len(project_name)).ljust(project_justify))
+                                project_name_print = '{} '.format((' ' * len(project_data['name'])).ljust(project_justify))
                             #Print the branch combination name, if this is the default branch combination,
                             #then print it in green color with *'s around it
-                            if default_combo == combo:
-                                print(humble.DEFAULT_COMBO_FORMAT_STRING.format(project_name_print, combo))
+                            if combo_data['project_default_combination']:
+                                print(humble.DEFAULT_COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
                             else:
-                                print(humble.COMBO_FORMAT_STRING.format(project_name_print, combo))
+                                print(humble.COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
 
     def get_repo_url(self, repo_url):
         if repo_url[-4:].lower() == '.git':
