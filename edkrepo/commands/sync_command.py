@@ -479,7 +479,7 @@ class SyncCommand(EdkrepoCommand):
         gitglobalconfig = git.GitConfigParser(gitconfigpath, read_only=False)
         try:
             local_manifest_dir = os.path.join(workspace_path, "repo")
-            includeif_regex = re.compile('^includeIf "gitdir:(/.+)/"$')
+            includeif_regex = re.compile('^includeIf "gitdir:%\(prefix\)(/.+)/"$')
             rewrite_everything = False
             #Generate list of .gitconfig files that should be present in the workspace
             included_configs = []
@@ -515,7 +515,7 @@ class SyncCommand(EdkrepoCommand):
                             else:
                                 path = included_config[1]
                             path = path.replace('\\', '/')
-                            section = 'includeIf "gitdir:{}/"'.format(gitdir)
+                            section = 'includeIf "gitdir:%(prefix){}/"'.format(gitdir)
                             gitglobalconfig.add_section(section)
                             gitglobalconfig.set(section, 'path', path)
                             gitglobalconfig.release()

@@ -194,7 +194,7 @@ def write_conditional_include(workspace_path, repo_sources, included_configs):
                 else:
                     path = included_config[1]
                 path = path.replace('\\', '/')
-                section = 'includeIf "gitdir:{}/"'.format(gitdir)
+                section = 'includeIf "gitdir:%(prefix){}/"'.format(gitdir)
                 with git.GitConfigParser(gitconfigpath, read_only=False) as gitglobalconfig:
                     gitglobalconfig.add_section(section)
                     gitglobalconfig.set(section, 'path', path)
