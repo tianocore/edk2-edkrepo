@@ -35,7 +35,7 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
     # Clone the repository if it does not exist locally
     if not os.path.exists(local_path):
         print(humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
-        repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), branch=branch)
+        repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), single_branch=True, branch=branch)
     # Sync the repository if it exists locally
     else:
         repo = Repo(local_path)
@@ -58,7 +58,7 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
             print(humble.SINGLE_MAN_REPO_MOVED.format(new_path))
             shutil.move(local_path, new_path)
             print (humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
-            repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), branch=branch)
+            repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), single_branch=True, branch=branch)
 
 def pull_all_manifest_repos(edkrepo_cfg, edkrepo_user_cfg, reset_hard=False):
     '''
