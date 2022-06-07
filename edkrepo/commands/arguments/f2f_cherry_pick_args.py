@@ -20,5 +20,5 @@ F2F_CHERRY_PICK_FOLDERS_HELP = 'A list of source and destination folders seperat
 F2F_CHERRY_PICK_CONTINUE_HELP = 'Continue processing a Cherry Pick after resolving a merge conflict'
 F2F_CHERRY_PICK_ABORT_HELP = 'Abort processing a Cherry Pick after encountering a merge conflict'
 F2F_CHERRY_PICK_LIST_TEMPLATES_HELP = 'Print a list of templates defined in the manifest file, and the mappings they define.'
-F2F_CHERRY_PICK_APPEND_COMMIT_HELP = 'Append a line that says "(cherry picked from commit ...​)" to the original commit message in order to indicate which commit this change was cherry-picked from.'
+F2F_CHERRY_PICK_APPEND_COMMIT_HELP = 'Append a line that says "(cherry picked from commit ...)" to the original commit message in order to indicate which commit this change was cherry-picked from.'
 F2F_CHERRY_PICK_SQUASH_HELP = 'If given a range of commits, automatically squash them during the Cherry Pick'
