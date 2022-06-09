@@ -105,3 +105,8 @@ class EdkrepoCacheException(EdkrepoException):
 class EdkrepoAbortCherryPickException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 124)
+
+class EdkrepoInvalidConfigOptionException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 125)
+

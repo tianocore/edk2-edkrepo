@@ -18,7 +18,7 @@ if sys.platform == "win32":
 import edkrepo.config.humble.config_factory_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoGlobalConfigNotFoundException, EdkrepoConfigFileInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoGlobalDataDirectoryNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoConfigFileReadOnlyException
+from edkrepo.common.edkrepo_exception import EdkrepoConfigFileReadOnlyException, EdkrepoInvalidConfigOptionException
 from edkrepo.common.humble import MIRROR_PRIMARY_REPOS_MISSING, MIRROR_DECODE_WARNING, MAX_PATCH_SET_INVALID
 from edkrepo.common.pathfix import get_subst_drive_dict
 from edkrepo_manifest_parser import edk_manifest
@@ -226,7 +226,8 @@ class GlobalUserConfig(BaseConfig):
         self.prop_list = [
             CfgProp('scm', 'mirror_geo', 'geo', 'none', False),
             CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False),
-            CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False)]
+            CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False),
+            CfgProp('caching', 'cache-path', 'cache_path_text', 'default', False)]
         super().__init__(self.filename, get_edkrepo_global_data_directory(), False)
 
     @property
@@ -238,6 +239,19 @@ class GlobalUserConfig(BaseConfig):
             self.enable_caching_text = 'true'
         else:
             self.enable_caching_text = 'false'
+
+    def set_cache_path(self, cache_path=None, default=True):
+        if default:
+            self.cache_path_text = 'default'
+        elif not default and cache_path is not None:
+            self.cache_path_text = cache_path
+        else:
+            raise EdkrepoConfigFileInvalidException(humble.INVALID_CACHE_PATH)
+
+    @property
+    def cache_path(self):
+        return self.cache_path_text
+
 
     @property
     def cfg_filename(self):

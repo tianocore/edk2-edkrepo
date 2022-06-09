@@ -3,9 +3,11 @@
 ## @file
 # cache_command.py
 #
-# Copyright (c) 2020-2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020-2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
+
+import os
 
 import edkrepo.commands.arguments.cache_args as arguments
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
@@ -49,6 +51,11 @@ class CacheCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.COMMAND_INFO_HELP})
+        args.append({'name': 'path',
+                     'positional': False,
+                     'required': False,
+                     'action': 'store',
+                     'help-text': arguments.COMMAND_PATH_HELP})
         args.append({'name': 'project',
                      'positional': True,
                      'required': False,
@@ -57,18 +64,26 @@ class CacheCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+
+        if not args.info:
         # Process enable disable requests
-        if args.disable:
-            config['user_cfg_file'].set_caching_state(False)
-        elif args.enable:
-            config['user_cfg_file'].set_caching_state(True)
+            if args.disable:
+                config['user_cfg_file'].set_caching_state(False)
+            elif args.enable:
+                config['user_cfg_file'].set_caching_state(True)
+
+            # Write the cache location to the user_cfg
+            if not args.path:
+                config['user_cfg_file'].set_cache_path(cache_path=None, default=True)
+            elif args.path:
+                config['user_cfg_file'].set_cache_path(cache_path=os.path.normpath(os.path.normcase(args.path)), default=False)
 
         # Get the current state now that we have processed enable/disable
         cache_state = config['user_cfg_file'].caching_state
+
         ui_functions.print_info_msg(CACHE_ENABLED.format(cache_state))
         if not cache_state:
             return
-
         # State is enabled so make sure cache directory exists
         cache_obj = get_repo_cache_obj(config)
 
