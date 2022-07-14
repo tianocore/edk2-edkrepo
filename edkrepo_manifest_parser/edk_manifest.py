@@ -26,7 +26,7 @@ RemoteRepo = namedtuple('RemoteRepo', ['name', 'url'])
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
 Combination = namedtuple('Combination', ['name', 'description'])
 RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
-                                       'enable_submodule', 'tag'])
+                                       'enable_submodule', 'tag', 'patch_set'])
 
 SparseSettings = namedtuple('SparseSettings', ['sparse_by_default'])
 SparseData = namedtuple('SparseData', ['combination', 'remote_name', 'always_include', 'always_exclude'])
@@ -48,6 +48,7 @@ DUPLICATE_TAG_ERROR = "Duplicate <{}> tag not allowed: '{}' (Note: check <includ
 COMB_INVALIDINPUT_ERROR = "Invalid input: {} not found in 'combinations' property"
 COMB_UNKOWN_ERROR = "Could not find a Combination named '{}' in '{}'"
 ATTRIBUTE_MISSING_ERROR = "Missing required attribute. Must specify either 'branch' or 'commit' for each <Source>."
+INVALID_COMBO_DEFINITION_ERROR = "Can not specify branch or commit or tag along with patchSet"
 GENERAL_CONFIG_MISSING_ERROR = "Unable to locate <GeneralConfig>"
 SOURCELIST_EMPTY_ERROR = "Invalid input: empty values in source list"
 INVALID_PROJECTNAME_ERROR = "Invalid input: {} not found in CiIndexXml"
@@ -787,6 +788,10 @@ class _RepoSource():
         except Exception:
             self.tag = None
         try:
+            self.patch_set = element.attrib['patchSet']
+        except Exception:
+            self.patch_set = None
+        try:
             # if the sparse attrib is not explicitly set to true, then assume false
             self.sparse = (element.attrib['sparseCheckout'].lower() == 'true')
         except Exception:
@@ -801,13 +806,16 @@ class _RepoSource():
             except Exception:
                 self.enableSub = False
 
-        if self.branch is None and self.commit is None and self.tag is None:
+        if self.branch is None and self.commit is None and self.tag is None and self.patch_set is None:
             raise KeyError(ATTRIBUTE_MISSING_ERROR)
+
+        if self.patch_set is not None and (self.branch is not None or self.commit is not None or self.tag is not None):
+            raise ValueError(INVALID_COMBO_DEFINITION_ERROR)
 
     @property
     def tuple(self):
         return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
-                          self.commit, self.sparse, self.enableSub, self.tag)
+                          self.commit, self.sparse, self.enableSub, self.tag, self.patch_set)
 
 
 class _SparseSettings():
