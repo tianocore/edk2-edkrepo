@@ -1075,7 +1075,12 @@ def main():
             print('\nAttempting to write TESTCOMBO to current combo field of TestManifest.xml')
             test_manifest.write_current_combo('TESTCOMBO', 'TestManifest.xml')
             print('Updated current combo: {}'.format(test_manifest.general_config.current_combo))
-
+        
+        # print('\nPatchsets')
+        # print(test_manifest.get_all_patchsets())
+        # print('\nPatchset Operations\n')
+        # print(test_manifest.get_patchset_operations("test 5"))
+        
         print(separator_string)
         if test_manifest.is_pin_file():
             print('Successfully parsed {} as a pin file.\nExiting...'.format(args.InputFile))
