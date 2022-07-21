@@ -47,4 +47,4 @@ EdkRepo
 W: https://github.com/tianocore/edk2-staging/tree/EdkRepo
 M: Nate DeSimone <nathaniel.l.desimone@intel.com>
 M: Ashley DeSimone <ashley.e.desimone@intel.com>
-R: Puja Pandya <puja.pandya@intel.com>
+R: Kevin Sun <kevin.sun@intel.com>
