@@ -35,7 +35,7 @@ FolderToFolderMapping = namedtuple('FolderToFolderMapping', ['project1', 'projec
 FolderToFolderMappingFolder = namedtuple('FolderToFolderMappingFolder', ['project1_folder', 'project2_folder',
                                                                          'excludes'])
 FolderToFolderMappingFolderExclude = namedtuple('FolderToFolderMappingFolderExclude', ['path'])
-
+PatchSet = namedtuple('PatchSet', ['remote', 'name', 'parent_sha', 'fetch_branch'])
 SubmoduleAlternateRemote = namedtuple('SubmoduleAlternateRemote', ['remote_name', 'original_url', 'alternate_url'])
 SubmoduleInitPath = namedtuple('SubmoduleInitPath', ['remote_name', 'combo', 'recursive', 'path'])
 
@@ -141,6 +141,7 @@ class ManifestXml(BaseXmlHelper):
         self._folder_to_folder_mappings = []  # List of FolderToFolderMapping objects
         self._submodule_alternate_remotes = []
         self._submodule_init_list = []
+        self._patchsets = {}
 
         #
         # Append include XML's to the Manifest etree before parsing
@@ -268,6 +269,14 @@ class ManifestXml(BaseXmlHelper):
             for f2f_mapping in subroot.iter(tag='FolderToFolderMapping'):
                 self._folder_to_folder_mappings.append(_FolderToFolderMapping(f2f_mapping))
 
+        #
+        # Process <PatchSets> tag
+        #
+        subroot = self._tree.find('PatchSets')
+        if subroot is not None:
+            for patchset in subroot.iter(tag='PatchSet'):
+                self._patchsets[patchset.attrib['name']] =_PatchSet(patchset).tuple
+
         return
 
     def is_pin_file(self):
@@ -380,6 +389,21 @@ class ManifestXml(BaseXmlHelper):
             if combo.attrib['name'] == name:
                 return copy.deepcopy(combo)
         raise ValueError(COMB_UNKOWN_ERROR.format(name, self._fileref))
+
+    def get_patchsets_for_combo(self):
+        patch_in_source = []
+        sources = self._combo_sources
+        for source in sources.values():
+            for reposource in source:
+                if reposource.tuple.patch_set is not None:
+                    patch_in_source.append(reposource.tuple.patch_set)
+        return patch_in_source
+        #     if source.tuple.patchSet is not None:
+        #         patch_in_source[source.tuple.remote_name] = self._patchsets[source.tuple.patchSet]
+        # if len(patch_in_source):
+        #     return patch_in_source
+        # else:
+        #     raise KeyError(NO_PATCHSET_IN_COMBO.format(combo_name))
 
     @property
     def commit_templates(self):
@@ -649,6 +673,19 @@ class ManifestXml(BaseXmlHelper):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+class _PatchSet():
+    def __init__(self, element):
+        try:
+            self.remote = element.attrib['remote']
+            self.name = element.attrib['name']
+            self.parentSha = element.attrib['parentSha']
+            self.fetchBranch = element.attrib['fetchBranch']
+        except KeyError as k:
+            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+
+    @property
+    def tuple(self):
+        return PatchSet(self.remote, self.name, self.parentSha, self.fetchBranch)
 
 class _ProjectInfo():
     def __init__(self, element):
@@ -1090,6 +1127,7 @@ def main():
         else:
             print('Successfully parsed {} as a manifest file.\nExiting...'.format(args.InputFile))
         print(separator_string)
+        print(test_manifest.get_patchsets_for_combo())
         sys.exit(0)
 
     except (TypeError, KeyError, ValueError):
