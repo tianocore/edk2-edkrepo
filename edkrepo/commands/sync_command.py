@@ -43,6 +43,8 @@ from edkrepo.common.common_repo_functions import update_editor_config
 from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
 from edkrepo.common.common_repo_functions import update_hooks, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
+from edkrepo.common.common_repo_functions import find_git_version
+from edkrepo.common.git_version import GitVersion
 from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
@@ -473,7 +475,8 @@ class SyncCommand(EdkrepoCommand):
         gitglobalconfig = git.GitConfigParser(gitconfigpath, read_only=False)
         try:
             local_manifest_dir = os.path.join(workspace_path, "repo")
-            includeif_regex = re.compile('^includeIf "gitdir:%\(prefix\)(/.+)/"$')
+            prefix_required = find_git_version() >= GitVersion('2.34.0')
+            includeif_regex = re.compile('^includeIf "gitdir:{}(/.+)/"$'.format('%\(prefix\)' if prefix_required else ''))
             rewrite_everything = False
             #Generate list of .gitconfig files that should be present in the workspace
             included_configs = []
@@ -502,14 +505,23 @@ class SyncCommand(EdkrepoCommand):
                                 if data.group(1) == gitdir:
                                     found_include = True
                                     break
-                        if not found_include:
+                        if sys.platform == "win32":
+                            path = '/{}'.format(included_config[1])
+                        else:
+                            path = included_config[1]
+                        if prefix_required:
+                            path_correct = path.startswith('%(prefix)')
+                        else:
+                            path_correct = not path.startswith('%(prefix)')
+                        if not found_include or not path_correct:
                             #If the .gitconfig file is missing from the global git config, add it.
-                            if sys.platform == "win32":
-                                path = '/{}'.format(included_config[1])
-                            else:
-                                path = included_config[1]
+                            #Or if the .gitconfig file is not correct, correct it.
                             path = path.replace('\\', '/')
-                            section = 'includeIf "gitdir:%(prefix){}/"'.format(gitdir)
+                            if prefix_required:
+                                path = '%(prefix){}'.format(path)
+                                section = 'includeIf "gitdir:%(prefix){}/"'.format(gitdir)
+                            else:
+                                section = 'includeIf "gitdir:{}/"'.format(gitdir)
                             gitglobalconfig.add_section(section)
                             gitglobalconfig.set(section, 'path', path)
                             gitglobalconfig.release()
@@ -520,5 +532,4 @@ class SyncCommand(EdkrepoCommand):
                 write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
         finally:
             gitglobalconfig.release()
-
 

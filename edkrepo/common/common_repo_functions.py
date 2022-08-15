@@ -53,6 +53,7 @@ from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, V
 from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
 from edkrepo.common.pathfix import get_actual_path, expanduser
+from edkrepo.common.git_version import GitVersion
 from project_utils.sparse import BuildInfo, process_sparse_checkout
 from edkrepo.config.config_factory import get_workspace_path
 from edkrepo.config.config_factory import get_workspace_manifest
@@ -174,6 +175,7 @@ def remove_included_config(remotes, submodule_alt_remotes, repo_directory):
 
 def write_conditional_include(workspace_path, repo_sources, included_configs):
     gitconfigpath = os.path.normpath(expanduser("~/.gitconfig"))
+    prefix_required = find_git_version() >= GitVersion('2.34.0')
     for source in repo_sources:
         for included_config in included_configs:
             if included_config[0] == source.remote_name:
@@ -186,7 +188,11 @@ def write_conditional_include(workspace_path, repo_sources, included_configs):
                 else:
                     path = included_config[1]
                 path = path.replace('\\', '/')
-                section = 'includeIf "gitdir:%(prefix){}/"'.format(gitdir)
+                if prefix_required:
+                    path = '%(prefix){}'.format(path)
+                    section = 'includeIf "gitdir:%(prefix){}/"'.format(gitdir)
+                else:
+                    section = 'includeIf "gitdir:{}/"'.format(gitdir)
                 with git.GitConfigParser(gitconfigpath, read_only=False) as gitglobalconfig:
                     gitglobalconfig.add_section(section)
                     gitglobalconfig.set(section, 'path', path)
@@ -317,7 +323,7 @@ def check_dirty_repos(manifest, workspace_path):
     for repo_to_check in repos:
         local_repo_path = os.path.join(workspace_path, repo_to_check.root)
         repo = Repo(local_repo_path)
-        if repo.is_dirty(untracked_files=True):
+        if repo.is_dirty(untracked_files=True, submodules=False):
             raise EdkrepoUncommitedChangesException(UNCOMMITED_CHANGES.format(repo_to_check.root))
 
 
@@ -658,3 +664,10 @@ def find_curl():
     else:
         curl_path = get_full_path('curl')
         return curl_path
+
+def find_git_version():
+    git_version_output = subprocess.run('git --version', stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+    cur_git_ver_string = git_version_output.stdout
+    cur_git_version = GitVersion(cur_git_ver_string)
+
+    return cur_git_version
