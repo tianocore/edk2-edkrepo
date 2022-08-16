@@ -467,17 +467,23 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
     # Disable sparse checkout
     current_repos = initial_repo_sources
     sparse_enabled = sparse_checkout_enabled(workspace_path, initial_repo_sources)
+
+    # Determine if there is a difference in the sparse states of the two combos
+    # sparse_diff = True if there is a difference in sparse enable or if there
+    # is a statically defined sparse list for the combo
     sparse_diff = False
-    for source in initial_repo_sources:
-        for src in repo_sources:
-            if source.root == src.root:
-                if source.sparse != src.sparse:
-                    sparse_diff = True
+    sources_to_check = [(x, y) for x in initial_repo_sources for y in repo_sources if x.root == y.root]
+    for source in sources_to_check:
+        if source[0].sparse != source[1].sparse:
+            sparse_diff = True
         if sparse_diff:
             break
-    # Sparse checkout only needs to be recomputed if
-    # the dynamic sparse list is being used instead of the static sparse list
-    # or the sparse settings between two combinations differ
+    if set([combo, manifest.general_config.current_combo]).issubset(set([data.combination for data in manifest.sparse_data])):
+        sparse_diff =  True
+
+    # Recompute the sparse checkout if the dynamic sparse list is being used or
+    # there is a difference in the sparse settings / static sparse definition
+    # between the two combos
     if sparse_enabled:
         sparse_settings = manifest.sparse_settings
         if sparse_settings is not None:
