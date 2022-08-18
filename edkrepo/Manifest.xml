@@ -1,0 +1,89 @@
+<Manifest>
+  <ProjectInfo>
+    <CodeName>CrTools</CodeName>
+    <Description>Comanche Ridge CI Tools</Description>
+    <DevLead>aedesimo</DevLead>
+    <LeadReviewers>
+      <Idsid>bmorton</Idsid>
+      <Idsid>nldesimo</Idsid>
+      <Idsid>aedesimo</Idsid>
+    </LeadReviewers>
+  </ProjectInfo>
+
+  <GeneralConfig>
+    <WitConfigPath />
+    <PinPath>CrTools/pins</PinPath>
+    <DefaultCombo combination="main" />
+    <CurrentClonedCombo combination="main" />
+<SourceManifestRepository manifest_repo="cr-manifest" />
+</GeneralConfig>
+
+  <RemoteList>
+    <Remote name="firmware.boot.uefi.iafw.devops.ci.cr.tools" owner="intel-innersource" reviewType="pull request">https://github.com/intel-innersource/firmware.boot.uefi.iafw.devops.ci.cr.tools</Remote>
+    <Remote name="firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo" owner="intel-innersource" reviewType="pull request">https://github.com/intel-innersource/firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo</Remote>
+  </RemoteList>
+
+  <ClientGitHookList>
+    <ClientGitHook destination=".git/hooks" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/commit_msg_common.ini" />
+    <ClientGitHook destination=".git/hooks" destination_file="hooks/git_handler.py" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/git_handler.py" />
+    <ClientGitHook destination=".git/hooks" destination_file="hooks/pre-commit" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/hook-dispatcher" />
+    <ClientGitHook destination=".git/hooks/pre-commit.d" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/pre-commit-format" />
+    <ClientGitHook destination=".git/hooks" destination_file="hooks/commit-msg" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/hook-dispatcher" />
+    <ClientGitHook destination=".git/hooks/commit-msg.d" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/commit-msg" />
+    <ClientGitHook destination=".git/hooks/commit-msg.d" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/commit-msg-format" />
+    <ClientGitHook destination=".git/hooks" destination_file="hooks/pre-push" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/hook-dispatcher" />
+    <ClientGitHook destination=".git/hooks/pre-push.d" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" source="hooks/pre-push-format" />
+  </ClientGitHookList>
+
+  <CommitTemplates>
+    <Template remoteName="firmware.boot.uefi.iafw.devops.ci.cr.tools">Templates/cr-tools-review-template.txt</Template>
+    <Template remoteName="firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo">Templates/edk2-edkrepo-template.txt</Template>
+  </CommitTemplates>
+
+  <CombinationList>
+    <Combination name="main" description="The main branch from all repos">
+      <Source localRoot="iafw-cr-tools" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" branch="main" />
+      <Source localRoot="edk2-edkrepo" remote="firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo" branch="main" />
+      <Build group="Build-All" />
+    </Combination>
+    <Combination name="edkrepo_2.0" description="EdkRepo 2.0 release branches. All EdkRepo 2.0.x.x releases are generated from this combo">
+      <Source localRoot="iafw-cr-tools" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" branch="release/edkrepo_2.0" />
+      <Source localRoot="edk2-edkrepo" remote="firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo" branch="release/edkrepo_2.0" />
+    </Combination>
+    <Combination name="edkrepo_2.1" description="EdkRepo 2.1 release branches. All EdkRepo 2.1.x.x releases are generated from this combo">
+      <Source localRoot="iafw-cr-tools" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" branch="release/edkrepo_2.1" />
+      <Source localRoot="edk2-edkrepo" remote="firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo" branch="release/edkrepo_2.1" />
+    </Combination>
+    <Combination name="edkrepo_3.0" description="EdkRepo 3.0 release branches. All EdkRepo 3.0.x.x releases are generated from this combo">
+      <Source localRoot="iafw-cr-tools" remote="firmware.boot.uefi.iafw.devops.ci.cr.tools" branch="release/edkrepo_3.0" />
+      <Source localRoot="edk2-edkrepo" remote="firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo" branch="release/edkrepo_3.0" />
+    </Combination>
+    <Combination name="test" description="">
+      <Source localRoot="edk2-edkrepo" remote="firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo" patchSet="test" />
+    </Combination>
+  </CombinationList>
+
+  <PatchSets>
+    <PatchSet remote="firmware.boot.uefi.iafw.devops.ci.cr.edk2-edkrepo" name="test" parentSha="82a2ece8749f3c46ba757ed5ddce7fc4eac1e797" fetchBranch="main">
+      <Patch file="0004-Get-all-patchsets-utilised-by-Combos-in-Manifest.patch" />
+      <Revert sha="82a2ece8749f3c46ba757ed5ddce7fc4eac1e797" />
+      <CherryPick sha="abc6665607b841f6e682d8049dad3d8443b8d424" sourceBranch="single_branch" />
+    </PatchSet>
+  </PatchSets>
+
+  <DscList>
+  </DscList>
+
+  <BuildServerList>
+    <BuildServer name="ssg-teamcity">https://teamcity03-or.intel.com</BuildServer>
+  </BuildServerList>
+
+  <BuildGroupList>
+    <BuildGroup name="Build-All" buildServer="ssg-teamcity">
+    </BuildGroup>
+  </BuildGroupList>
+
+  <BuildTargetList>
+  </BuildTargetList>
+
+</Manifest>
