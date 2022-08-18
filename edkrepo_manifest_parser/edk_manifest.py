@@ -36,6 +36,7 @@ FolderToFolderMappingFolder = namedtuple('FolderToFolderMappingFolder', ['projec
                                                                          'excludes'])
 FolderToFolderMappingFolderExclude = namedtuple('FolderToFolderMappingFolderExclude', ['path'])
 PatchSet = namedtuple('PatchSet', ['remote', 'name', 'parent_sha', 'fetch_branch'])
+PatchOperation = namedtuple('PatchOperation',['type', 'file', 'sha', 'source_remote', 'source_branch'])
 SubmoduleAlternateRemote = namedtuple('SubmoduleAlternateRemote', ['remote_name', 'original_url', 'alternate_url'])
 SubmoduleInitPath = namedtuple('SubmoduleInitPath', ['remote_name', 'combo', 'recursive', 'path'])
 
@@ -43,10 +44,10 @@ REQUIRED_ATTRIB_ERROR_MSG = "Required attribute malformed in <{}>: {}"
 NO_ASSOCIATED_REMOTE = 'There are no remotes associated with the ClientGitHook entry:\nsource:{} destination:{}' \
                        '\nThis hook will not be installed, updated or deleted.\n'
 NO_REMOTE_EXISTS_WITH_NAME = 'There are no remotes with the name: {} listed in the manifest file.'
-PIN_COMB_ERROR = "Pin \"{}\" Pin did not have a single <Combination> tag."
+PIN_COMBO_ERROR = "Pin \"{}\" Pin did not have a single <Combination> tag."
 DUPLICATE_TAG_ERROR = "Duplicate <{}> tag not allowed: '{}' (Note: check <include>'s"
-COMB_INVALIDINPUT_ERROR = "Invalid input: {} not found in 'combinations' property"
-COMB_UNKOWN_ERROR = "Could not find a Combination named '{}' in '{}'"
+COMBO_INVALIDINPUT_ERROR = "Invalid input: {} not found in 'combinations' property"
+COMBO_UNKNOWN_ERROR = "Could not find a Combination named '{}' in '{}'"
 ATTRIBUTE_MISSING_ERROR = "Missing required attribute. Must specify either 'branch' or 'commit' for each <Source>."
 INVALID_COMBO_DEFINITION_ERROR = "Can not specify branch or commit or tag along with patchSet"
 GENERAL_CONFIG_MISSING_ERROR = "Unable to locate <GeneralConfig>"
@@ -54,7 +55,10 @@ SOURCELIST_EMPTY_ERROR = "Invalid input: empty values in source list"
 INVALID_PROJECTNAME_ERROR = "Invalid input: {} not found in CiIndexXml"
 UNSUPPORTED_TYPE_ERROR = "{} is not a supported xml type: {}"
 INVALID_XML_ERROR = "{} is not a valid xml file ({})"
-
+PATCHSET_UNKNOWN_ERROR = "Could not find a PatchSet named '{}' in '{}'"
+REMOTE_DIFFERENT_ERROR = "The remote for patchset {}/{} is different from {}/{}"
+NO_PATCHSET_IN_COMBO = "The Combination: {} does not have any patchset"
+NO_PATCHSET_EXISTS = "The Patchset: {} does not exist"
 
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
@@ -141,7 +145,8 @@ class ManifestXml(BaseXmlHelper):
         self._folder_to_folder_mappings = []  # List of FolderToFolderMapping objects
         self._submodule_alternate_remotes = []
         self._submodule_init_list = []
-        self._patchsets = {}
+        self._patch_sets = {}
+        self._patch_set_operations = {}
 
         #
         # Append include XML's to the Manifest etree before parsing
@@ -209,7 +214,7 @@ class ManifestXml(BaseXmlHelper):
         if self._xml_type == 'Pin':
             combos = self._tree.findall('Combination')
             if len(combos) != 1:
-                raise KeyError(PIN_COMB_ERROR.format(fileref))
+                raise KeyError(PIN_COMBO_ERROR.format(fileref))
 
             # <CombinationList> container tag not required for pin files
             if self._tree.find('CombinationList') is None:
@@ -275,7 +280,11 @@ class ManifestXml(BaseXmlHelper):
         subroot = self._tree.find('PatchSets')
         if subroot is not None:
             for patchset in subroot.iter(tag='PatchSet'):
-                self._patchsets[patchset.attrib['name']] =_PatchSet(patchset).tuple
+                self._patch_sets[patchset.attrib['name']] =_PatchSet(patchset).tuple
+                operations = []
+                for subelem in patchset:
+                    operations.append(_PatchSetOperations(subelem).tuple)
+                self._patch_set_operations[patchset.attrib['name']] = operations
 
         return
 
@@ -344,7 +353,7 @@ class ManifestXml(BaseXmlHelper):
             # default combo
             return self._tuple_list(self._combo_sources[self.general_config.default_combo])
         else:
-            raise ValueError(COMB_INVALIDINPUT_ERROR.format(combo_name))
+            raise ValueError(COMBO_INVALIDINPUT_ERROR.format(combo_name))
 
     @property
     def repo_hooks(self):
@@ -388,22 +397,7 @@ class ManifestXml(BaseXmlHelper):
         for combo in combinations.iter(tag='Combination'):
             if combo.attrib['name'] == name:
                 return copy.deepcopy(combo)
-        raise ValueError(COMB_UNKOWN_ERROR.format(name, self._fileref))
-
-    def get_patchsets_for_combo(self):
-        patch_in_source = []
-        sources = self._combo_sources
-        for source in sources.values():
-            for reposource in source:
-                if reposource.tuple.patch_set is not None:
-                    patch_in_source.append(reposource.tuple.patch_set)
-        return patch_in_source
-        #     if source.tuple.patchSet is not None:
-        #         patch_in_source[source.tuple.remote_name] = self._patchsets[source.tuple.patchSet]
-        # if len(patch_in_source):
-        #     return patch_in_source
-        # else:
-        #     raise KeyError(NO_PATCHSET_IN_COMBO.format(combo_name))
+        raise ValueError(COMBO_UNKNOWN_ERROR.format(name, self._fileref))
 
     @property
     def commit_templates(self):
@@ -673,6 +667,75 @@ class ManifestXml(BaseXmlHelper):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @property
+    def get_all_patchsets(self):
+        '''
+        Returns a list of all the patchsets defined in the manifest file
+        '''
+        patchsets = []
+        for patch in self._patch_sets.keys():
+            patchsets.append(self._patch_sets[patch])
+        return patchsets
+
+    def get_patchset(self, name):
+        if name in self._patch_sets.keys():
+            return self._patch_sets[name]
+        else:
+            raise KeyError(NO_PATCHSET_EXISTS.format(name))
+
+    def get_patchsets_for_combo(self, combo=None):
+        patchsets = {}
+        if combo is None:
+            sources = self._combo_sources
+            for combo, source in sources.items():
+                for reposource in source:
+                    if reposource.patch_set is not None:
+                        patchsets[combo]=self.get_patchset(reposource.patch_set)
+            return patchsets
+        else:
+            sources = self._combo_sources[combo]
+            for reposource in sources:
+                if reposource.patch_set is not None:
+                        patchsets[combo]=self.get_patchset(reposource.patch_set)
+
+            if len(patchsets):
+                return patchsets
+            else:
+                raise KeyError(NO_PATCHSET_IN_COMBO.format(combo))
+
+    def get_parent_patchset_operations(self, name, patch_set_operations):
+        '''
+        This method takes the input name and a list for storing the operations as its parameters. It recursively
+        calls itself to check if there is a parent patchset for the given patchset and if there is, it checks if
+        the remotes are same. If not, it throws a ValueError. These operations are appended to the patch_set_operations
+        list.
+        '''
+        parent_sha = self._patch_sets[name][2]
+        if parent_sha in self._patch_sets:
+            if self._patch_sets[parent_sha][0] == self._patch_sets[name][0]:
+                self.get_parent_patchset_operations(parent_sha, patch_set_operations)
+                patch_set_operations.append(self._patch_set_operations[parent_sha])
+            else:
+                raise ValueError(REMOTE_DIFFERENT_ERROR.format(parent_sha, self._patch_sets[parent_sha][0],
+                name, self._patch_sets[name][0]))
+
+    def get_patchset_operations(self, name=None):
+        '''
+        This method returns a list of patchset operations. If name of the patchset is provided as a parameter,
+        it gives the operations of that patchset otherwise operations of all patchsets are returned.
+        The parent patchset's operations are listed first if there are any.
+        '''
+        if name:
+            patch_set_operations = []
+            if name in self._patch_sets:
+                self.get_parent_patchset_operations(name, patch_set_operations)
+                patch_set_operations.append(self._patch_set_operations[name])
+                return patch_set_operations
+            raise ValueError(PATCHSET_UNKNOWN_ERROR.format(name, self._fileref))
+        else:
+            return self._patch_set_operations
+
+
 class _PatchSet():
     def __init__(self, element):
         try:
@@ -686,6 +749,30 @@ class _PatchSet():
     @property
     def tuple(self):
         return PatchSet(self.remote, self.name, self.parentSha, self.fetchBranch)
+
+class _PatchSetOperations():
+    def __init__(self, element):
+        self.type = element.tag
+        try:
+            self.file = element.attrib['file']
+        except KeyError as k:
+            self.file = None
+        try:
+            self.sha = element.attrib['sha']
+        except KeyError as k:
+            self.sha = None
+        try:
+            self.source_remote = element.attrib['sourceRemote']
+        except KeyError as k:
+            self.source_remote = None
+        try:
+            self.source_branch = element.attrib['sourceBranch']
+        except KeyError as k:
+            self.source_branch = None
+
+    @property
+    def tuple(self):
+        return PatchOperation(self.type, self.file, self.sha, self.source_remote, self.source_branch)
 
 class _ProjectInfo():
     def __init__(self, element):
@@ -1127,7 +1214,12 @@ def main():
         else:
             print('Successfully parsed {} as a manifest file.\nExiting...'.format(args.InputFile))
         print(separator_string)
+        print('\nPatchsets')
+        print(test_manifest.get_all_patchsets)
+        print('\nPatchset Operations\n')
+        print(test_manifest.get_patchset_operations())
         print(test_manifest.get_patchsets_for_combo())
+        print(test_manifest.get_patchset('test'))
         sys.exit(0)
 
     except (TypeError, KeyError, ValueError):
