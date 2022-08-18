@@ -9,6 +9,9 @@
 
 
 
+from mimetypes import init
+
+
 class EdkrepoException(Exception):
     def __init__(self, message, exit_code):
         super().__init__(message)
@@ -105,3 +108,39 @@ class EdkrepoCacheException(EdkrepoException):
 class EdkrepoAbortCherryPickException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 134)
+
+class EdkrepoPatchFailedException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 138)
+
+class EdkrepoRevertFailedException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 139)
+
+class EdkrepoCherryPickFailedException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 140)
+
+class EdkrepoBranchExistsException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 141)
+
+class EdkrepoFetchBranchNotFoundException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 142)
+
+class EdkrepoRemoteNotFoundException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 143)
+
+class EdkrepoPatchNotFoundException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 144)
+
+class EdkrepoRemoteAddException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 145)
+
+class EdkrepoRemoteRemoveException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 146)

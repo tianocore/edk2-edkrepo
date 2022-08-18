@@ -163,3 +163,14 @@ COMMIT_MESSAGE = 'Pin file for project: {0} \nPin Description: {1}'
 
 # Common submodule error messages
 SUBMODULE_DEINIT_FAILED = 'Warning: Unable to remove all submodule content'
+
+# Creating Local Branch Error Messages
+BRANCH_EXISTS = "The branch: {} already exists."
+REMOTE_NOT_FOUND = "Could not find the remote: {}"
+REMOTE_CREATION_FAILED = "Failed to add the remote: {}"
+FETCH_BRANCH_DOES_NOT_EXIST = "The branch {} does not exist"
+PATCHFILE_DOES_NOT_EXIST = "The patch file {} does not exist"
+APPLYING_PATCH_FAILED = "Unable to apply the patch file {}"
+APPLYING_REVERT_FAILED = "Failed to revert to the commit: {}"
+APPLYING_CHERRY_PICK_FAILED = "Failed to cherry pick the commit: {}"
+REMOVE_REMOTE_FAILED = "Failed to remove the remote: {}"
