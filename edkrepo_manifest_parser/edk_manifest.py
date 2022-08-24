@@ -205,7 +205,11 @@ class ManifestXml(BaseXmlHelper):
         # requires RemoteList to be parsed first
         #
         if self._xml_type == 'Pin':
-            combos = self._tree.findall('Combination')
+            combos_list = self._tree.findall('CombinationList')
+            if len(combos_list) == 1:
+                combos = self._tree.find('CombinationList').findall('Combination')
+            else:
+                combos = self._tree.findall('Combination')
             if len(combos) != 1:
                 raise KeyError(PIN_COMB_ERROR.format(fileref))
 
