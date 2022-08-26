@@ -75,7 +75,7 @@ DEFAULT_REMOTE_NAME = 'origin'
 PRIMARY_REMOTE_NAME = 'primary'
 
 
-def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, cache_obj=None):
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -101,10 +101,13 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         if add_primary_repo_remote(repo, repo_to_clone, args.verbose):
             fetch_from_primary_repo(repo, repo_to_clone, args.verbose)
 
+        if repo_to_clone.patch_set:
+            patchset = manifest.get_patchset(repo_to_clone.patch_set)
+            create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
         # Handle branch/commit/tag checkout if needed. If a combination of these are specified the
         # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked
         # out
-        if repo_to_clone.commit:
+        elif repo_to_clone.commit:
             if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
                 ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
             repo.git.checkout(repo_to_clone.commit)
@@ -354,6 +357,11 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
                 print(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
+
+        if repo_to_checkout.patch_set:
+            if repo_to_checkout.patch_set not in repo.branches:
+                patchset = manifest.get_patchset(repo_to_checkout.patch_set)
+                create_local_branch(repo_to_checkout.patch_set, patchset, '', manifest, repo)
         # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
         # the source section for the manifest the order of priority is the followiwng 1)commit
         # 2) tag 3)branch with the highest priority attribute provided beinng checked out
