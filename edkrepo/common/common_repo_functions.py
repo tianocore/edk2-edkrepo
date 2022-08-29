@@ -20,37 +20,36 @@ import git
 from git import Repo
 import colorama
 
-from edkrepo.config.config_factory import get_edkrepo_global_data_directory
+from edkrepo.common.edkrepo_exception import EdkrepoRevertFailedException, EdkrepoCherryPickFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException, EdkrepoBranchExistsException
+from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
 from edkrepo.common.edkrepo_exception import EdkrepoVerificationException
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.progress_handler import GitProgressHandler
+from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED
+from edkrepo.common.humble import BRANCH_EXISTS, FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST
+from edkrepo.common.humble import REMOTE_CREATION_FAILED, REMOTE_NOT_FOUND, REMOVE_REMOTE_FAILED
 from edkrepo.common.humble import MISSING_BRANCH_COMMIT
 from edkrepo.common.humble import UNCOMMITED_CHANGES, CHECKOUT_UNCOMMITED_CHANGES
 from edkrepo.common.humble import CHECKING_OUT_COMMIT, CHECKING_CONNECTION
 from edkrepo.common.humble import CHECKING_OUT_BRANCH
-from edkrepo.common.humble import VERIFY_ERROR_HEADER
-from edkrepo.common.humble import VERIFY_EXCEPTION_MSG
-from edkrepo.common.humble import INDEX_DUPLICATE_NAMES
-from edkrepo.common.humble import LOAD_MANIFEST_FAILED
-from edkrepo.common.humble import MANIFEST_NAME_INCONSISTENT
 from edkrepo.common.humble import CHECKOUT_NO_REMOTE
 from edkrepo.common.humble import SPARSE_CHECKOUT
 from edkrepo.common.humble import SPARSE_RESET
 from edkrepo.common.humble import CHECKING_OUT_COMBO
 from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
 from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
-from edkrepo.common.humble import GEN_A_NOT_IN_B, GEN_FOUND_MULT_A_IN_B
 from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
 from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
-from edkrepo.common.humble import ADD_PRIMARY_REMOTE, REMOVE_PRIMARY_REMOTE
-from edkrepo.common.humble import FETCH_PRIMARY_REMOTE, MIRROR_PRIMARY_SHA, TAG_AND_BRANCH_SPECIFIED
+from edkrepo.common.humble import TAG_AND_BRANCH_SPECIFIED
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR, SUBMODULE_FAILURE
 from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
-from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL
+from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from project_utils.sparse import BuildInfo, process_sparse_checkout
@@ -60,8 +59,7 @@ from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
-from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException, EdkrepoWarningException
-from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoHookNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoHookNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
@@ -78,7 +76,7 @@ DEFAULT_REMOTE_NAME = 'origin'
 PRIMARY_REMOTE_NAME = 'primary'
 
 
-def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, cache_obj=None):
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -104,10 +102,13 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         if add_primary_repo_remote(repo, repo_to_clone, args.verbose):
             fetch_from_primary_repo(repo, repo_to_clone, args.verbose)
 
+        if repo_to_clone.patch_set:
+            patchset = manifest.get_patchset(repo_to_clone.patch_set)
+            create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
         # Handle branch/commit/tag checkout if needed. If a combination of these are specified the
         # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked
         # out
-        if repo_to_clone.commit:
+        elif repo_to_clone.commit:
             if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
                 ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
             repo.git.checkout(repo_to_clone.commit)
@@ -357,6 +358,10 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
                 print(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
+        if repo_to_checkout.patch_set:
+            if repo_to_checkout.patch_set not in repo.branches:
+                patchset = manifest.get_patchset(repo_to_checkout.patch_set)
+                create_local_branch(repo_to_checkout.patch_set, patchset, '', manifest, repo)
         # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
         # the source section for the manifest the order of priority is the followiwng 1)commit
         # 2) tag 3)branch with the highest priority attribute provided beinng checked out
@@ -446,7 +451,7 @@ def combination_is_in_manifest(combination, manifest):
     return combination in combination_names
 
 
-def checkout(combination, verbose=False, override=False, log=None, cache_obj=None):
+def checkout(combination, global_manifest_path, verbose=False, override=False, log=None, cache_obj=None):
     workspace_path = get_workspace_path()
     manifest = get_workspace_manifest()
 
@@ -510,7 +515,7 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
             traceback.print_exc()
         print (CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
         # Return to the initial combo, since there was an issue with cheking out the selected combo
-        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
+        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest, global_manifest_path)
     finally:
         cache_path = None
         if cache_obj is not None:
@@ -687,3 +692,77 @@ def find_curl():
     else:
         curl_path = get_full_path('curl')
         return curl_path
+
+def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo):
+    for branch in repo.branches:
+        if name == str(branch):
+            raise EdkrepoBranchExistsException(BRANCH_EXISTS.format(name))
+    operations_list = manifest_obj.get_patchset_operations(patchset.name)
+    remote_list = manifest_obj.remotes
+    REMOTE_IN_REMOTE_LIST = False
+    for remote in remote_list:
+        if patchset.remote == remote.name:
+            REMOTE_IN_REMOTE_LIST = True
+            try:
+                repo.remotes.origin.fetch(patchset.fetch_branch, progress=GitProgressHandler())
+            except:
+                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
+            name = name.replace(' ', '_')
+            repo.git.checkout(patchset.parent_sha, b=name)
+            try:
+                apply_patchset_operations(repo, remote, operations_list, global_manifest_path, remote_list)
+            except (EdkrepoPatchFailedException, EdkrepoRevertFailedException, git.GitCommandError, EdkrepoCherryPickFailedException) as exception:
+                print(exception)
+    if not REMOTE_IN_REMOTE_LIST:
+        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
+
+def apply_patchset_operations(repo, remote, operations_list, global_manifest_path, remote_list):
+    for operations in operations_list:
+        for operation in operations:
+            if operation.type == "Patch":
+                path = os.path.normpath(os.path.join(global_manifest_path, operation.file))
+                if os.path.isfile(path):
+                    try:
+                        repo.git.execute(['git', 'am', path, '--ignore-whitespace'])
+                    except:
+                        raise EdkrepoPatchFailedException(APPLYING_PATCH_FAILED.format(operation.file))
+                else:
+                    raise EdkrepoPatchNotFoundException(PATCHFILE_DOES_NOT_EXIST.format(operation.file))
+            elif operation.type == "Revert":
+                try:
+                    repo.git.execute(['git', 'revert', operation.sha, '--no-edit'])
+                except:
+                    raise EdkrepoRevertFailedException(APPLYING_REVERT_FAILED.format(operation.sha))
+            else:
+                if operation.source_remote:
+                    REMOTE_FOUND = False
+                    for remote in remote_list:
+                        if operation.source_remote == remote.name:
+                            REMOTE_FOUND = True
+                            try:
+                                repo.git.execute(['git', 'remote', 'add', operation.source_remote, remote.url])
+                            except :
+                                raise EdkrepoRemoteAddException(REMOTE_CREATION_FAILED.format(operation.source_remote))
+                            try:
+                                repo.git.execute(['git', 'fetch', operation.source_remote, operation.source_branch])
+                            except:
+                                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                            try:
+                                repo.git.cherry_pick(operation.sha)
+                            except:
+                                raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
+                            try:
+                                repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
+                            except:
+                                raise EdkrepoRemoteRemoveException(REMOVE_REMOTE_FAILED.format(operation.source_remote))
+                    if not REMOTE_FOUND:
+                        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(operation.source_remote))
+                else:
+                    try:
+                        repo.remotes.origin.fetch(operation.source_branch)
+                    except:
+                        raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                    try:
+                        repo.git.cherry_pick(operation.sha)
+                    except:
+                        raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
