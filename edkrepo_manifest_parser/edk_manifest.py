@@ -60,6 +60,7 @@ REMOTE_DIFFERENT_ERROR = "The remote for patchset {}/{} is different from {}/{}"
 NO_PATCHSET_IN_COMBO = "The Combination: {} does not have any patchset"
 NO_PATCHSET_EXISTS = "The Patchset: {} does not exist"
 
+
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
         self._fileref = fileref
