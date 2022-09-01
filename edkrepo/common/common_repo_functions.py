@@ -15,6 +15,8 @@ import unicodedata
 import urllib.request
 import subprocess
 import traceback
+import hashlib
+import json
 
 import git
 from git import Repo
@@ -70,6 +72,7 @@ from edkrepo_manifest_parser.edk_manifest_validation import get_manifest_validat
 from edkrepo_manifest_parser.edk_manifest_validation import print_manifest_errors
 from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestfiles
 from project_utils.submodule import deinit_full, maintain_submodules
+from edkrepo.commands.f2f_cherry_pick_command import get_unique_branch_name
 
 CLEAR_LINE = '\x1b[K'
 DEFAULT_REMOTE_NAME = 'origin'
@@ -693,11 +696,46 @@ def find_curl():
         curl_path = get_full_path('curl')
         return curl_path
 
+def get_hash_of_file(file):
+    sha256 = hashlib.sha256()
+    with open(file, 'rb') as f:
+        while True:
+            chunk = f.read(65536)
+            if not chunk:
+                break
+            sha256.update(chunk)
+
+        return sha256.hexdigest()
+
 def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo):
     for branch in repo.branches:
         if name == str(branch):
             raise EdkrepoBranchExistsException(BRANCH_EXISTS.format(name))
+    ref_exists_flag = False
+    for line in repo.git.ls_remote().split('\n'):
+        (sha, *ref) = line.split()
+        ref = ' '.join(ref)
+        if ref.startswith('refs/patch_sets/'):
+            ref_exists_flag = True
+    if not ref_exists_flag:
+        temp_branch_name = get_unique_branch_name("temp_branch", repo)
+        repo.git.checkout('--orphan', temp_branch_name)
+        repo.git.execute(['git', 'rm', '-rf', '.'])
+        repo.git.execute(['git', 'commit', '-m', 'Empty branch', '--allow-empty'])
+        repo.git.execute(['git', 'update-ref', 'refs/patch_sets', temp_branch_name])
+
+    json_str = {
+        patchset.name: name,
+        "head_sha": patchset.parent_sha
+    }
+
     operations_list = manifest_obj.get_patchset_operations(patchset.name)
+    for operations in operations_list:
+        for operation in operations:
+            if operation.type == "Patch":
+                json_str[operation.file] = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, operation.file)))
+
+    repo.git.execute(['git', 'notes', 'append', '-m', json.dumps(json_str, indent=4)])
     remote_list = manifest_obj.remotes
     REMOTE_IN_REMOTE_LIST = False
     for remote in remote_list:
