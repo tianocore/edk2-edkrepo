@@ -17,7 +17,7 @@ from git import Repo
 import edkrepo.config.config_factory as cfg
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoInvalidParametersException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException, EdkrepoManifestRepoNotFoundException
 from edkrepo.common.progress_handler import GitProgressHandler
 import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as humble
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
@@ -293,3 +293,19 @@ def pull_workspace_manifest_repo(project_manifest, edkrepo_cfg, edkrepo_user_cfg
                                   reset_hard)
     elif src_man_repo in conflicts:
         raise EdkrepoInvalidParametersException(humble.CONFLICT_NO_CLONE.format(src_man_repo))
+
+def get_manifest_repo_path(manifest_repo, config):
+    '''Calculates the absolute path for the provided manifest repo. Raises an
+    EdkRepoManifestRepoNotFound exception otherwise.
+    '''
+
+    cfg_manifest_repos, user_cfg_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+    if manifest_repo in cfg_manifest_repos:
+        return config['cfg_file'].manifest_repo_abs_path(manifest_repo)
+    elif manifest_repo in user_cfg_manifest_repos:
+        return config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
+    else:
+        raise EdkRepoManifestRepoManifestNotFoundException(humble.MANIFEST_REPO_NOT_FOUND.format(manifest_repo))
+
+
+

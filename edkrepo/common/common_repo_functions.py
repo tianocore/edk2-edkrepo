@@ -15,6 +15,7 @@ import unicodedata
 import urllib.request
 import subprocess
 import traceback
+import hashlib
 
 import git
 from git import Repo
@@ -349,7 +350,7 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
             check_dirty_repos(manifest, workspace_path)
         except EdkrepoUncommitedChangesException:
             raise EdkrepoUncommitedChangesException(CHECKOUT_UNCOMMITED_CHANGES)
-    check_branches(repos_to_checkout, workspace_path)
+    #check_branches(repos_to_checkout, workspace_path)
     for repo_to_checkout in repos_to_checkout:
         if verbose:
             if repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
@@ -359,6 +360,8 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
         if repo_to_checkout.patch_set:
+            patch_set_info = repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'show'])
+            print(patch_set_info)
             if repo_to_checkout.patch_set not in repo.branches:
                 patchset = manifest.get_patchset(repo_to_checkout.patch_set)
                 create_local_branch(repo_to_checkout.patch_set, patchset, '', manifest, repo)
@@ -451,7 +454,7 @@ def combination_is_in_manifest(combination, manifest):
     return combination in combination_names
 
 
-def checkout(combination, global_manifest_path, verbose=False, override=False, log=None, cache_obj=None):
+def checkout(combination, verbose=False, override=False, log=None, cache_obj=None):
     workspace_path = get_workspace_path()
     manifest = get_workspace_manifest()
 
@@ -515,7 +518,7 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
             traceback.print_exc()
         print (CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
         # Return to the initial combo, since there was an issue with cheking out the selected combo
-        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest, global_manifest_path)
+        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
     finally:
         cache_path = None
         if cache_obj is not None:
@@ -693,12 +696,52 @@ def find_curl():
         curl_path = get_full_path('curl')
         return curl_path
 
+
+def get_unique_branch_name(branch_name_prefix, repo):
+    branch_names = [x.name for x in repo.heads]
+    if branch_name_prefix not in branch_names:
+        return branch_name_prefix
+    index = 1
+    while True:
+        branch_name = "{}-{}".format(branch_name_prefix, index)
+        if branch_name not in branch_names:
+            return branch_name
+
+
+def get_hash_of_file(file):
+    sha256 = hashlib.sha256()
+    with open(file, 'rb') as f:
+        while True:
+            chunk = f.read(65536)
+            if not chunk:
+                break
+            sha256.update(chunk)
+
+        return sha256.hexdigest()
+
+
 def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo):
     for branch in repo.branches:
         if name == str(branch):
             raise EdkrepoBranchExistsException(BRANCH_EXISTS.format(name))
-    operations_list = manifest_obj.get_patchset_operations(patchset.name)
+    ref_exists_flag = False
+    for line in repo.git.ls_remote().split('\n'):
+        (sha, *ref) = line.split()
+        ref = ' '.join(ref)
+        if ref.startswith('refs/patch_sets'):
+            ref_exists_flag = True
+    if not ref_exists_flag:
+        temp_branch_name = get_unique_branch_name("temp_branch", repo)
+        repo.git.checkout('--orphan', temp_branch_name)
+        repo.git.execute(['git', 'reset', '--hard'])
+        repo.git.execute(['git', 'commit', '-m', 'Empty branch', '--allow-empty'])
+        repo.git.execute(['git', 'update-ref', 'refs/patch_sets', temp_branch_name])
+        repo.git.execute(['git', 'checkout', 'refs/patch_sets'])
+        repo.git.execute(['git', 'branch', '-D', temp_branch_name])
+        repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'add', '-m', ''])
+
     remote_list = manifest_obj.remotes
+    operations_list = manifest_obj.get_patchset_operations(patchset.name)
     REMOTE_IN_REMOTE_LIST = False
     for remote in remote_list:
         if patchset.remote == remote.name:
@@ -711,8 +754,20 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
             repo.git.checkout(patchset.parent_sha, b=name)
             try:
                 apply_patchset_operations(repo, remote, operations_list, global_manifest_path, remote_list)
+                head_sha = repo.git.execute(['git', 'rev-parse', 'HEAD'])
             except (EdkrepoPatchFailedException, EdkrepoRevertFailedException, git.GitCommandError, EdkrepoCherryPickFailedException) as exception:
                 print(exception)
+    json_str = {
+        patchset.name: name,
+        "head_sha": head_sha
+    }
+    operations_list = manifest_obj.get_patchset_operations(patchset.name)
+    for operations in operations_list:
+        for operation in operations:
+            if operation.type == "Patch":
+                json_str[operation.file] = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, operation.file)))
+
+    repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'append', '-m', json.dumps(json_str, indent=4)])
     if not REMOTE_IN_REMOTE_LIST:
         raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
 

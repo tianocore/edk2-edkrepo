@@ -10,6 +10,7 @@
 import os
 import shutil
 import sys
+from webbrowser import get
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
@@ -27,7 +28,7 @@ from edkrepo.common.pathfix import get_subst_drive_dict
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
@@ -106,6 +107,8 @@ class CloneCommand(EdkrepoCommand):
         except EdkrepoManifestNotFoundException:
             raise EdkrepoInvalidParametersException(CLONE_INVALID_PROJECT_ARG)
 
+        manifest_repository_path = get_manifest_repo_path(manifest_repo, config)
+
         # If this manifest is in a defined manifest repository validate the manifest within the manifest repo
         if manifest_repo in cfg:
             verify_single_manifest(config['cfg_file'], manifest_repo, global_manifest_path)
@@ -170,7 +173,7 @@ class CloneCommand(EdkrepoCommand):
         cache_obj = get_repo_cache_obj(config)
         if cache_obj is not None:
             add_missing_cache_repos(cache_obj, manifest, args.verbose)
-        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, cache_obj, global_manifest_path)
+        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, cache_obj, manifest_repository_path)
 
         # Init submodules
         if not args.skip_submodule:
