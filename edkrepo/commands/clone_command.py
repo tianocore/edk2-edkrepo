@@ -118,7 +118,13 @@ class CloneCommand(EdkrepoCommand):
         local_manifest_dir = os.path.join(workspace_dir, "repo")
         os.makedirs(local_manifest_dir)
         local_manifest_path = os.path.join(local_manifest_dir, "Manifest.xml")
-        shutil.copy(global_manifest_path, local_manifest_path)
+        # If JSON, write to XML. Else, simple copy
+        file_ext = os.path.splitext(global_manifest_path)[1]
+        if file_ext == '.json':
+            json_manifest = ManifestXml(global_manifest_path)
+            json_manifest.write_tree(local_manifest_path)
+        else:
+            shutil.copy(global_manifest_path, local_manifest_path)
         manifest = ManifestXml(local_manifest_path)
 
         # Update the source manifest repository tag in the local copy of the manifest XML
