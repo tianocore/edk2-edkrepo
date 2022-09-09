@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from collections import namedtuple
 import os
 import copy
+import json
 
 # 3rd party imports
 #   None planned at this time
@@ -59,7 +60,13 @@ class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
         self._fileref = fileref
         try:
-            self._tree = ET.ElementTree(file=fileref)  # fileref can be a filename or filestream
+            file_ext = os.path.splitext(fileref)[1]
+            if file_ext == '.xml':
+                self._tree = ET.ElementTree(file=fileref)  # fileref can be a filename or filestream
+            elif file_ext == '.json':
+                self._tree = self._json_to_xml(fileref)
+            else:
+                raise TypeError(INVALID_XML_ERROR.format(fileref, et_error))
         except Exception as et_error:
             raise TypeError(INVALID_XML_ERROR.format(fileref, et_error))
 
@@ -67,6 +74,56 @@ class BaseXmlHelper():
         if self._xml_type not in xml_types:
             raise TypeError(UNSUPPORTED_TYPE_ERROR.format(fileref, self._xml_type))
 
+    def _json_to_xml(self, fileref):
+        with open(fileref, 'r') as f:
+            json_in = json.load(f)
+
+        root = ET.Element('placeholder')
+        tree = ET.ElementTree(root)
+
+        self._build_etree_node(json_in, root)
+        tree._setroot(root[0])
+
+        self._pretty_format(tree.getroot())
+        return tree
+
+
+    def _build_etree_node(self, current_dict, parent):
+        '''
+        Build ElementTree node as a subelement of parent node.
+        '''
+        node_tag = current_dict['name']
+
+        # attribs
+        if 'attrib' in current_dict.keys():
+            node_attribs = current_dict['attrib']
+        else:
+            node_attribs = {}
+
+        # construct this subelement
+        node = ET.SubElement(parent, node_tag, attrib=node_attribs)
+
+        # text
+        if 'text' in current_dict.keys():
+            node.text = current_dict['text']
+
+        # tail
+        if 'tail' in current_dict.keys():
+            node.tail = current_dict['tail']
+
+        # children
+        if 'children' in current_dict.keys():
+            for child_dict in current_dict['children']:
+                # append child to this node
+                self._build_etree_node(child_dict, node)
+
+
+    def _pretty_format(self, current, parent=None, index=-1, depth=0):
+        for i, node in enumerate(current):
+            self._pretty_format(node, current, i, depth + 1)
+        if parent is not None:
+            if index == 0:
+                parent.text = '\n' + ('  ' * depth)
 
 #
 #  This class will parse and the Index XML file and provide the data to the caller
@@ -459,8 +516,35 @@ class ManifestXml(BaseXmlHelper):
         self._tree.write(filename)
         self._general_config.source_manifest_repo = manifest_repo
 
-    def generate_pin_xml(self, description, combo_name, repo_source_list, filename=None):
+    def write_tree(self, filename=None):
+        self._tree.write(filename)
 
+    def _dfs_traverse_etree(self, node):
+        '''
+        Traverse ElementTree to construct JSON equivalent.
+        '''
+        current_dict = {}
+        current_dict['name'] = node.tag
+
+        # attribs
+        if node.attrib:
+            current_dict['attrib'] = node.attrib
+
+        # text
+        if node.text and (not node.text.isspace()):
+            current_dict['text'] = node.text
+
+        # tail
+        if node.tail:
+            current_dict['tail'] = node.tail
+
+        # dfs recurse
+        if list(node):
+            current_dict['children'] = [self._dfs_traverse_etree(child) for child in node]
+
+        return current_dict
+
+    def generate_pin_etree(self, description, combo_name, repo_source_list):
         pin_tree = ET.ElementTree(ET.Element('Pin'))
         pin_root = pin_tree.getroot()
 
@@ -586,7 +670,22 @@ class ManifestXml(BaseXmlHelper):
         source_root.tail = '\n'
         list(source_root)[-1].tail = '\n  '
 
+        return pin_tree
+
+    def generate_pin_xml(self, description, combo_name, repo_source_list, filename=None):
+        # Filename should be .xml
+        pin_tree = self.generate_pin_etree(description, combo_name, repo_source_list)
         pin_tree.write(filename)
+
+    def generate_pin_json(self, description, combo_name, repo_source_list, filename=None):
+        # Filename should be .json
+        pin_tree = self.generate_pin_etree(description, combo_name, repo_source_list)
+        pin_root = pin_tree.getroot()
+
+        json_out = self._dfs_traverse_etree(pin_root)
+
+        with open(filename, 'w') as f:
+            f.write(json.dumps(json_out, indent=2))
 
     def _compare_elements(self, element1, element2):
         if element1.tag != element2.tag:
