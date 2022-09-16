@@ -109,7 +109,7 @@ class EdkrepoAbortCherryPickException(EdkrepoException):
 class EdkrepoVersionException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 135)
-<<<<<<< HEAD
 
-=======
->>>>>>> 61666d54 (Edkrepo: Performance data included in logs)
+class EdkrepoLogsRemoveException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 136)

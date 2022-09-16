@@ -227,7 +227,12 @@ class GlobalUserConfig(BaseConfig):
             CfgProp('scm', 'mirror_geo', 'geo', 'none', False),
             CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False),
             CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False),
+<<<<<<< HEAD
             CfgProp('logs', 'logs-path', 'log_path', os.path.join(get_edkrepo_global_data_directory(), 'logs'), False)]
+=======
+            CfgProp('logs', 'logs-path', 'log_path', os.path.join(get_edkrepo_global_data_directory(), 'logs'), False),
+            CfgProp('logs', 'logs-retention-days', 'logs_retention_days', '30', False)]
+>>>>>>> 0825130d (Edkrepo: Implement retention period for EdkRepo logs)
         super().__init__(self.filename, get_edkrepo_global_data_directory(), False)
 
     @property
@@ -250,6 +255,13 @@ class GlobalUserConfig(BaseConfig):
             return int(self.max_patch_set)
         except:
             raise EdkrepoConfigFileInvalidException(MAX_PATCH_SET_INVALID)
+    @property
+    def logs_path(self):
+        return self.log_path
+
+    @property
+    def logs_retention_period(self):
+        return int(self.logs_retention_days)
 
     @property
     def logs_path(self):

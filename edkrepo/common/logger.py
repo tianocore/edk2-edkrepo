@@ -11,15 +11,20 @@ import os
 import re
 import sys
 import json
+import time
+import shutil
 import logging
 import subprocess
 import pkg_resources
+
 from datetime import date
 from colorama import init, Fore
 
 from edkrepo.common.edkrepo_version import EdkrepoVersion
+from edkrepo.common.humble import REMOVE_LOG_FAILED
 from edkrepo.common.humble import PYTHON_VERSION, LFS_VERSION
 from edkrepo.common.humble import EDKREPO_VERSION, GIT_VERSION, ENVIRONMENT_VARIABLES, GIT_CONFIG
+from edkrepo.common.edkrepo_exception import EdkrepoLogsRemoveException
 from edkrepo.config.config_factory import GlobalUserConfig
 
 
@@ -60,11 +65,23 @@ class fileFormatter(logging.Formatter):
             return plainMsg
         return ""
 
+def clear_logs():
+    SECONDS_IN_A_DAY = 86400
+    if os.path.exists(config.logs_path):
+        for folder in os.listdir(config.logs_path):
+            folder_path = os.path.join(config.logs_path, folder)
+            if os.stat(folder_path).st_mtime < time.time() - config.logs_retention_period * SECONDS_IN_A_DAY:
+                try:
+                    shutil.rmtree(folder_path)
+                except EdkrepoLogsRemoveException as e:
+                    logger.info(REMOVE_LOG_FAILED.format(folder_path), extra={'normal': False})
+
 
 def get_logger():
     return logger
 
 config = GlobalUserConfig()
+clear_logs()
 logFormatter = logging.Formatter("%(message)s\n")
 logger = logging.getLogger('log')
 logger.setLevel(logging.DEBUG)

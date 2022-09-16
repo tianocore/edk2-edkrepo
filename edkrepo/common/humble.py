@@ -172,3 +172,6 @@ EDKREPO_VERSION = "edkrepo Version: {}"
 PYTHON_VERSION = "Python Version: {}"
 ENVIRONMENT_VARIABLES = "Environment Variables: {}"
 GIT_CONFIG = "Git Config: {}"
+
+# Logging errors
+REMOVE_LOG_FAILED = "Failed to clear logs at {}"
