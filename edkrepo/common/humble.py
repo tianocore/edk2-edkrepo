@@ -163,3 +163,6 @@ COMMIT_MESSAGE = 'Pin file for project: {0} \nPin Description: {1}'
 
 # Common submodule error messages
 SUBMODULE_DEINIT_FAILED = 'Warning: Unable to remove all submodule content'
+
+# Logging errors
+DISK_SPACE_ERROR = "Due to unavailability of disk space, edkrepo cannot generate log files at {}. Clear some space for it to work."
