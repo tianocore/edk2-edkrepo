@@ -53,7 +53,7 @@ logger.setLevel(logging.DEBUG)
 
 fileHandler = logging.FileHandler("log.log")
 
-formatter = fileFormatter("%(message)s")
+formatter = fileFormatter("%(asctime)s.%(msecs)03d %(message)s", datefmt='%Y-%m-%d %H:%M:%S')
 fileHandler.setFormatter(formatter)
 logger.addHandler(fileHandler)
 
