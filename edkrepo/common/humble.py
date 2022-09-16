@@ -175,3 +175,4 @@ GIT_CONFIG = "Git Config: {}"
 
 # Logging errors
 REMOVE_LOG_FAILED = "Failed to clear logs at {}"
+DISK_SPACE_ERROR = "Due to unavailability of disk space, edkrepo cannot generate log files at {}. Clear some space for it to work."

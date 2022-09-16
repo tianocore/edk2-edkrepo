@@ -12,6 +12,7 @@ import re
 import sys
 import json
 import time
+import errno
 import shutil
 import logging
 import subprocess
@@ -21,8 +22,8 @@ from datetime import date
 from colorama import init, Fore
 
 from edkrepo.common.edkrepo_version import EdkrepoVersion
-from edkrepo.common.humble import REMOVE_LOG_FAILED
-from edkrepo.common.humble import PYTHON_VERSION, LFS_VERSION
+from edkrepo.common.humble import LFS_VERSION, PYTHON_VERSION
+from edkrepo.common.humble import DISK_SPACE_ERROR, REMOVE_LOG_FAILED
 from edkrepo.common.humble import EDKREPO_VERSION, GIT_VERSION, ENVIRONMENT_VARIABLES, GIT_CONFIG
 from edkrepo.common.edkrepo_exception import EdkrepoLogsRemoveException
 from edkrepo.config.config_factory import GlobalUserConfig
@@ -45,14 +46,21 @@ class ColorFormatter(logging.Formatter):
 
 
 class CustomHandler(logging.StreamHandler):
+    def write(self, stream, msg):
+        try:
+            stream.write(msg)
+        except OSError as e:
+            if e.errno == errno.ENOSPC:
+                logger.info(DISK_SPACE_ERROR.format(path))
+
     def emit(self, record):
         try:
             msg = self.format(record)
             stream = self.stream
             if hasattr(record, 'verbose') and record.verbose:
-                stream.write(msg)
+                self.write(stream, msg)
             if hasattr(record, 'normal') and record.normal:
-                stream.write(msg)
+                self.write(stream, msg)
         except:
             self.handleError(record)
 
@@ -90,8 +98,12 @@ folder_name = date.today().strftime("%Y/%m/%d_logs").split('/')
 folder_name = '-'.join(folder_name)
 path = os.path.join(config.logs_path, folder_name)
 
-os.makedirs(path, exist_ok=True)
-fileHandler = logging.FileHandler("{}/log.log".format(path))
+try:
+    os.makedirs(path, exist_ok=True)
+    fileHandler = logging.FileHandler("{}/log.log".format(path))
+except OSError as e:
+        if e.errno == errno.ENOSPC:
+            logger.info(DISK_SPACE_ERROR.format(path))
 
 formatter = fileFormatter("%(asctime)s.%(msecs)03d %(message)s", datefmt='%Y-%m-%d %H:%M:%S')
 fileHandler.setFormatter(formatter)
