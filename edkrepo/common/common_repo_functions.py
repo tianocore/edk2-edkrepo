@@ -52,6 +52,7 @@ from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBU
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
 from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
+from edkrepo.common.humble import NETRC_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from project_utils.sparse import BuildInfo, process_sparse_checkout
 from edkrepo.config.config_factory import get_workspace_path
@@ -687,3 +688,14 @@ def find_curl():
     else:
         curl_path = get_full_path('curl')
         return curl_path
+
+def get_netrc_path():
+    netrc_path = None
+    home_dir = expanduser('~')
+    if os.path.isfile(os.path.join(home_dir, '.netrc')):
+        netrc_path = os.path.join(home_dir, '.netrc')
+    elif os.path.isfile(os.path.join(home_dir, '_netrc')):
+        netrc_path = os.path.join(home_dir, '_netrc')
+    if not netrc_path:
+        raise EdkrepoWarningException(NETRC_NOT_FOUND)
+    return netrc_path

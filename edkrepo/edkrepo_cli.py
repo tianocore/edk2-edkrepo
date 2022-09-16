@@ -23,6 +23,7 @@ import datetime as dt
 
 from git.exc import GitCommandError
 
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.commands import command_factory
 from edkrepo.config import config_factory
 from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoGlobalConfigNotFoundException
@@ -208,8 +209,7 @@ def main():
             traceback.print_exc()
         print("Error: {}".format(str(e)))
         return 1
-    if parsed_args.performance:
-        print('\nExecution Time: {}'.format(dt.datetime.now() - start_time))
+    ui_functions.print_info_msg('Execution Time: {}'.format(dt.datetime.now() - start_time), extra = {'normal': parsed_args.performance})
     return 0
 
 if __name__ == "__main__":
