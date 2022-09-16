@@ -163,3 +163,6 @@ COMMIT_MESSAGE = 'Pin file for project: {0} \nPin Description: {1}'
 
 # Common submodule error messages
 SUBMODULE_DEINIT_FAILED = 'Warning: Unable to remove all submodule content'
+
+# Logging errors
+REMOVE_LOG_FAILED = "Failed to clear logs at {}"
