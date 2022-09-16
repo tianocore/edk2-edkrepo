@@ -14,13 +14,13 @@ import json
 import logging
 import subprocess
 import pkg_resources
-
+from datetime import date
 from colorama import init, Fore
 
 from edkrepo.common.edkrepo_version import EdkrepoVersion
 from edkrepo.common.humble import PYTHON_VERSION, LFS_VERSION
 from edkrepo.common.humble import EDKREPO_VERSION, GIT_VERSION, ENVIRONMENT_VARIABLES, GIT_CONFIG
-
+from edkrepo.config.config_factory import GlobalUserConfig
 
 
 init(autoreset=True)
@@ -64,13 +64,17 @@ class fileFormatter(logging.Formatter):
 def get_logger():
     return logger
 
-
+config = GlobalUserConfig()
 logFormatter = logging.Formatter("%(message)s\n")
 logger = logging.getLogger('log')
 logger.setLevel(logging.DEBUG)
 
+folder_name = date.today().strftime("%Y/%m/%d_logs").split('/')
+folder_name = '-'.join(folder_name)
+path = os.path.join(config.logs_path, folder_name)
 
-fileHandler = logging.FileHandler("log.log")
+os.makedirs(path, exist_ok=True)
+fileHandler = logging.FileHandler("{}/log.log".format(path))
 
 formatter = fileFormatter("%(asctime)s.%(msecs)03d %(message)s", datefmt='%Y-%m-%d %H:%M:%S')
 fileHandler.setFormatter(formatter)

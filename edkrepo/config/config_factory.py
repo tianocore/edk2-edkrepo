@@ -226,7 +226,8 @@ class GlobalUserConfig(BaseConfig):
         self.prop_list = [
             CfgProp('scm', 'mirror_geo', 'geo', 'none', False),
             CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False),
-            CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False)]
+            CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False),
+            CfgProp('logs', 'logs-path', 'log_path', os.path.join(get_edkrepo_global_data_directory(), 'logs'), False)]
         super().__init__(self.filename, get_edkrepo_global_data_directory(), False)
 
     @property
@@ -249,6 +250,10 @@ class GlobalUserConfig(BaseConfig):
             return int(self.max_patch_set)
         except:
             raise EdkrepoConfigFileInvalidException(MAX_PATCH_SET_INVALID)
+
+    @property
+    def logs_path(self):
+        return self.log_path
 
 def get_workspace_path():
     path = os.path.realpath(os.getcwd())
