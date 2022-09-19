@@ -141,3 +141,7 @@ class EdkrepoRemoteAddException(EdkrepoException):
 class EdkrepoRemoteRemoveException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 146)
+
+class EdkrepoManifestRepoNotFoundException(EdkrepoException):
+    def __init__(self, message):
+        super().__initi__(message, 147)

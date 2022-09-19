@@ -27,3 +27,4 @@ CONFLICT_NO_CLONE = ('The definition of global manifest repository, {}, '
                      'Resolve the conflict and then re-run the failed operation')
 SOURCE_MANIFEST_REPO_NOT_FOUND = 'Could not determine the source global manifest repository for project: {}'
 PROJ_NOT_IN_REPO = 'Project: {} does not exist in any global manifest repository'
+MANIFEST_REPO_NOT_FOUND = 'The manifest repository: {} was not found'

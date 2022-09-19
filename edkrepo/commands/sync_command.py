@@ -49,7 +49,7 @@ from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos, get_manifest_repo_path
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
 from edkrepo.config.config_factory import get_workspace_manifest_file
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
@@ -99,12 +99,13 @@ class SyncCommand(EdkrepoCommand):
         except:
             pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
         source_global_manifest_repo = find_source_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+
+        global_manifest_directory = get_manifest_repo_path(source_global_manifest_repo, config)
+
         cfg_manifest_repos, user_cfg_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
         if source_global_manifest_repo in cfg_manifest_repos:
-            global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
             verify_single_manifest(config['cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
         elif source_global_manifest_repo in user_cfg_manifest_repos:
-            global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
             verify_single_manifest(config['user_cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
         else:
             global_manifest_directory = None
