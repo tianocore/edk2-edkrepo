@@ -109,12 +109,12 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked
         # out
         if repo_to_clone.commit:
-            if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
-                ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
+            if repo_to_clone.branch or repo_to_clone.tag:
+                ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root), extra={'verbose': args.verbose})
             repo.git.checkout(repo_to_clone.commit)
         elif repo_to_clone.tag and repo_to_clone.commit is None:
-            if args.verbose and repo_to_clone.branch:
-                ui_functions.print_info_msg(TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
+            if repo_to_clone.branch:
+                ui_functions.print_info_msg(TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root), extra={'verbose': args.verbose})
             repo.git.checkout(repo_to_clone.tag)
         elif repo_to_clone.branch and (repo_to_clone.commit is None and repo_to_clone.tag is None):
             if repo_to_clone.branch not in repo.remotes['origin'].refs:
@@ -279,7 +279,6 @@ def sparse_checkout_enabled(workspace_dir, repo_list):
             return True
     return False
 
-
 def get_sparse_folder_list(repo):
     with repo.config_reader() as cr:
         if cr.has_option(section='core', option='sparsecheckout'):
@@ -318,7 +317,7 @@ def sparse_checkout(workspace_dir, repo_list, manifest):
     try:
         process_sparse_checkout(workspace_dir, repo_list, current_combo, manifest)
     except RuntimeError as msg:
-        print(msg)
+        ui_functions.print_error_msg(msg)
 
 
 def check_dirty_repos(manifest, workspace_path):
@@ -351,26 +350,25 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
             raise EdkrepoUncommitedChangesException(CHECKOUT_UNCOMMITED_CHANGES)
     check_branches(repos_to_checkout, workspace_path)
     for repo_to_checkout in repos_to_checkout:
-        if verbose:
-            if repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
-                print(CHECKING_OUT_BRANCH.format(repo_to_checkout.branch, repo_to_checkout.root))
-            elif repo_to_checkout.commit is not None:
-                print(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
+        if repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
+            ui_functions.print_info_msg(CHECKING_OUT_BRANCH.format(repo_to_checkout.branch, repo_to_checkout.root), extra={'verbose': verbose})
+        elif repo_to_checkout.commit is not None:
+            ui_functions.print_info_msg(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root), extra={'verbose': verbose})
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
         # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
         # the source section for the manifest the order of priority is the followiwng 1)commit
         # 2) tag 3)branch with the highest priority attribute provided beinng checked out
         if repo_to_checkout.commit:
-            if verbose and (repo_to_checkout.branch or repo_to_checkout.tag):
-                print(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root))
+            if repo_to_checkout.branch or repo_to_checkout.tag:
+                ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root), extra={'verbose': verbose})
             if override:
                 repo.git.checkout(repo_to_checkout.commit, '--force')
             else:
                 repo.git.checkout(repo_to_checkout.commit)
         elif repo_to_checkout.tag and repo_to_checkout.commit is None:
-            if verbose and (repo_to_checkout.branch):
-                print(TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root))
+            if repo_to_checkout.branch:
+                ui_functions.print_info_msg(TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root), extra={'verbose': verbose})
             if override:
                 repo.git.checkout(repo_to_checkout.tag, '--force')
             else:
@@ -392,25 +390,22 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
             raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
 
 def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
-    print(VERIFY_GLOBAL)
-    if archived:
-        print(VERIFY_ARCHIVED)
+    ui_functions.print_info_msg(VERIFY_GLOBAL)
+    ui_functions.print_info_msg(VERIFY_ARCHIVED, extra={'normal': archived})
     manifest_validation_data = validate_manifestrepo(manifest_repo, archived)
     manifest_repo_error = get_manifest_validation_status(manifest_validation_data)
     if manifest_repo_error:
-        print(VERIFY_GLOBAL_FAIL)
-        if verbose:
-            print_manifest_errors(manifest_validation_data)
+        ui_functions.print_error_msg(VERIFY_GLOBAL_FAIL)
+        print_manifest_errors(manifest_validation_data, verbose)
 
 def verify_single_manifest(cfg_file, manifest_repo, manifest_path, verbose=False):
     manifest = ManifestXml(manifest_path)
-    print(VERIFY_PROJ.format(manifest.project_info.codename))
+    ui_functions.print_info_msg(VERIFY_PROJ.format(manifest.project_info.codename))
     index_path = os.path.join(cfg_file.manifest_repo_abs_path(manifest_repo), CI_INDEX_FILE_NAME)
     proj_val_data = validate_manifestfiles([manifest_path])
     proj_val_error = get_manifest_validation_status(proj_val_data)
     if proj_val_error:
-        if verbose:
-            print_manifest_errors(proj_val_data)
+        print_manifest_errors(proj_val_data, verbose)
         raise EdkrepoManifestInvalidException(VERIFY_PROJ_FAIL.format(manifest.project_info.codename))
 
 def sort_commits(manifest, workspace_path, max_commits=None):
@@ -421,14 +416,14 @@ def sort_commits(manifest, workspace_path, max_commits=None):
     for repo_to_log in repo_sources_to_log:
         local_repo_path = os.path.join(workspace_path, repo_to_log.root)
         repo = Repo(local_repo_path)
-        print("Processing {} log...".format(repo_to_log.root), end='\r')
+        ui_functions.print_info_msg("Processing {} log...".format(repo_to_log.root), end='\r')
         if max_commits:
             commit_generator = repo.iter_commits(max_count=max_commits)
         else:
             commit_generator = repo.iter_commits()
         for commit in commit_generator:
             commit_dictionary[commit] = commit.committed_date
-        print(CLEAR_LINE, end='')
+        ui_functions.print_info_msg(CLEAR_LINE, end='', header=False)
 
     sorted_commit_list = sorted(commit_dictionary, key=commit_dictionary.get, reverse=True)
     if max_commits:
@@ -484,7 +479,7 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
         if sparse_settings is not None:
             sparse_enabled = False
     if sparse_enabled or sparse_diff:
-        print(SPARSE_RESET)
+        ui_functions.print_info_msg(SPARSE_RESET)
         reset_sparse_checkout(workspace_path, current_repos)
 
     # Deinit all submodules due to the potential for issues when switching
@@ -493,11 +488,10 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
         try:
             deinit_full(workspace_path, manifest, verbose)
         except Exception as e:
-            print(SUBMODULE_DEINIT_FAILED)
-            if verbose:
-                print(e)
+            ui_functions.print_warning_msg(SUBMODULE_DEINIT_FAILED)
+            ui_functions.print_error_msg(e, extra={'verbose': verbose})
 
-    print(CHECKING_OUT_COMBO.format(combo))
+    ui_functions.print_info_msg(CHECKING_OUT_COMBO.format(combo))
 
     try:
         checkout_repos(verbose, override, repo_sources, workspace_path, manifest)
@@ -507,9 +501,8 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
         if combination_is_in_manifest(combo, manifest):
             manifest.write_current_combo(combo)
     except:
-        if verbose:
-            traceback.print_exc()
-        print (CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
+        ui_functions.print_warning_msg(traceback.format_exc(), extra={'verbose': verbose})
+        ui_functions.print_error_msg(CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
         # Return to the initial combo, since there was an issue with cheking out the selected combo
         checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
     finally:
@@ -518,7 +511,7 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
             cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
         maintain_submodules(workspace_path, manifest, submodule_combo, verbose, cache_path)
         if sparse_enabled or sparse_diff:
-            print(SPARSE_CHECKOUT)
+            ui_functions.print_info_msg(SPARSE_CHECKOUT)
             sparse_checkout(workspace_path, current_repos, manifest)
 
 def get_latest_sha(repo, branch, remote_or_url='origin'):
@@ -553,7 +546,7 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_m
         if gitglobalconfig.has_option(section='commit', option='template'):
             gitglobalconfig.get_value(section='commit', option='template')
             global_template_in_use = True
-            print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
+            ui_functions.print_warning_msg(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
 
     # Apply the template based on current manifest
     with repo.config_writer() as cw:
@@ -562,16 +555,16 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_m
                 current_template = cw.get_value(section='commit', option='template').replace('"', '')
                 if not current_template.startswith(os.path.normpath(global_manifest_directory).replace('\\', '/')):
                     if os.path.isfile(current_template):
-                        print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
+                        ui_functions.print_warning_msg(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
                         return
                     else:
-                        print(COMMIT_TEMPLATE_NOT_FOUND.format(current_template))
-                        print(COMMIT_TEMPLATE_RESETTING_VALUE)
+                        ui_functions.print_warning_msg(COMMIT_TEMPLATE_NOT_FOUND.format(current_template))
+                        ui_functions.print_info_msg(COMMIT_TEMPLATE_RESETTING_VALUE)
 
             if repo_info.remote_name in templates:
                 template_path = os.path.normpath(os.path.join(global_manifest_directory, templates[repo_info.remote_name]))
                 if not os.path.isfile(template_path):
-                    print(COMMIT_TEMPLATE_NOT_FOUND.format(template_path))
+                    ui_functions.print_warning_msg(COMMIT_TEMPLATE_NOT_FOUND.format(template_path))
                     return
                 template_path = template_path.replace('\\', '/')    # Convert to git approved path
                 cw.set_value(section='commit', option='template', value='"{}"'.format(template_path))
@@ -618,7 +611,7 @@ def check_single_remote_connection(remote_url):
     Checks the connection to a single remote using git ls-remote remote_url -q invoked via subprocess
     instead of gitpython to ensure that ssh errors are caught and handled properly on both git bash
     and windows command line"""
-    print(CHECKING_CONNECTION.format(remote_url))
+    ui_functions.print_info_msg(CHECKING_CONNECTION.format(remote_url))
     check_output = subprocess.Popen('git ls-remote {} -q'.format(remote_url), shell=True)
     check_output.communicate()
 

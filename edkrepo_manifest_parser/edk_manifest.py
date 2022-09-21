@@ -15,7 +15,7 @@ import copy
 
 # 3rd party imports
 #   None planned at this time
-
+import edkrepo.common.ui_functions as ui_functions
 
 #
 # All the namedtuple data structures that consumers of this module will need.
@@ -735,7 +735,7 @@ class _RepoHook():
             self.remote_url = remotes[element.attrib['remote']].url
         except Exception:
             self.remote_url = None
-            print(NO_ASSOCIATED_REMOTE.format(self.source, self.dest_path))
+            ui_functions.print_error_msg(NO_ASSOCIATED_REMOTE.format(self.source, self.dest_path))
         try:
             self.dest_file = element.attrib['destination_file']
         except Exception:

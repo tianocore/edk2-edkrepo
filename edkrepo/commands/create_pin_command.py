@@ -81,10 +81,9 @@ class CreatePinCommand(EdkrepoCommand):
                 raise EdkrepoWorkspaceCorruptException(MISSING_REPO.format(repo_source.root))
             repo = Repo(local_repo_path)
             commit_id = repo.head.commit.hexsha
-            if args.verbose:
-                ui_functions.print_info_msg(GENERATING_REPO_DATA.format(repo_source.root), header = False)
-                ui_functions.print_info_msg(BRANCH.format(repo_source.branch), header = False)
-                ui_functions.print_info_msg(COMMIT.format(commit_id), header = False)
+            ui_functions.print_info_msg(GENERATING_REPO_DATA.format(repo_source.root), header = False, extra={'verbose': args.verbose})
+            ui_functions.print_info_msg(BRANCH.format(repo_source.branch), header = False, extra={'verbose': args.verbose})
+            ui_functions.print_info_msg(COMMIT.format(commit_id), header = False, extra={'verbose': args.verbose})
             updated_repo_source = repo_source._replace(commit=commit_id)
             updated_repo_sources.append(updated_repo_source)
 

@@ -13,6 +13,7 @@ import unicodedata
 import sys
 import traceback
 
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from edkrepo.common.humble import MANIFEST_NAME_INCONSISTENT
 from edkrepo.common.humble import INDEX_DUPLICATE_NAMES
@@ -119,14 +120,14 @@ def get_manifest_validation_status(manifestfile_validation):
 
     return manifest_error
 
-def print_manifest_errors(manifestfile_validation):
-    print(VERIFY_ERROR_HEADER)
+def print_manifest_errors(manifestfile_validation, verbose):
+    ui_functions.print_error_msg(VERIFY_ERROR_HEADER, extra={'verbose': verbose})
     for manifestfile in manifestfile_validation.keys():
         for result in manifestfile_validation[manifestfile]:
             if not result[1]:
-                print ("File name: {} ".format(manifestfile))
-                print ("Error type: {} ".format(result[0]))
-                print("Error message: {} \n".format(result[2]))
+                ui_functions.print_error_msg("File name: {} ".format(manifestfile), extra={'verbose': verbose})
+                ui_functions.print_error_msg("Error type: {} ".format(result[0]), extra={'verbose': verbose})
+                ui_functions.print_error_msg("Error message: {} \n".format(result[2]), extra={'verbose': verbose})
 def main():
     parser = argparse.ArgumentParser()
     # Add mutually exclusive arguments group
@@ -147,9 +148,8 @@ def main():
 
     # Check status.If any error print errors and raise exception.
     if not manifest_error:
-        print("Manifest validation status: PASS \n")
-    else:
-        print_manifest_errors(manifestfile_validation)
+        ui_functions.print_info_msg("Manifest validation status: PASS \n")
+        print_manifest_errors(manifestfile_validation, args.verbose)
         raise EdkrepoVerificationException(("Manifest validation status: FAIL \n"))
     return 0
 
@@ -157,5 +157,5 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except Exception as e:
-        traceback.print_exc()
+        ui_functions.print_warning_msg(traceback.format_exc())
         sys.exit(1)

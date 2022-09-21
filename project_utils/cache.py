@@ -12,6 +12,7 @@ import shutil
 
 from git import Repo
 
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.common.progress_handler import GitProgressHandler
 from project_utils.project_utils_strings import CACHE_ADD_REMOTE, CACHE_ADDING_REPO, CACHE_CHECK_ROOT_DIR
 from project_utils.project_utils_strings import CACHE_FAILED_TO_CLOSE, CACHE_FAILED_TO_OPEN, CACHE_FETCH_REMOTE
@@ -62,11 +63,9 @@ class RepoCache(object):
         return [x for x in os.listdir(self._cache_root_path) if os.path.isdir(self._get_repo_path(x))]
 
     def _add_and_fetch_remote(self, repo, remote_name, url, verbose=False):
-        if verbose:
-            print(CACHE_ADD_REMOTE.format(remote_name, url))
+        ui_functions.print_info_msg(CACHE_ADD_REMOTE.format(remote_name, url), extra={'verbose': verbose})
         repo.create_remote(remote_name, url)
-        if verbose:
-            print(CACHE_FETCH_REMOTE.format(remote_name, url))
+        ui_functions.print_info_msg(CACHE_FETCH_REMOTE.format(remote_name, url), extra={'verbose': verbose})
         repo.remotes[remote_name].fetch(progress=GitProgressHandler())
 
     def open(self, verbose=False):
@@ -77,16 +76,14 @@ class RepoCache(object):
         """
         if not self._repos:
             if not os.path.isdir(self._cache_root_path):
-                if verbose:
-                    print(CACHE_CHECK_ROOT_DIR.format(self._cache_root_path))
+                ui_functions.print_info_msg(CACHE_CHECK_ROOT_DIR.format(self._cache_root_path), extra={'verbose': verbose})
                 os.makedirs(self._cache_root_path)
 
             for dir_name in self._get_cache_dirs():
                 try:
                     self._repos[dir_name] = self._get_repo(dir_name)
                 except Exception:
-                    if verbose:
-                        print(CACHE_FAILED_TO_OPEN.format(dir_name))
+                    ui_functions.print_error_msg(CACHE_FAILED_TO_OPEN.format(dir_name), extra={'verbose': verbose})
 
     def close(self, verbose=False):
         """
@@ -96,8 +93,7 @@ class RepoCache(object):
             try:
                 self._repos[dir_name].close()
             except Exception:
-                if verbose:
-                    print(CACHE_FAILED_TO_CLOSE.format(dir_name))
+                ui_functions.print_error_msg(CACHE_FAILED_TO_CLOSE.format(dir_name), extra={'verbose': verbose})
         self._repos = {}
 
     def get_cache_path(self, url_or_name):
@@ -144,11 +140,9 @@ class RepoCache(object):
         repo_path = self._get_repo_path(dir_name)
 
         if dir_name in self._repos:
-            if verbose:
-                print(CACHE_REPO_EXISTS.format(dir_name))
+            ui_functions.print_info_msg(CACHE_REPO_EXISTS.format(dir_name), extra={'verbose': verbose})
         else:
-            if verbose:
-                print(CACHE_ADDING_REPO.format(dir_name))
+            ui_functions.print_info_msg(CACHE_ADDING_REPO.format(dir_name), extra={'verbose': verbose})
             os.makedirs(repo_path)
             self._repos[dir_name] = Repo.init(repo_path, bare=True)
 
@@ -170,8 +164,7 @@ class RepoCache(object):
             dir_name = self._create_name(url)
         if dir_name not in self._repos:
             return
-        if verbose:
-            print(CACHE_REMOVE_REPO.format(dir_name))
+        ui_functions.print_info_msg(CACHE_REMOVE_REPO.format(dir_name), extra={'verbose': verbose})
         self._repos.pop(dir_name).close()
         shutil.rmtree(os.path.join(self._cache_root_path, dir_name), ignore_errors=True)
 
@@ -182,8 +175,7 @@ class RepoCache(object):
             raise ValueError
         repo = self._get_repo(dir_name)
         if remote_name in repo.remotes:
-            if verbose:
-                print(CACHE_REMOTE_EXISTS.format(remote_name))
+            ui_functions.print_info_msg(CACHE_REMOTE_EXISTS.format(remote_name), extra={'verbose': verbose})
             return
         self._add_and_fetch_remote(repo, remote_name, url, verbose)
 
@@ -213,11 +205,10 @@ class RepoCache(object):
             try:
                 repo = self._get_repo(dir_name)
             except Exception:
-                print(CACHE_FAILED_TO_OPEN.format(dir_name))
+                ui_functions.print_error_msg(CACHE_FAILED_TO_OPEN.format(dir_name))
                 continue
             for remote in repo.remotes:
-                if verbose:
-                    print(CACHE_FETCH_REMOTE.format(dir_name, remote.url))
+                ui_functions.print_error_msg(CACHE_FETCH_REMOTE.format(dir_name, remote.url), extra={'verbose': verbose})
                 remote.fetch(progress=GitProgressHandler())
 
     def clean_cache(self, verbose=False):

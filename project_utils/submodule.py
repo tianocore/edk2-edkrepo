@@ -31,8 +31,7 @@ def _init(repo, submodules=None, verbose=False):
     # it is cleaner to do it as part of the update process.
     if submodules is not None:
         for sub in submodules:
-            if verbose:
-                print(strings.SUBMOD_INIT_PATH.format(sub.path))
+            ui_functions.print_info_msg(strings.SUBMOD_INIT_PATH.format(sub.path), extra={'verbose': verbose})
             output_data = repo.git.execute(['git', 'submodule', 'init', '--', sub.path],
                                            with_extended_output=True, with_stdout=True)
             ui_functions.display_git_output(output_data, verbose)
@@ -53,8 +52,7 @@ def _deinit(repo, submodules=None, verbose=False):
         ui_functions.display_git_output(output_data, verbose)
     else:
         for sub in submodules:
-            if verbose:
-                print(strings.SUBMOD_DEINIT_PATH.format(sub.path))
+            ui_functions.print_info_msg(strings.SUBMOD_DEINIT_PATH.format(sub.path), extra={'verbose': verbose})
             output_data = repo.git.execute(['git', 'submodule', 'deinit', '-f', '--', sub.path],
                                            with_extended_output=True, with_stdout=True)
             ui_functions.display_git_output(output_data, verbose)
@@ -88,16 +86,14 @@ def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=No
         ui_functions.display_git_output(output_data, verbose)
     else:
         for sub in submodules:
-            if verbose:
-                print(strings.SUBMOD_SYNC_PATH.format(sub.path))
+            ui_functions.print_info_msg(strings.SUBMOD_SYNC_PATH.format(sub.path), extra={'verbose': verbose})
             cmd = ['git', 'submodule', 'sync']
             if sub.recursive:
                 cmd.append('--recursive')
             cmd.extend(['--', sub.path])
             output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
             ui_functions.display_git_output(output_data, verbose)
-            if verbose:
-                print(strings.SUBMOD_UPDATE_PATH.format(sub.path))
+            ui_functions.print_info_msg(strings.SUBMOD_UPDATE_PATH.format(sub.path), extra={'verbose': verbose})
             cmd = ['git', 'submodule', 'update', '--init']
             if sub.recursive:
                 cmd.append('--recursive')
@@ -185,7 +181,7 @@ def deinit_full(workspace, manifest, verbose=False):
         workspace - Path to the current workspace.
         manifest  - The current manifest parser object.
     """
-    print(strings.SUBMOD_DEINIT_FULL)
+    ui_functions.print_info_msg(strings.SUBMOD_DEINIT_FULL)
     current_combo = manifest.general_config.current_combo
     repo_sources = manifest.get_repo_sources(current_combo)
     for source in repo_sources:
@@ -194,8 +190,7 @@ def deinit_full(workspace, manifest, verbose=False):
             try:
                 repo = git.Repo(os.path.join(workspace, source.root))
             except Exception as repo_error:
-                if args.verbose:
-                    print(strings.SUBMOD_EXCEPTION.format(repo_error))
+                ui_functions.print_error_msg(strings.SUBMOD_EXCEPTION.format(repo_error), extra={'verbose': verbose})
                 continue
             _deinit(repo, None, verbose)
 
@@ -207,7 +202,7 @@ def init_full(workspace, manifest, verbose=False):
         workspace - Path to the current workspace.
         manifest  - The current manifest parser object.
     """
-    print(strings.SUBMOD_INIT_FULL)
+    ui_functions.print_info_msg(strings.SUBMOD_INIT_FULL)
     current_combo = manifest.general_config.current_combo
     repo_sources = manifest.get_repo_sources(current_combo)
     for source in repo_sources:
@@ -216,8 +211,7 @@ def init_full(workspace, manifest, verbose=False):
             try:
                 repo = git.Repo(os.path.join(workspace, source.root))
             except Exception as repo_error:
-                if args.verbose:
-                    print(strings.SUBMOD_EXCEPTION.format(repo_error))
+                ui_functions.print_error_msg(strings.SUBMOD_EXCEPTION.format(repo_error), extra={'verbose': verbose})
                 continue
             _update(repo, None, verbose, True)
 
@@ -238,15 +232,14 @@ def deinit_submodules(workspace, start_manifest, start_combo,
         verbose        - Enable verbose messages.
     """
     # Process each repo that may have submodules enabled
-    print(strings.SUBMOD_DEINIT)
+    ui_functions.print_info_msg(strings.SUBMOD_DEINIT)
     repo_sources = start_manifest.get_repo_sources(start_combo)
     for source in repo_sources:
         # Open the repo and process submodules
         try:
             repo = git.Repo(os.path.join(workspace, source.root))
         except Exception as repo_error:
-            if args.verbose:
-                print(strings.SUBMOD_EXCEPTION.format(repo_error))
+            ui_functions.print_error_msg(strings.SUBMOD_EXCEPTION.format(repo_error), extra={'verbose': verbose})
             continue
 
         # Collect the submodule initialization data from manifest as well as if submodules
@@ -291,8 +284,7 @@ def maintain_submodules(workspace, manifest, combo_name, verbose=False, cache_pa
         try:
             repo = git.Repo(os.path.join(workspace, source.root))
         except Exception as repo_error:
-            if args.verbose:
-                ui_functions.print_error_msg(strings.SUBMOD_EXCEPTION.format(repo_error))
+            ui_functions.print_error_msg(strings.SUBMOD_EXCEPTION.format(repo_error), extra={'verbose': verbose})
             continue
 
         # Collect the submodule initialization data from manifest as well as if submodules
@@ -373,6 +365,5 @@ if __name__ == '__main__':
         args = parse_args()
         sys.exit(main(args))
     except Exception:
-        if args.verbose:
-            traceback.print_exc()
+        ui_functions.print_warning_msg(traceback.format_exc())
         sys.exit(1)

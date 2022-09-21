@@ -229,8 +229,7 @@ class SyncCommand(EdkrepoCommand):
                             repo_folder=repo_to_sync.root), header = False)
                 except:
                     ui_functions.print_error_msg(SYNC_REBASE_CALC_FAIL, header = False)
-            elif args.verbose:
-                ui_functions.print_warning_msg(NO_SYNC_DETACHED_HEAD.format(repo_to_sync.root), header = False)
+            ui_functions.print_warning_msg(NO_SYNC_DETACHED_HEAD.format(repo_to_sync.root), header = False, extra={"verbose": args.verbose})
 
             # Update commit message templates
             if global_manifest_directory is not None:

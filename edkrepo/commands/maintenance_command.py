@@ -41,11 +41,11 @@ class MaintenanceCommande(EdkrepoCommand):
         # Configure git long path support
         ui_functions.print_info_msg(humble.LONGPATH_CONFIG, header = False)
         set_long_path_support()
-        print()
+        ui_functions.print_info_msg("", header=False)
 
         # Remove unneeded instead of entries from git global config
         ui_functions.print_info_msg(humble.CLEAN_INSTEAD_OFS, header = False)
-        print()
+        ui_functions.print_info_msg('', header=False)
 
         # If in a valid workspace run the following for each repo:
         # git reflog --expire, git gc, git remote prune origin
@@ -54,7 +54,7 @@ class MaintenanceCommande(EdkrepoCommand):
         except EdkrepoWorkspaceInvalidException:
             workspace_path = None
             ui_functions.print_error_msg(humble.NO_WOKKSPACE, header = False)
-            print()
+            ui_functions.print_info_msg('', header=False)
 
         if workspace_path:
             manifest = get_workspace_manifest()
@@ -69,4 +69,4 @@ class MaintenanceCommande(EdkrepoCommand):
                 repo.git.gc('--aggressive', '--prune=now')
                 ui_functions.print_info_msg(humble.REMOTE_PRUNE, header = False)
                 repo.git.remote('prune', 'origin')
-                print()
+                ui_functions.print_info_msg('', header=False)

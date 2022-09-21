@@ -17,9 +17,6 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list
 import edkrepo.common.ui_functions as ui_functions
 
 
-
-
-
 class ManifestRepos(EdkrepoCommand):
     def __init__(self):
         super().__init__()

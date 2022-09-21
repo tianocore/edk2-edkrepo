@@ -20,6 +20,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, 
 from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 from edkrepo.common.progress_handler import GitProgressHandler
 import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as humble
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
@@ -34,7 +35,7 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
         local_path = os.path.join(cfg.get_edkrepo_global_data_directory(), local_path)
     # Clone the repository if it does not exist locally
     if not os.path.exists(local_path):
-        print(humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
+        ui_functions.print_info_msg(humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
         repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), branch=branch)
     # Sync the repository if it exists locally
     else:
@@ -44,10 +45,10 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
                 raise EdkrepoUncommitedChangesException(humble.SINGLE_MAN_REPO_DIRTY.format(local_path))
             elif repo.is_dirty(untracked_files=True) and reset_hard:
                 repo.git.reset('--hard')
-            print(humble.SYNC_SINGLE_MAN_REPO.format(local_path))
+            ui_functions.print_info_msg(humble.SYNC_SINGLE_MAN_REPO.format(local_path))
             if repo.active_branch.name != branch:
-                print(humble.SINGLE_MAN_REPO_NOT_CFG_BRANCH.format(repo.active_branch.name, local_path))
-                print(humble.SINGLE_MAN_REPO_CHECKOUT_CFG_BRANCH.format(branch))
+                ui_functions.print_info_msg(humble.SINGLE_MAN_REPO_NOT_CFG_BRANCH.format(repo.active_branch.name, local_path))
+                ui_functions.print_info_msg(humble.SINGLE_MAN_REPO_CHECKOUT_CFG_BRANCH.format(branch))
                 repo.git.checkout(branch)
             repo.remotes.origin.pull()
         # If the URL specified for this manifest repo has moved back up the existing
@@ -55,9 +56,9 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
         else:
             new_path = generate_name_for_obsolete_backup(local_path)
             new_path = os.path.join(os.path.dirname(local_path), new_path)
-            print(humble.SINGLE_MAN_REPO_MOVED.format(new_path))
+            ui_functions.print_info_msg(humble.SINGLE_MAN_REPO_MOVED.format(new_path))
             shutil.move(local_path, new_path)
-            print (humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
+            ui_functions.print_info_msg(humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
             repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), branch=branch)
 
 def pull_all_manifest_repos(edkrepo_cfg, edkrepo_user_cfg, reset_hard=False):
@@ -70,7 +71,7 @@ def pull_all_manifest_repos(edkrepo_cfg, edkrepo_user_cfg, reset_hard=False):
     conflicts = []
     cfg_man_repos, user_cfg_man_repos, conflicts = list_available_manifest_repos(edkrepo_cfg, edkrepo_user_cfg)
     for conflict in conflicts:
-        print(humble.CONFLICT_NO_CLONE.format(conflict))
+        ui_functions.print_info_msg(humble.CONFLICT_NO_CLONE.format(conflict))
     for repo in cfg_man_repos:
         pull_single_manifest_repo(edkrepo_cfg.get_manifest_repo_url(repo),
                                   edkrepo_cfg.get_manifest_repo_branch(repo),

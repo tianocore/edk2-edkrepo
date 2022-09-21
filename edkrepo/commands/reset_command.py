@@ -50,6 +50,5 @@ class ResetCommand(EdkrepoCommand):
         for repo_to_reset in repo_sources_to_reset:
             local_repo_path = os.path.join(workspace_path, repo_to_reset.root)
             repo = Repo(local_repo_path)
-            if args.verbose:
-                ui_functions.print_info_msg("{}Resetting {}".format("Hard " if args.hard else "", repo_to_reset.root))
+            ui_functions.print_info_msg("{}Resetting {}".format("Hard " if args.hard else "", repo_to_reset.root), extra={"verbose": args.verbose})
             repo.head.reset(working_tree=args.hard)

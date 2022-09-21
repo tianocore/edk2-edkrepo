@@ -9,6 +9,7 @@
 
 import os
 
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.config.config_factory import get_edkrepo_global_data_directory
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from project_utils.cache import RepoCache
@@ -30,12 +31,12 @@ def get_repo_cache_obj(config):
 
 
 def add_missing_cache_repos(cache_obj, manifest, verbose=False):
-    print('Adding and fetching new remotes... (this could take a while)')
+    ui_functions.print_info_msg('Adding and fetching new remotes... (this could take a while)')
     for remote in manifest.remotes:
         cache_obj.add_repo(url=remote.url, verbose=verbose)
     alt_submodules = manifest.submodule_alternate_remotes
     if alt_submodules:
-        print('Adding and fetching new submodule remotes... (this could also take a while)')
+        ui_functions.print_info_msg('Adding and fetching new submodule remotes... (this could also take a while)')
         cache_obj.add_repo(name=SUBMODULE_CACHE_REPO_NAME, verbose=verbose)
         for alt in alt_submodules:
             cache_obj.add_remote(alt.alternate_url, SUBMODULE_CACHE_REPO_NAME, verbose)

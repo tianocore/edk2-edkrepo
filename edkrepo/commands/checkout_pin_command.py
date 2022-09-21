@@ -81,8 +81,7 @@ class CheckoutPinCommand(EdkrepoCommand):
             deinit_full(workspace_path, manifest, args.verbose)
         except Exception as e:
             ui_functions.print_error_msg(SUBMODULE_DEINIT_FAILED, header = False)
-            if args.verbose:
-                ui_functions.print_error_msg(e, header = False)
+            ui_functions.print_error_msg(e, header = False, extra={'verbose': args.verbose})
         pin_repo_sources = pin.get_repo_sources(pin.general_config.current_combo)
         try:
             checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest)

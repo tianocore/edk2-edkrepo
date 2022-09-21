@@ -43,7 +43,7 @@ class ManifestCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        print()
+        ui_functions.print_info_msg('', header=False)
         cfg_file = config['cfg_file']
         user_cfg = config['user_cfg_file']
         cfg_man_repos, user_cfg_man_repos, conflicts = list_available_manifest_repos(cfg_file, user_cfg)
@@ -73,13 +73,12 @@ class ManifestCommand(EdkrepoCommand):
 
 
         for repo in man_repos.keys():
-            print()
+            ui_functions.print_info_msg('', header=False)
             ui_functions.print_info_msg("Manifest directory:", header = False)
             ui_functions.print_info_msg(repo, header = False)
-            if args.verbose:
-                ui_functions.print_info_msg('Manifest directory path:', header = False)
-                ui_functions.print_info_msg(man_repos[repo][0], header = False)
-            print()
+            ui_functions.print_info_msg('Manifest directory path:', header = False, extra={"verbose": args.verbose})
+            ui_functions.print_info_msg(man_repos[repo][0], header = False, extra={"verbose": args.verbose})
+            ui_functions.print_info_msg('', header=False)
 
             ci_index_xml = CiIndexXml(man_repos[repo][1])
 
@@ -87,7 +86,7 @@ class ManifestCommand(EdkrepoCommand):
             try:
                 validate_manifest_repo(man_repos[repo][0], args.verbose, args.archived)
             except:
-                print()
+                ui_functions.print_info_msg('', header=False)
 
             ui_functions.print_info_msg("Projects:", header = False)
             for project in sorted(ci_index_xml.project_list):
@@ -95,20 +94,18 @@ class ManifestCommand(EdkrepoCommand):
                     ui_functions.print_info_msg(project, header = False)
                 else:
                     ui_functions.print_warning_msg(project, header = False)
-                if args.verbose:
-                    ui_functions.print_info_msg("   -> {}".format(ci_index_xml.get_project_xml(project)), header = False)
+                    ui_functions.print_info_msg("   -> {}".format(ci_index_xml.get_project_xml(project)), header = False, extra={"verbose": args.verbose})
                     proj_manifest = ManifestXml(find_project_in_single_index(project, ci_index_xml, man_repos[repo][0])[1])
-                    ui_functions.print_info_msg("   -> DevLead: {}".format(' '.join(x for x in proj_manifest.project_info.dev_leads)), header = False)
+                    ui_functions.print_info_msg("   -> DevLead: {}".format(' '.join(x for x in proj_manifest.project_info.dev_leads)), header = False, extra={"verbose": args.verbose})
 
             if args.archived:
-                print()
+                ui_functions.print_info_msg('', header=False)
                 ui_functions.print_info_msg("Archived Projects:", header = False)
                 for project in sorted(ci_index_xml.archived_project_list):
                     if project == current_project:
                         ui_functions.print_info_msg(project, header = False)
                     else:
                         ui_functions.print_warning_msg(project, header = False)
-                    if args.verbose:
-                        ui_functions.print_info_msg("   -> {}".format(ci_index_xml.get_project_xml(project)), header = False)
+                        ui_functions.print_info_msg("   -> {}".format(ci_index_xml.get_project_xml(project)), header = False, extra={"verbose": args.verbose})
                         proj_manifest = ManifestXml(find_project_in_single_index(project, ci_index_xml, man_repos[repo][0])[1])
-                        ui_functions.print_info_msg("   -> DevLead: {}".format(' '.join(x for x in proj_manifest.project_info.dev_leads)), header = False)
+                        ui_functions.print_info_msg("   -> DevLead: {}".format(' '.join(x for x in proj_manifest.project_info.dev_leads)), header = False, extra={"verbose": args.verbose})

@@ -49,7 +49,7 @@ class LogCommand(EdkrepoCommand):
             try:
                 args.number = int(args.number)
             except ValueError:
-                print("Error: \'{}\' is not an integer".format(args.number))
+                ui_functions.print_error_msg("Error: \'{}\' is not an integer".format(args.number))
                 return
 
         workspace_path = get_workspace_path()
@@ -75,7 +75,7 @@ class LogCommand(EdkrepoCommand):
                     output_string = separator.join((output_string, oneline))
 
                 else:
-                    print(oneline)
+                    ui_functions.print_info_msg(oneline)
             else:
                 time_string = datetime.utcfromtimestamp(commit.authored_date - commit.author_tz_offset).strftime("%c")
                 time_zone_string = "{}{:04.0f}".format("-" if commit.author_tz_offset > 0 else "+",
@@ -96,13 +96,13 @@ class LogCommand(EdkrepoCommand):
 
                     output_string = separator.join((output_string, commit_string, separator))
                 else:
-                    print(hexsha_string)
+                    ui_functions.print_info_msg(hexsha_string)
                     ui_functions.print_safe(author_string)
-                    print(date_string)
-                    print("")
+                    ui_functions.print_info_msg(date_string)
+                    ui_functions.print_info_msg("", header=False)
                     for line in commit.message.splitlines():
                         ui_functions.print_safe("    {}".format(line))
-                    print("")
+                    ui_functions.print_info_msg("", header=False)
         if less_path:
             less_output = subprocess.Popen([str(less_path), '-F', '-R', '-S', '-X', '-K'], stdin=subprocess.PIPE, stdout=sys.stdout, universal_newlines=True)
             less_output.communicate(input=output_string)
