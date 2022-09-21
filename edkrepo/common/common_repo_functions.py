@@ -8,6 +8,7 @@
 #
 
 import collections
+import json
 import os
 import shutil
 import sys
@@ -19,6 +20,7 @@ import hashlib
 
 import git
 from git import Repo
+from datetime import date
 import colorama
 
 from edkrepo.common.edkrepo_exception import EdkrepoRevertFailedException, EdkrepoCherryPickFailedException
@@ -79,6 +81,7 @@ PRIMARY_REMOTE_NAME = 'primary'
 
 
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
+    created_patch_sets = []
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -104,12 +107,13 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         if add_primary_repo_remote(repo, repo_to_clone, args.verbose):
             fetch_from_primary_repo(repo, repo_to_clone, args.verbose)
 
+        # Handle patchset/branch/commit/tag checkout if needed. While checking out, patchset has the highest priority.
+        # If patchset is not present then, if a combination of these are specified the
+        # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked out
         if repo_to_clone.patch_set:
             patchset = manifest.get_patchset(repo_to_clone.patch_set)
+            created_patch_sets.append(repo_to_clone.patch_set)
             create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
-        # Handle branch/commit/tag checkout if needed. If a combination of these are specified the
-        # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked
-        # out
         elif repo_to_clone.commit:
             if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
                 ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
@@ -155,6 +159,23 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # Check to see if mirror is in sync with primary repo
         if not in_sync_with_primary(repo, repo_to_clone, args.verbose):
             ui_functions.print_warning_msg(MIRROR_BEHIND_PRIMARY_REPO)
+
+    # Create patch set branches
+    patchsets_in_manifest = manifest.get_patchsets_for_combo()
+    if patchsets_in_manifest:
+        default_combo_repo = None
+
+        for combo, patch in patchsets_in_manifest.items():
+            for repo_to_clone in manifest.get_repo_sources(combo):
+                if getattr(repo_to_clone, "patch_set"):
+                    repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
+                    if getattr(patch, "name") not in created_patch_sets:
+                        patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"))
+                        create_local_branch(getattr(repo_to_clone, "patch_set"), patch, global_manifest_path, manifest, repo)
+                    else:
+                        default_combo_repo = repo
+
+        default_combo_repo.git.checkout(created_patch_sets[0])
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
@@ -344,8 +365,14 @@ def check_branches(sources, workspace_path):
             except:
                 raise EdkrepoManifestInvalidException(CHECKOUT_NO_REMOTE.format(repo_to_check.root))
 
+def check_branch_name_collision(repo_to_checkout, repo):
+    if repo_to_checkout.patch_set in repo.branches:
+        for branch in repo.branches:
+            if str(branch) == repo_to_checkout.patch_set:
+                branch.rename(repo_to_checkout.patch_set + '_' + date.today().strftime("%Y/%m/%d"))
 
-def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest):
+
+def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest, global_manifest_path):
     if not override:
         try:
             check_dirty_repos(manifest, workspace_path)
@@ -361,11 +388,9 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
         if repo_to_checkout.patch_set:
-            patch_set_info = repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'show'])
-            print(patch_set_info)
-            if repo_to_checkout.patch_set not in repo.branches:
-                patchset = manifest.get_patchset(repo_to_checkout.patch_set)
-                create_local_branch(repo_to_checkout.patch_set, patchset, '', manifest, repo)
+            check_branch_name_collision(repo_to_checkout, repo)
+            patchset = manifest.get_patchset(repo_to_checkout.patch_set)
+            create_local_branch(repo_to_checkout.patch_set, patchset, global_manifest_path, manifest, repo)
         # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
         # the source section for the manifest the order of priority is the followiwng 1)commit
         # 2) tag 3)branch with the highest priority attribute provided beinng checked out
@@ -455,7 +480,7 @@ def combination_is_in_manifest(combination, manifest):
     return combination in combination_names
 
 
-def checkout(combination, verbose=False, override=False, log=None, cache_obj=None):
+def checkout(combination, global_manifest_path, verbose=False, override=False, log=None, cache_obj=None):
     workspace_path = get_workspace_path()
     manifest = get_workspace_manifest()
 
@@ -508,7 +533,7 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
     print(CHECKING_OUT_COMBO.format(combo))
 
     try:
-        checkout_repos(verbose, override, repo_sources, workspace_path, manifest)
+        checkout_repos(verbose, override, repo_sources, workspace_path, manifest, global_manifest_path)
         current_repos = repo_sources
         # Update the current checkout combo in the manifest only if this
         # combination exists in the manifest
@@ -734,7 +759,7 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
         temp_branch_name = get_unique_branch_name("temp_branch", repo)
         repo.git.checkout('--orphan', temp_branch_name)
         repo.git.execute(['git', 'reset', '--hard'])
-        repo.git.execute(['git', 'commit', '-m', 'Empty branch', '--allow-empty'])
+        repo.git.execute(['git', 'commit', '-m', 'Empty branch', '--allow-empty', '--no-verify'])
         repo.git.execute(['git', 'update-ref', 'refs/patch_sets', temp_branch_name])
         repo.git.execute(['git', 'checkout', 'refs/patch_sets'])
         repo.git.execute(['git', 'branch', '-D', temp_branch_name])

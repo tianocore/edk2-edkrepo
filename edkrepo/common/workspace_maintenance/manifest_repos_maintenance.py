@@ -305,7 +305,4 @@ def get_manifest_repo_path(manifest_repo, config):
     elif manifest_repo in user_cfg_manifest_repos:
         return config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
     else:
-        raise EdkRepoManifestRepoManifestNotFoundException(humble.MANIFEST_REPO_NOT_FOUND.format(manifest_repo))
-
-
-
+        raise EdkrepoManifestRepoNotFoundException(humble.MANIFEST_REPO_NOT_FOUND.format(manifest_repo))
