@@ -377,9 +377,8 @@ def check_branch_name_collision(json_path, patch_set, repo):
                     patchset_data = data[repo_name]
                     for patchset in patchset_data:
                         if patch_set in patchset.values():
-                            if patchset['head_sha'] == repo.git.execute(['git', 'rev-parse', 'HEAD']):
-                                repo.git.checkout(patch_set)
-                            else:
+                            repo.git.checkout(patch_set)
+                            if patchset['head_sha'] != repo.git.execute(['git', 'rev-parse', 'HEAD']):
                                 branch.rename(patch_set + '_' + date.today().strftime("%Y/%m/%d"))
                                 patchset['head_sha'] = repo.git.execute(['git', 'rev-parse', 'HEAD'])
                                 patchset[patch_set] = patch_set + '_' + date.today().strftime("%Y/%m/%d")
