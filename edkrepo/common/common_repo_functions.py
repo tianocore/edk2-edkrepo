@@ -365,11 +365,30 @@ def check_branches(sources, workspace_path):
             except:
                 raise EdkrepoManifestInvalidException(CHECKOUT_NO_REMOTE.format(repo_to_check.root))
 
-def check_branch_name_collision(repo_to_checkout, repo):
-    if repo_to_checkout.patch_set in repo.branches:
+def check_branch_name_collision(json_path, patch_set, repo):
+    if patch_set in repo.branches:
+        repo_name = repo.working_tree_dir
+        repo_name = repo_name.split("\\")[-1]
+        collision = False
         for branch in repo.branches:
-            if str(branch) == repo_to_checkout.patch_set:
-                branch.rename(repo_to_checkout.patch_set + '_' + date.today().strftime("%Y/%m/%d"))
+            if str(branch) == patch_set:
+                with open(json_path, 'r') as f:
+                    data = json.load(f)
+                    patchset_data = data[repo_name]
+                    for patchset in patchset_data:
+                        if patch_set in patchset.values():
+                            if patchset['head_sha'] == repo.git.execute(['git', 'rev-parse', 'HEAD']):
+                                repo.git.checkout(patch_set)
+                            else:
+                                branch.rename(patch_set + '_' + date.today().strftime("%Y/%m/%d"))
+                                patchset['head_sha'] = repo.git.execute(['git', 'rev-parse', 'HEAD'])
+                                patchset[patch_set] = patch_set + '_' + date.today().strftime("%Y/%m/%d")
+                                f.seek(0)
+                                json.dump(data, f, indent=4)
+                                collision = True
+                                break
+                f.close()
+        return collision
 
 
 def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest, global_manifest_path):
@@ -387,10 +406,13 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
                 print(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
+        json_path = os.path.join(workspace_path, "repo")
+        json_path = os.path.join(json_path, "patchset.json")
         if repo_to_checkout.patch_set:
-            check_branch_name_collision(repo_to_checkout, repo)
-            patchset = manifest.get_patchset(repo_to_checkout.patch_set)
-            create_local_branch(repo_to_checkout.patch_set, patchset, global_manifest_path, manifest, repo)
+            collision = check_branch_name_collision(json_path, repo_to_checkout.patch_set, repo)
+            if collision:
+                patchset = manifest.get_patchset(repo_to_checkout.patch_set)
+                create_local_branch(repo_to_checkout.patch_set, patchset, global_manifest_path, manifest, repo)
         # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
         # the source section for the manifest the order of priority is the followiwng 1)commit
         # 2) tag 3)branch with the highest priority attribute provided beinng checked out
@@ -749,22 +771,27 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
     for branch in repo.branches:
         if name == str(branch):
             raise EdkrepoBranchExistsException(BRANCH_EXISTS.format(name))
-    ref_exists_flag = False
-    for line in repo.git.ls_remote().split('\n'):
-        (sha, *ref) = line.split()
-        ref = ' '.join(ref)
-        if ref.startswith('refs/patch_sets'):
-            ref_exists_flag = True
-    if not ref_exists_flag:
-        temp_branch_name = get_unique_branch_name("temp_branch", repo)
-        repo.git.checkout('--orphan', temp_branch_name)
-        repo.git.execute(['git', 'reset', '--hard'])
-        repo.git.execute(['git', 'commit', '-m', 'Empty branch', '--allow-empty', '--no-verify'])
-        repo.git.execute(['git', 'update-ref', 'refs/patch_sets', temp_branch_name])
-        repo.git.execute(['git', 'checkout', 'refs/patch_sets'])
-        repo.git.execute(['git', 'branch', '-D', temp_branch_name])
-        repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'add', '-m', ''])
+    # ref_exists_flag = False
 
+    # for line in repo.git.execute(['git', 'show-ref']).split('\n'):
+    #     (sha, *ref) = line.split()
+    #     ref = " ".join(ref)
+    #     if ref.startswith('refs/patch_sets'):
+    #         ref_exists_flag = True
+    # if not ref_exists_flag:
+        # temp_branch_name = get_unique_branch_name("temp_branch", repo)
+        # repo.git.checkout('--orphan', temp_branch_name)
+        # repo.git.execute(['git', 'reset', '--hard'])
+        # repo.git.execute(['git', 'commit', '-m', 'Empty branch', '--allow-empty', '--no-verify'])
+        # repo.git.execute(['git', 'update-ref', 'refs/patch_sets', temp_branch_name])
+        # repo.git.execute(['git', 'checkout', 'refs/patch_sets'])
+        # repo.git.execute(['git', 'branch', '-D', temp_branch_name])
+        # repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'add', '-m', ''])
+
+    path = repo.working_tree_dir
+    repo_path = os.path.dirname(path)
+    path = os.path.join(repo_path, "repo")
+    json_path = os.path.join(path, "patchset.json")
     remote_list = manifest_obj.remotes
     operations_list = manifest_obj.get_patchset_operations(patchset.name)
     REMOTE_IN_REMOTE_LIST = False
@@ -786,13 +813,24 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
         patchset.name: name,
         "head_sha": head_sha
     }
-    operations_list = manifest_obj.get_patchset_operations(patchset.name)
     for operations in operations_list:
         for operation in operations:
             if operation.type == "Patch":
                 json_str[operation.file] = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, operation.file)))
 
-    repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'append', '-m', json.dumps(json_str, indent=4)])
+    if not os.path.isfile(json_path):
+        with open(json_path, 'w') as f:
+            json.dump({repo_path.split("\\")[-1]: [json_str]}, f, indent=4)
+        f.close()
+    else:
+        with open(json_path, "r+") as f:
+            data = json.load(f)
+            data[repo_path.split("\\")[-1]].append(json_str)
+            f.seek(0)
+            json.dump(data, f, indent=4)
+        f.close()
+
+    # repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'append', '-m', json.dumps(json_str, indent=4)])
     if not REMOTE_IN_REMOTE_LIST:
         raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
 
