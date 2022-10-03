@@ -671,3 +671,14 @@ def find_git_version():
     cur_git_version = GitVersion(cur_git_ver_string)
 
     return cur_git_version
+
+def get_unique_branch_name(branch_name_prefix, repo):
+    branch_names = [x.name for x in repo.heads]
+    if branch_name_prefix not in branch_names:
+        return branch_name_prefix
+    index = 1
+    while True:
+        branch_name = "{}-{}".format(branch_name_prefix, index)
+        if branch_name not in branch_names:
+            return branch_name
+
