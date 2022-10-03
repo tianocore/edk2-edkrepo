@@ -15,6 +15,7 @@ import unicodedata
 import urllib.request
 import subprocess
 import traceback
+import hashlib
 
 import git
 from git import Repo
@@ -682,3 +683,14 @@ def get_unique_branch_name(branch_name_prefix, repo):
         if branch_name not in branch_names:
             return branch_name
 
+
+def get_hash_of_file(file):
+    sha256 = hashlib.sha256()
+    with open(file, 'rb') as f:
+        while True:
+            chunk = f.read(65536)
+            if not chunk:
+                break
+            sha256.update(chunk)
+
+        return sha256.hexdigest()
