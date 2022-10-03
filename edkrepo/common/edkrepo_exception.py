@@ -110,3 +110,6 @@ class EdkrepoInvalidConfigOptionException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 125)
 
+class EdkrepoManifestRepoNotFoundException(EdkrepoException):
+    def __init__(self, message):
+        super().__initi__(message, 126)

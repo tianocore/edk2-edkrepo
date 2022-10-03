@@ -27,7 +27,7 @@ from edkrepo.common.pathfix import get_subst_drive_dict
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
@@ -105,6 +105,8 @@ class CloneCommand(EdkrepoCommand):
                                                                     args.source_manifest_repo)
         except EdkrepoManifestNotFoundException:
             raise EdkrepoInvalidParametersException(CLONE_INVALID_PROJECT_ARG)
+
+        manifest_repository_path = get_manifest_repo_path(manifest_repo, config)
 
         # If this manifest is in a defined manifest repository validate the manifest within the manifest repo
         if manifest_repo in cfg:
