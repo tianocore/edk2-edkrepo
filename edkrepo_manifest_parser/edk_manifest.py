@@ -44,10 +44,10 @@ REQUIRED_ATTRIB_ERROR_MSG = "Required attribute malformed in <{}>: {}"
 NO_ASSOCIATED_REMOTE = 'There are no remotes associated with the ClientGitHook entry:\nsource:{} destination:{}' \
                        '\nThis hook will not be installed, updated or deleted.\n'
 NO_REMOTE_EXISTS_WITH_NAME = 'There are no remotes with the name: {} listed in the manifest file.'
-PIN_COMB_ERROR = "Pin \"{}\" Pin did not have a single <Combination> tag."
+PIN_COMBO_ERROR = "Pin \"{}\" Pin did not have a single <Combination> tag."
 DUPLICATE_TAG_ERROR = "Duplicate <{}> tag not allowed: '{}' (Note: check <include>'s"
-COMB_INVALIDINPUT_ERROR = "Invalid input: {} not found in 'combinations' property"
-COMB_UNKOWN_ERROR = "Could not find a Combination named '{}' in '{}'"
+COMBO_INVALIDINPUT_ERROR = "Invalid input: {} not found in 'combinations' property"
+COMBO_UNKNOWN_ERROR = "Could not find a Combination named '{}' in '{}'"
 ATTRIBUTE_MISSING_ERROR = "Missing required attribute. Must specify either 'branch' or 'commit' for each <Source>."
 GENERAL_CONFIG_MISSING_ERROR = "Unable to locate <GeneralConfig>"
 SOURCELIST_EMPTY_ERROR = "Invalid input: empty values in source list"
@@ -268,7 +268,7 @@ class ManifestXml(BaseXmlHelper):
             else:
                 combos = self._tree.findall('Combination')
             if len(combos) != 1:
-                raise KeyError(PIN_COMB_ERROR.format(fileref))
+                raise KeyError(PIN_COMBO_ERROR.format(fileref))
 
             # <CombinationList> container tag not required for pin files
             if self._tree.find('CombinationList') is None:
@@ -395,7 +395,7 @@ class ManifestXml(BaseXmlHelper):
             # default combo
             return self._tuple_list(self._combo_sources[self.general_config.default_combo])
         else:
-            raise ValueError(COMB_INVALIDINPUT_ERROR.format(combo_name))
+            raise ValueError(COMBO_INVALIDINPUT_ERROR.format(combo_name))
 
     @property
     def repo_hooks(self):
@@ -439,7 +439,7 @@ class ManifestXml(BaseXmlHelper):
         for combo in combinations.iter(tag='Combination'):
             if combo.attrib['name'] == name:
                 return copy.deepcopy(combo)
-        raise ValueError(COMB_UNKOWN_ERROR.format(name, self._fileref))
+        raise ValueError(COMBO_UNKNOWN_ERROR.format(name, self._fileref))
 
     @property
     def commit_templates(self):
