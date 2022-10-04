@@ -39,27 +39,20 @@ from edkrepo.common.humble import MISSING_BRANCH_COMMIT
 from edkrepo.common.humble import UNCOMMITED_CHANGES, CHECKOUT_UNCOMMITED_CHANGES
 from edkrepo.common.humble import CHECKING_OUT_COMMIT, CHECKING_CONNECTION
 from edkrepo.common.humble import CHECKING_OUT_BRANCH
-from edkrepo.common.humble import VERIFY_ERROR_HEADER
-from edkrepo.common.humble import VERIFY_EXCEPTION_MSG
-from edkrepo.common.humble import INDEX_DUPLICATE_NAMES
-from edkrepo.common.humble import LOAD_MANIFEST_FAILED
-from edkrepo.common.humble import MANIFEST_NAME_INCONSISTENT
 from edkrepo.common.humble import CHECKOUT_NO_REMOTE
 from edkrepo.common.humble import SPARSE_CHECKOUT
 from edkrepo.common.humble import SPARSE_RESET
 from edkrepo.common.humble import CHECKING_OUT_COMBO
 from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
 from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
-from edkrepo.common.humble import GEN_A_NOT_IN_B, GEN_FOUND_MULT_A_IN_B
 from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
 from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
-from edkrepo.common.humble import ADD_PRIMARY_REMOTE, REMOVE_PRIMARY_REMOTE
-from edkrepo.common.humble import FETCH_PRIMARY_REMOTE, MIRROR_PRIMARY_SHA, TAG_AND_BRANCH_SPECIFIED
+from edkrepo.common.humble import TAG_AND_BRANCH_SPECIFIED
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR, SUBMODULE_FAILURE
 from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
-from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL
+from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.git_version import GitVersion
@@ -70,8 +63,7 @@ from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
-from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException, EdkrepoWarningException
-from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoHookNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoHookNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
