@@ -8,6 +8,7 @@
 #
 
 import collections
+import json
 import os
 import shutil
 import sys
@@ -19,14 +20,21 @@ import hashlib
 
 import git
 from git import Repo
+from datetime import date
 import colorama
 
-from edkrepo.config.config_factory import get_edkrepo_global_data_directory
+from edkrepo.common.edkrepo_exception import EdkrepoRevertFailedException, EdkrepoCherryPickFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException, EdkrepoBranchExistsException
+from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
 from edkrepo.common.edkrepo_exception import EdkrepoVerificationException
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.progress_handler import GitProgressHandler
+from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED
+from edkrepo.common.humble import BRANCH_EXISTS, FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST
+from edkrepo.common.humble import REMOTE_CREATION_FAILED, REMOTE_NOT_FOUND, REMOVE_REMOTE_FAILED
 from edkrepo.common.humble import MISSING_BRANCH_COMMIT
 from edkrepo.common.humble import UNCOMMITED_CHANGES, CHECKOUT_UNCOMMITED_CHANGES
 from edkrepo.common.humble import CHECKING_OUT_COMMIT, CHECKING_CONNECTION
@@ -340,6 +348,29 @@ def check_branches(sources, workspace_path):
             except:
                 raise EdkrepoManifestInvalidException(CHECKOUT_NO_REMOTE.format(repo_to_check.root))
 
+def check_branch_name_collision(json_path, patch_set, repo):
+    if patch_set in repo.branches:
+        repo_name = repo.working_tree_dir
+        repo_name = repo_name.split("\\")[-1]
+        collision = False
+        for branch in repo.branches:
+            if str(branch) == patch_set:
+                with open(json_path, 'r') as f:
+                    data = json.load(f)
+                    patchset_data = data[repo_name]
+                    for patchset in patchset_data:
+                        if patch_set in patchset.values():
+                            repo.git.checkout(patch_set)
+                            if patchset['head_sha'] != repo.git.execute(['git', 'rev-parse', 'HEAD']):
+                                branch.rename(patch_set + '_' + date.today().strftime("%Y/%m/%d"))
+                                patchset['head_sha'] = repo.git.execute(['git', 'rev-parse', 'HEAD'])
+                                patchset[patch_set] = patch_set + '_' + date.today().strftime("%Y/%m/%d")
+                                f.seek(0)
+                                json.dump(data, f, indent=4)
+                                collision = True
+                                break
+                f.close()
+        return collision
 
 def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest):
     if not override:
@@ -694,3 +725,105 @@ def get_hash_of_file(file):
             sha256.update(chunk)
 
         return sha256.hexdigest()
+
+def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo):
+    for branch in repo.branches:
+        if name == str(branch):
+            raise EdkrepoBranchExistsException(BRANCH_EXISTS.format(name))
+
+    path = repo.working_tree_dir
+    repo_path = os.path.dirname(path)
+    path = os.path.join(repo_path, "repo")
+    json_path = os.path.join(path, "patchset_{}.json".format(os.path.basename(repo.working_dir)))
+    remote_list = manifest_obj.remotes
+    operations_list = manifest_obj.get_patchset_operations(patchset.name)
+    REMOTE_IN_REMOTE_LIST = False
+    for remote in remote_list:
+        if patchset.remote == remote.name:
+            REMOTE_IN_REMOTE_LIST = True
+            try:
+                repo.remotes.origin.fetch(patchset.fetch_branch, progress=GitProgressHandler())
+            except:
+                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
+            name = name.replace(' ', '_')
+            repo.git.checkout(patchset.parent_sha, b=name)
+            try:
+                apply_patchset_operations(repo, remote, operations_list, global_manifest_path, remote_list)
+                head_sha = repo.git.execute(['git', 'rev-parse', 'HEAD'])
+            except (EdkrepoPatchFailedException, EdkrepoRevertFailedException, git.GitCommandError, EdkrepoCherryPickFailedException) as exception:
+                print(exception)
+    json_str = {
+        patchset.name: name,
+        "head_sha": head_sha
+    }
+    for operations in operations_list:
+        for operation in operations:
+            if operation.type == "Patch":
+                json_str[operation.file] = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, operation.file)))
+    if not os.path.isfile(json_path):
+        with open(json_path, 'w') as f:
+            json.dump({os.path.basename(repo.working_dir): [json_str]}, f, indent=4)
+        f.close()
+    else:
+        with open(json_path, "r+") as f:
+            data = json.load(f)
+            data[os.path.basename(repo.working_dir)].append(json_str)
+            f.seek(0)
+            json.dump(data, f, indent=4)
+        f.close()
+
+    # repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'append', '-m', json.dumps(json_str, indent=4)])
+    if not REMOTE_IN_REMOTE_LIST:
+        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
+
+def apply_patchset_operations(repo, remote, operations_list, global_manifest_path, remote_list):
+    for operations in operations_list:
+        for operation in operations:
+            if operation.type == "Patch":
+                path = os.path.normpath(os.path.join(global_manifest_path, operation.file))
+                if os.path.isfile(path):
+                    try:
+                        repo.git.execute(['git', 'am', path, '--ignore-whitespace'])
+                    except:
+                        raise EdkrepoPatchFailedException(APPLYING_PATCH_FAILED.format(operation.file))
+                else:
+                    raise EdkrepoPatchNotFoundException(PATCHFILE_DOES_NOT_EXIST.format(operation.file))
+            elif operation.type == "Revert":
+                try:
+                    repo.git.execute(['git', 'revert', operation.sha, '--no-edit'])
+                except:
+                    raise EdkrepoRevertFailedException(APPLYING_REVERT_FAILED.format(operation.sha))
+            else:
+                if operation.source_remote:
+                    REMOTE_FOUND = False
+                    for remote in remote_list:
+                        if operation.source_remote == remote.name:
+                            REMOTE_FOUND = True
+                            try:
+                                repo.git.execute(['git', 'remote', 'add', operation.source_remote, remote.url])
+                            except :
+                                raise EdkrepoRemoteAddException(REMOTE_CREATION_FAILED.format(operation.source_remote))
+                            try:
+                                repo.git.execute(['git', 'fetch', operation.source_remote, operation.source_branch])
+                            except:
+                                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                            try:
+                                repo.git.cherry_pick(operation.sha)
+                            except:
+                                raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
+                            try:
+                                repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
+                            except:
+                                raise EdkrepoRemoteRemoveException(REMOVE_REMOTE_FAILED.format(operation.source_remote))
+                    if not REMOTE_FOUND:
+                        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(operation.source_remote))
+                else:
+                    try:
+                        repo.remotes.origin.fetch(operation.source_branch)
+                    except:
+                        raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                    try:
+                        repo.git.cherry_pick(operation.sha)
+                    except:
+                        raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
+
