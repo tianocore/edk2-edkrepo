@@ -10,6 +10,7 @@
 import os
 import shutil
 import sys
+from webbrowser import get
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
@@ -178,7 +179,7 @@ class CloneCommand(EdkrepoCommand):
         cache_obj = get_repo_cache_obj(config)
         if cache_obj is not None:
             add_missing_cache_repos(cache_obj, manifest, args.verbose)
-        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, cache_obj)
+        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, cache_obj, manifest_repository_path)
 
         # Init submodules
         if not args.skip_submodule:

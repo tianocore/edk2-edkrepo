@@ -88,7 +88,8 @@ DEFAULT_REMOTE_NAME = 'origin'
 PRIMARY_REMOTE_NAME = 'primary'
 
 
-def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, cache_obj=None):
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
+    created_patch_sets = []
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -109,10 +110,14 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # Fetch notes
         repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
 
-        # Handle branch/commit/tag checkout if needed. If a combination of these are specified the
-        # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked
-        # out
-        if repo_to_clone.commit:
+        # Handle patchset/branch/commit/tag checkout if needed. While checking out, patchset has the highest priority.
+        # If patchset is not present then, if a combination of these are specified the
+        # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked out
+        if repo_to_clone.patch_set:
+            patchset = manifest.get_patchset(repo_to_clone.patch_set)
+            created_patch_sets.append(repo_to_clone.patch_set)
+            create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
+        elif repo_to_clone.commit:
             if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
                 ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
             repo.git.checkout(repo_to_clone.commit)
@@ -154,6 +159,24 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
             # Add the commit template if it exists.
             update_repo_commit_template(workspace_dir, repo, repo_to_clone, config, global_manifest_directory)
 
+
+    # Create patch set branches
+    patchsets_in_manifest = manifest.get_patchsets_for_combo()
+    if patchsets_in_manifest:
+        default_combo_repo = None
+
+        for combo, patch in patchsets_in_manifest.items():
+            for repo_to_clone in manifest.get_repo_sources(combo):
+                if getattr(repo_to_clone, "patch_set"):
+                    repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
+                    if getattr(patch, "name") not in created_patch_sets:
+                        patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"))
+                        create_local_branch(getattr(repo_to_clone, "patch_set"), patch, global_manifest_path, manifest, repo)
+                    else:
+                        default_combo_repo = repo
+
+        if default_combo_repo:
+            default_combo_repo.git.checkout(created_patch_sets[0])
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
