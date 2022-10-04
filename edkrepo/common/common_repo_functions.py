@@ -395,13 +395,14 @@ def check_branch_name_collision(json_path, patch_set, repo):
                 f.close()
         return collision
 
-def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest):
+
+def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest, global_manifest_path):
     if not override:
         try:
             check_dirty_repos(manifest, workspace_path)
         except EdkrepoUncommitedChangesException:
             raise EdkrepoUncommitedChangesException(CHECKOUT_UNCOMMITED_CHANGES)
-    check_branches(repos_to_checkout, workspace_path)
+    #check_branches(repos_to_checkout, workspace_path)
     for repo_to_checkout in repos_to_checkout:
         if verbose:
             if repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
@@ -410,38 +411,48 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
                 print(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
+        json_path = os.path.join(workspace_path, "repo")
+        json_path = os.path.join(json_path, "patchset_{}.json".format(repo_to_checkout.root))
+        if repo_to_checkout.patch_set:
+            collision = check_branch_name_collision(json_path, repo_to_checkout.patch_set, repo)
+            patchset = manifest.get_patchset(repo_to_checkout.patch_set)
+            if collision:
+                create_local_branch(repo_to_checkout.patch_set, patchset, global_manifest_path, manifest, repo)
+            elif not collision and repo_to_checkout.patch_set not in repo.branches:
+                create_local_branch(repo_to_checkout.patch_set, patchset, global_manifest_path, manifest, repo)
         # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
         # the source section for the manifest the order of priority is the followiwng 1)commit
         # 2) tag 3)branch with the highest priority attribute provided beinng checked out
-        if repo_to_checkout.commit:
-            if verbose and (repo_to_checkout.branch or repo_to_checkout.tag):
-                print(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root))
-            if override:
-                repo.git.checkout(repo_to_checkout.commit, '--force')
-            else:
-                repo.git.checkout(repo_to_checkout.commit)
-        elif repo_to_checkout.tag and repo_to_checkout.commit is None:
-            if verbose and (repo_to_checkout.branch):
-                print(TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root))
-            if override:
-                repo.git.checkout(repo_to_checkout.tag, '--force')
-            else:
-                repo.git.checkout(repo_to_checkout.tag)
-        elif repo_to_checkout.branch and (repo_to_checkout.commit is None and repo_to_checkout.tag is None):
-            branch_name = repo_to_checkout.branch
-            if branch_name in repo.heads:
-                local_branch = repo.heads[branch_name]
-            else:
-                local_branch = repo.create_head(branch_name, repo.remotes['origin'].refs[branch_name])
-            #check to see if the branch being checked out has a tracking branch if not set one up
-            if repo.heads[local_branch.name].tracking_branch() is None:
-                repo.heads[local_branch.name].set_tracking_branch(repo.remotes['origin'].refs[branch_name])
-            if override:
-                repo.heads[local_branch.name].checkout(force=True)
-            else:
-                repo.heads[local_branch.name].checkout()
         else:
-            raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+            if repo_to_checkout.commit:
+                if verbose and (repo_to_checkout.branch or repo_to_checkout.tag):
+                    print(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root))
+                if override:
+                    repo.git.checkout(repo_to_checkout.commit, '--force')
+                else:
+                    repo.git.checkout(repo_to_checkout.commit)
+            elif repo_to_checkout.tag and repo_to_checkout.commit is None:
+                if verbose and (repo_to_checkout.branch):
+                    print(TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root))
+                if override:
+                    repo.git.checkout(repo_to_checkout.tag, '--force')
+                else:
+                    repo.git.checkout(repo_to_checkout.tag)
+            elif repo_to_checkout.branch and (repo_to_checkout.commit is None and repo_to_checkout.tag is None):
+                branch_name = repo_to_checkout.branch
+                if branch_name in repo.heads:
+                    local_branch = repo.heads[branch_name]
+                else:
+                    local_branch = repo.create_head(branch_name, repo.remotes['origin'].refs[branch_name])
+                #check to see if the branch being checked out has a tracking branch if not set one up
+                if repo.heads[local_branch.name].tracking_branch() is None:
+                    repo.heads[local_branch.name].set_tracking_branch(repo.remotes['origin'].refs[branch_name])
+                if override:
+                    repo.heads[local_branch.name].checkout(force=True)
+                else:
+                    repo.heads[local_branch.name].checkout()
+            else:
+                raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
 
 def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
     print(VERIFY_GLOBAL)
@@ -499,7 +510,7 @@ def combination_is_in_manifest(combination, manifest):
     return combination in combination_names
 
 
-def checkout(combination, verbose=False, override=False, log=None, cache_obj=None):
+def checkout(combination, global_manifest_path, verbose=False, override=False, log=None, cache_obj=None):
     workspace_path = get_workspace_path()
     manifest = get_workspace_manifest()
 
@@ -558,7 +569,7 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
     print(CHECKING_OUT_COMBO.format(combo))
 
     try:
-        checkout_repos(verbose, override, repo_sources, workspace_path, manifest)
+        checkout_repos(verbose, override, repo_sources, workspace_path, manifest, global_manifest_path)
         current_repos = repo_sources
         # Update the current checkout combo in the manifest only if this
         # combination exists in the manifest
@@ -569,7 +580,7 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
             traceback.print_exc()
         print (CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
         # Return to the initial combo, since there was an issue with cheking out the selected combo
-        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
+        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest, global_manifest_path)
     finally:
         cache_path = None
         if cache_obj is not None:

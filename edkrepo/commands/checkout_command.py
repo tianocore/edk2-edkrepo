@@ -43,10 +43,10 @@ class CheckoutCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        if combination_is_in_manifest(args.Combination, get_workspace_manifest()):
-            checkout(args.Combination, args.verbose, args.override, get_repo_cache_obj(config))
         manifest = get_workspace_manifest()
         manifest_repo = manifest.general_config.source_manifest_repo
         global_manifest_path = get_manifest_repo_path(manifest_repo, config)
+        if combination_is_in_manifest(args.Combination, manifest):
+            checkout(args.Combination, global_manifest_path, args.verbose, args.override, get_repo_cache_obj(config))
         else:
             raise EdkrepoInvalidParametersException(humble.NO_COMBO.format(args.Combination))
