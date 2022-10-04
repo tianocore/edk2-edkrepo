@@ -27,14 +27,9 @@ RemoteRepo = namedtuple('RemoteRepo', ['name', 'url'])
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
 Combination = namedtuple('Combination', ['name', 'description', 'venv_enable'])
 RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
-<<<<<<< HEAD
-                                       'enable_submodule', 'tag', 'venv_cfg'])
-
-=======
-                                       'enable_submodule', 'tag', 'patch_set'])
+                                       'enable_submodule', 'tag', 'venv_cfg', 'patch_set'])
 PatchSet = namedtuple('PatchSet', ['remote', 'name', 'parent_sha', 'fetch_branch'])
 PatchOperation = namedtuple('PatchOperation',['type', 'file', 'sha', 'source_remote', 'source_branch'])
->>>>>>> a3b5d3d1 (EdkRepo: Add support for defining and manipulating patch sets in the manifest file)
 SparseSettings = namedtuple('SparseSettings', ['sparse_by_default'])
 SparseData = namedtuple('SparseData', ['combination', 'remote_name', 'always_include', 'always_exclude'])
 
