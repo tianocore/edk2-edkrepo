@@ -111,7 +111,7 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # If patchset is not present then, if a combination of these are specified the
         # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked out
         if repo_to_clone.patch_set:
-            patchset = manifest.get_patchset(repo_to_clone.patch_set)
+            patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
             created_patch_sets.append(repo_to_clone.patch_set)
             create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
         elif repo_to_clone.commit:
@@ -170,12 +170,12 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
                 if getattr(repo_to_clone, "patch_set"):
                     repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
                     if getattr(patch, "name") not in created_patch_sets:
-                        patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"))
+                        patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"), getattr(repo_to_clone, "remote_name"))
                         create_local_branch(getattr(repo_to_clone, "patch_set"), patch, global_manifest_path, manifest, repo)
                     else:
                         default_combo_repo = repo
-
-        default_combo_repo.git.checkout(created_patch_sets[0])
+        if default_combo_repo is not None:
+            default_combo_repo.git.checkout(created_patch_sets[0])
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
@@ -410,7 +410,7 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
         if repo_to_checkout.patch_set:
             collision = check_branch_name_collision(json_path, repo_to_checkout.patch_set, repo)
             if collision:
-                patchset = manifest.get_patchset(repo_to_checkout.patch_set)
+                patchset = manifest.get_patchset(repo_to_checkout.patch_set, repo_to_checkout.remote_name)
                 create_local_branch(repo_to_checkout.patch_set, patchset, global_manifest_path, manifest, repo)
         # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
         # the source section for the manifest the order of priority is the followiwng 1)commit
@@ -769,7 +769,8 @@ def get_hash_of_file(file):
 def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo):
     for branch in repo.branches:
         if name == str(branch):
-            raise EdkrepoBranchExistsException(BRANCH_EXISTS.format(name))
+            repo.git.checkout(name)
+            return
     # ref_exists_flag = False
 
     # for line in repo.git.execute(['git', 'show-ref']).split('\n'):
@@ -788,11 +789,13 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
         # repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'add', '-m', ''])
 
     path = repo.working_tree_dir
+    repo_name = path.split("\\")[-1]
     repo_path = os.path.dirname(path)
     path = os.path.join(repo_path, "repo")
     json_path = os.path.join(path, "patchset.json")
+
     remote_list = manifest_obj.remotes
-    operations_list = manifest_obj.get_patchset_operations(patchset.name)
+    operations_list = manifest_obj.get_patchset_operations(patchset.name, patchset.remote)
     REMOTE_IN_REMOTE_LIST = False
     for remote in remote_list:
         if patchset.remote == remote.name:
@@ -819,12 +822,12 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
 
     if not os.path.isfile(json_path):
         with open(json_path, 'w') as f:
-            json.dump({repo_path.split("\\")[-1]: [json_str]}, f, indent=4)
+            json.dump({repo_name: [json_str]}, f, indent=4)
         f.close()
     else:
         with open(json_path, "r+") as f:
             data = json.load(f)
-            data[repo_path.split("\\")[-1]].append(json_str)
+            data[repo_name].append(json_str)
             f.seek(0)
             json.dump(data, f, indent=4)
         f.close()
