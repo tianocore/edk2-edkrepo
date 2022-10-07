@@ -87,6 +87,7 @@ CHECKOUT_COMBO_UNSUCCESSFULL = 'The combination {} was not able to be checked ou
 CHECKING_OUT_COMBO = 'Checking out combination: {0} ...'
 CHECKING_OUT_BRANCH = 'Checking out {0} branch for {1} repo ...'
 CHECKING_OUT_COMMIT = 'Checking detached HEAD on commit {0} for {1} repo ...'
+CHECKING_OUT_PATCHSET = 'Checking out {0} patchset for {1} repo ...'
 
 # Messages for config_factory.py
 MIRROR_PRIMARY_REPOS_MISSING = 'The edkrepo global configuration file missing [primary-repos] section.'

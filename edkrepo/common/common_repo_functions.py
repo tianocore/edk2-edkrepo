@@ -15,10 +15,10 @@ import urllib.request
 import subprocess
 import traceback
 import hashlib
+import time
 
 import git
 from git import Repo
-from datetime import date
 import colorama
 
 from edkrepo.common.edkrepo_exception import EdkrepoRevertFailedException, EdkrepoCherryPickFailedException
@@ -29,7 +29,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.progress_handler import GitProgressHandler
-from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, CHECKING_OUT_DEFAULT
+from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, CHECKING_OUT_DEFAULT, CHECKING_OUT_PATCHSET
 from edkrepo.common.humble import FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST
 from edkrepo.common.humble import REMOTE_CREATION_FAILED, REMOTE_NOT_FOUND, REMOVE_REMOTE_FAILED
 from edkrepo.common.humble import MISSING_BRANCH_COMMIT
@@ -360,31 +360,6 @@ def check_branches(sources, workspace_path):
             except:
                 raise EdkrepoManifestInvalidException(CHECKOUT_NO_REMOTE.format(repo_to_check.root))
 
-def check_branch_name_collision(json_path, patch_set, repo):
-    if patch_set in repo.branches:
-        repo_name = repo.working_tree_dir
-        repo_name = repo_name.split("\\")[-1]
-        collision = False
-        for branch in repo.branches:
-            if str(branch) == patch_set:
-                with open(json_path, 'r') as f:
-                    data = json.load(f)
-                    patchset_data = data[repo_name]
-                    for patchset in patchset_data:
-                        if patch_set in patchset.values():
-                            repo.git.checkout(patch_set)
-                            if patchset['head_sha'] != repo.git.execute(['git', 'rev-parse', 'HEAD']):
-                                branch.rename(patch_set + '_' + date.today().strftime("%Y/%m/%d"))
-                                patchset['head_sha'] = repo.git.execute(['git', 'rev-parse', 'HEAD'])
-                                patchset[patch_set] = patch_set + '_' + date.today().strftime("%Y/%m/%d")
-                                f.seek(0)
-                                json.dump(data, f, indent=4)
-                                collision = True
-                                break
-                f.close()
-        return collision
-
-
 def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest, global_manifest_path):
     if not override:
         try:
@@ -394,24 +369,20 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
     #check_branches(repos_to_checkout, workspace_path)
     for repo_to_checkout in repos_to_checkout:
         if verbose:
-            if repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
+            if repo_to_checkout.patch_set:
+                print(CHECKING_OUT_PATCHSET.format(repo_to_checkout.patch_set, repo_to_checkout.root))
+            elif repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
                 print(CHECKING_OUT_BRANCH.format(repo_to_checkout.branch, repo_to_checkout.root))
             elif repo_to_checkout.commit is not None:
                 print(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
-        json_path = os.path.join(workspace_path, "repo")
-        json_path = os.path.join(json_path, "patchset_{}.json".format(repo_to_checkout.root))
+
+        # Checkout the repo onto the correct patchset/branch/commit/tag if multiple attributes are provided in
+        # the source section for the manifest the order of priority is the followiwng 1)patchset 2)commit
+        # 3) tag 4)branch with the highest priority attribute provided beinng checked out
         if repo_to_checkout.patch_set:
-            collision = check_branch_name_collision(json_path, repo_to_checkout.patch_set, repo)
-            patchset = manifest.get_patchset(repo_to_checkout.patch_set)
-            if collision:
-                create_local_branch(repo_to_checkout.patch_set, patchset, global_manifest_path, manifest, repo)
-            elif not collision and repo_to_checkout.patch_set not in repo.branches:
-                create_local_branch(repo_to_checkout.patch_set, patchset, global_manifest_path, manifest, repo)
-        # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
-        # the source section for the manifest the order of priority is the followiwng 1)commit
-        # 2) tag 3)branch with the highest priority attribute provided beinng checked out
+            patchset_application_flow(repo_to_checkout, repo, workspace_path, manifest, global_manifest_path)
         else:
             if repo_to_checkout.commit:
                 if verbose and (repo_to_checkout.branch or repo_to_checkout.tag):
@@ -442,6 +413,47 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
                     repo.heads[local_branch.name].checkout()
             else:
                 raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+
+def patchset_application_flow(repo, repo_obj, workspace_path, manifest, global_manifest_path):
+    json_path = os.path.join(workspace_path, "repo")
+    json_path = os.path.join(json_path, "patchset_{}.json".format(os.path.basename(repo_obj.working_dir)))
+    patchset = manifest.get_patchset(repo.patch_set, repo.remote_name)
+
+    if repo.patch_set in repo_obj.branches:
+        if is_collision(json_path, repo.patch_set, repo_obj, global_manifest_path):
+            create_local_branch(repo.patch_set, patchset, global_manifest_path, manifest, repo_obj)
+    else:
+        create_local_branch(repo.patch_set, patchset, global_manifest_path, manifest, repo_obj)
+
+def is_collision(json_path, patch_set, repo, global_manifest_path):
+    repo_name = repo.working_tree_dir
+    repo_name = repo_name.split("\\")[-1]
+    COLLISION = False
+    for branch in repo.branches:
+        if str(branch) == patch_set:
+            with open(json_path, 'r+') as f:
+                data = json.load(f)
+                patchset_data = data[repo_name]
+                for patchset in patchset_data:
+                    if patch_set in patchset.values():
+                        repo.git.checkout(patch_set)
+                        head = repo.git.execute(['git', 'rev-parse', 'HEAD'])
+                        if patchset['head_sha'] != head:
+                            patchset['head_sha'] = head
+                            COLLISION = True
+                        if len(patchset.keys()) == 3:
+                            patch_file = list(patchset.keys())[-1]
+                            hash_of_patch_file = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, patch_file)))
+                            if patchset[patch_file] != hash_of_patch_file:
+                                patchset[patch_file] = hash_of_patch_file
+                                COLLISION = True
+                        if COLLISION:
+                            branch.rename(patch_set + '_' + time.strftime("%Y/%m/%d_%H_%M_%S"))
+                            patchset[patch_set] = patch_set + '_' + time.strftime("%Y/%m/%d_%H_%M_%S")
+                            f.seek(0)
+                            json.dump(data, f, indent=4)
+                            return True
+                return False
 
 def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
     print(VERIFY_GLOBAL)
