@@ -22,15 +22,15 @@ from datetime import date
 import colorama
 
 from edkrepo.common.edkrepo_exception import EdkrepoRevertFailedException, EdkrepoCherryPickFailedException
-from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException, EdkrepoBranchExistsException
+from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
 from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.progress_handler import GitProgressHandler
-from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED
-from edkrepo.common.humble import BRANCH_EXISTS, FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST
+from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, CHECKING_OUT_DEFAULT
+from edkrepo.common.humble import FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST
 from edkrepo.common.humble import REMOTE_CREATION_FAILED, REMOTE_NOT_FOUND, REMOVE_REMOTE_FAILED
 from edkrepo.common.humble import MISSING_BRANCH_COMMIT
 from edkrepo.common.humble import UNCOMMITED_CHANGES, CHECKOUT_UNCOMMITED_CHANGES
@@ -103,8 +103,8 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # If patchset is not present then, if a combination of these are specified the
         # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked out
         if repo_to_clone.patch_set:
-            patchset = manifest.get_patchset(repo_to_clone.patch_set)
-            created_patch_sets.append(repo_to_clone.patch_set)
+            patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
+            created_patch_sets.append((repo_to_clone.patch_set, repo_to_clone.remote_name))
             create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
         elif repo_to_clone.commit:
             if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
@@ -158,14 +158,14 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
             for repo_to_clone in manifest.get_repo_sources(combo):
                 if getattr(repo_to_clone, "patch_set"):
                     repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
-                    if getattr(patch, "name") not in created_patch_sets:
-                        patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"))
+                    if (getattr(patch, "name"), getattr(repo_to_clone, "remote_name")) not in created_patch_sets:
+                        patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"), getattr(repo_to_clone, "remote_name"))
                         create_local_branch(getattr(repo_to_clone, "patch_set"), patch, global_manifest_path, manifest, repo)
                     else:
                         default_combo_repo = repo
 
-        if default_combo_repo:
-            default_combo_repo.git.checkout(created_patch_sets[0])
+        if default_combo_repo is not None:
+            default_combo_repo.git.checkout(created_patch_sets[0][0])
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
@@ -768,21 +768,34 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
                 repo.remotes.origin.fetch(patchset.fetch_branch, progress=GitProgressHandler())
             except:
                 raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
-            name = name.replace(' ', '_')
-            repo.git.checkout(patchset.parent_sha, b=name)
+            try:
+                parent_patchset = manifest_obj.get_patchset(patchset.parent_sha, patchset.remote)
+                repo.git.checkout(parent_patchset[2], b=name)
+            except:
+                repo.git.checkout(patchset.parent_sha, b=name)
             try:
                 apply_patchset_operations(repo, remote, operations_list, global_manifest_path, remote_list)
                 head_sha = repo.git.execute(['git', 'rev-parse', 'HEAD'])
             except (EdkrepoPatchFailedException, EdkrepoRevertFailedException, git.GitCommandError, EdkrepoCherryPickFailedException) as exception:
                 print(exception)
+                print(CHECKING_OUT_DEFAULT)
+                repo.git.checkout(os.path.basename(repo.git.execute(['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'])))
+                repo.git.execute(['git', 'branch', '-D', '{}'.format(name)])
+                return
+
+    if not REMOTE_IN_REMOTE_LIST:
+        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
+
     json_str = {
         patchset.name: name,
         "head_sha": head_sha
     }
+
     for operations in operations_list:
         for operation in operations:
             if operation.type == "Patch":
                 json_str[operation.file] = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, operation.file)))
+
     if not os.path.isfile(json_path):
         with open(json_path, 'w') as f:
             json.dump({os.path.basename(repo.working_dir): [json_str]}, f, indent=4)
@@ -794,10 +807,6 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
             f.seek(0)
             json.dump(data, f, indent=4)
         f.close()
-
-    # repo.git.execute(['git', 'notes', '--ref', 'refs/patch_sets', 'append', '-m', json.dumps(json_str, indent=4)])
-    if not REMOTE_IN_REMOTE_LIST:
-        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
 
 def apply_patchset_operations(repo, remote, operations_list, global_manifest_path, remote_list):
     for operations in operations_list:
@@ -849,4 +858,3 @@ def apply_patchset_operations(repo, remote, operations_list, global_manifest_pat
                         repo.git.cherry_pick(operation.sha)
                     except:
                         raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
-
