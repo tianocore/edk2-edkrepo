@@ -426,8 +426,7 @@ def patchset_application_flow(repo, repo_obj, workspace_path, manifest, global_m
         create_local_branch(repo.patch_set, patchset, global_manifest_path, manifest, repo_obj)
 
 def is_collision(json_path, patch_set, repo, global_manifest_path):
-    repo_name = repo.working_tree_dir
-    repo_name = repo_name.split("\\")[-1]
+    repo_name = os.path.basename(repo.working_dir)
     COLLISION = False
     for branch in repo.branches:
         if str(branch) == patch_set:
@@ -454,6 +453,45 @@ def is_collision(json_path, patch_set, repo, global_manifest_path):
                             json.dump(data, f, indent=4)
                             return True
                 return False
+
+def patchset_operations_similarity(initial_patchset, new_patchset, initial_manifest, new_manifest):
+    return initial_manifest.get_patchset_operations(initial_patchset.name, initial_patchset.remote) \
+            == new_manifest.get_patchset_operations(new_patchset.name, new_patchset.remote)
+
+def check_patchset_similarity(initial_patchset, new_patchset):
+    if initial_patchset.remote != new_patchset.remote:
+        return False
+    elif initial_patchset.name != new_patchset.name:
+        return False
+    elif initial_patchset.parent_sha != new_patchset.parent_sha:
+        return False
+    elif initial_patchset.fetch_branch != new_patchset.fetch_branch:
+        return False
+
+    return True
+
+def create_repos(repos_to_create, workspace_path, manifest, global_manifest_path):
+    for repo_to_create in repos_to_create:
+        local_repo_path = os.path.join(workspace_path, repo_to_create.root)
+        repo = Repo(local_repo_path)
+        json_path = os.path.join(workspace_path, "repo")
+        json_path = os.path.join(json_path, "patchset_{}.json".format(os.path.basename(repo.working_dir)))
+        repo_name = os.path.basename(repo.working_dir)
+        patch_set = repo_to_create.patch_set
+        for branch in repo.branches:
+            if str(branch) == patch_set:
+                with open(json_path, 'r+') as f:
+                    data = json.load(f)
+                    patchset_data = data[repo_name]
+                    for patch_data in patchset_data:
+                        if patch_set in patch_data.values():
+                            patchset = manifest.get_patchset(repo_to_create.patch_set, repo_to_create.remote_name)
+                            create_local_branch(patch_set, patchset, global_manifest_path, manifest, repo)
+                            branch.rename(patch_set + '_' + time.strftime("%Y/%m/%d_%H_%M_%S"))
+                            patch_data[patch_set] = patch_set + '_' + time.strftime("%Y/%m/%d_%H_%M_%S")
+                            f.seek(0)
+                            json.dump(data, f, indent=4)
+                            break
 
 def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
     print(VERIFY_GLOBAL)
