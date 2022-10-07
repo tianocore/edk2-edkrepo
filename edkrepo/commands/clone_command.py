@@ -10,7 +10,6 @@
 import os
 import shutil
 import sys
-from webbrowser import get
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
@@ -31,7 +30,7 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from project_utils.submodule import maintain_submodules
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 
@@ -77,7 +76,6 @@ class CloneCommand(EdkrepoCommand):
     def run_command(self, args, config):
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
 
-        name_or_manifest = args.ProjectNameOrManifestFile
         workspace_dir = args.Workspace
         # Check to see if requested workspace exists. If not create it. If so check for empty
         if workspace_dir == '.':
