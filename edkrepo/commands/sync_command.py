@@ -231,7 +231,7 @@ class SyncCommand(EdkrepoCommand):
 
             # Update commit message templates
             if global_manifest_directory is not None:
-                update_repo_commit_template(workspace_path, repo, repo_to_sync, config, global_manifest_directory)
+                update_repo_commit_template(workspace_path, repo, repo_to_sync, global_manifest_directory)
 
         if sync_error:
             ui_functions.print_error_msg(SYNC_ERROR, header = False)

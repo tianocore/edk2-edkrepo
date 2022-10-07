@@ -7,12 +7,10 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import collections
 import json
 import os
 import shutil
 import sys
-import unicodedata
 import urllib.request
 import subprocess
 import traceback
@@ -29,7 +27,6 @@ from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, Edkr
 from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
-from edkrepo.common.edkrepo_exception import EdkrepoVerificationException
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.progress_handler import GitProgressHandler
 from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED
@@ -48,7 +45,7 @@ from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
 from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
 from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
 from edkrepo.common.humble import TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR, SUBMODULE_FAILURE
+from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR
 from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
@@ -62,7 +59,7 @@ from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from edkrepo.common.edkrepo_exception import EdkrepoHookNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
@@ -149,7 +146,7 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
             install_hooks(project_client_side_hooks, local_repo_path, repo_to_clone, config, global_manifest_directory)
 
             # Add the commit template if it exists.
-            update_repo_commit_template(workspace_dir, repo, repo_to_clone, config, global_manifest_directory)
+            update_repo_commit_template(workspace_dir, repo, repo_to_clone, global_manifest_directory)
 
 
     # Create patch set branches
@@ -602,7 +599,7 @@ def get_full_path(file_name):
             return file_path
     return None
 
-def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_manifest_directory):
+def update_repo_commit_template(workspace_dir, repo, repo_info, global_manifest_directory):
     # Open the local manifest and get any templates
     manifest = edk_manifest.ManifestXml(os.path.join(workspace_dir, 'repo', 'Manifest.xml'))
     templates = manifest.commit_templates
