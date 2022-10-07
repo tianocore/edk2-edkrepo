@@ -6,11 +6,6 @@
 # Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
-# Standard modules
-import sys
-import os
-
-# Third-Party modules
 
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
