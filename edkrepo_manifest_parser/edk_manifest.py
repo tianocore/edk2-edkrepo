@@ -59,6 +59,7 @@ INVALID_XML_ERROR = "{} is not a valid xml file ({})"
 PATCHSET_UNKNOWN_ERROR = "Could not find a PatchSet named '{}' in '{}'"
 REMOTE_DIFFERENT_ERROR = "The remote for patchset {}/{} is different from {}/{}"
 NO_PATCHSET_IN_COMBO = "The Combination: {} does not have any patchsets."
+NO_PATCHSET_EXISTS = "The Patchset: {} does not exist"
 
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
@@ -340,11 +341,11 @@ class ManifestXml(BaseXmlHelper):
         subroot = self._tree.find('PatchSets')
         if subroot is not None:
             for patchset in subroot.iter(tag='PatchSet'):
-                self._patch_sets[patchset.attrib['name']] =_PatchSet(patchset).tuple
+                self._patch_sets[(patchset.attrib['name'], getattr(_PatchSet(patchset).tuple, "remote"))] =_PatchSet(patchset).tuple
                 operations = []
                 for subelem in patchset:
                     operations.append(_PatchSetOperations(subelem).tuple)
-                self._patch_set_operations[patchset.attrib['name']] = operations
+                self._patch_set_operations[(patchset.attrib['name'], getattr(_PatchSet(patchset).tuple, "remote"))] = operations
         return
 
     def is_pin_file(self):
@@ -778,10 +779,13 @@ class ManifestXml(BaseXmlHelper):
             patchsets.append(self._patch_sets[patch])
         return patchsets
 
-    def get_patchset(self, name):
-        for patch in self._patch_sets.keys():
-            if patch == name:
-                return self._patch_sets[patch]
+    def get_patchset(self, name, remote):
+        if (name, remote) in self._patch_sets.keys():
+            for patchset in self._patch_sets.keys():
+                if patchset[0] == name and patchset[1] == remote:
+                    return self._patch_sets[(name, remote)]
+        else:
+            raise KeyError(NO_PATCHSET_EXISTS.format(name))
 
     def get_patchsets_for_combo(self, combo=None):
         patchsets = {}
@@ -790,13 +794,13 @@ class ManifestXml(BaseXmlHelper):
             for combo, source in sources.items():
                 for reposource in source:
                     if reposource.patch_set is not None:
-                        patchsets[combo]=self.get_patchset(reposource.patch_set)
+                        patchsets[combo]=self.get_patchset(reposource.patch_set, reposource.remote_name)
             return patchsets
         else:
             sources = self._combo_sources[combo]
             for reposource in sources:
                 if reposource.patch_set is not None:
-                        patchsets[combo]=self.get_patchset(reposource.patch_set)
+                        patchsets[combo]=self.get_patchset(reposource.patch_set, reposource.remote_name)
 
             if len(patchsets):
                 return patchsets
@@ -804,37 +808,35 @@ class ManifestXml(BaseXmlHelper):
                 raise KeyError(NO_PATCHSET_IN_COMBO.format(combo))
 
 
-    def get_parent_patchset_operations(self, name, patch_set_operations):
+    def get_parent_patchset_operations(self, name, remote, patch_set_operations):
         '''
         This method takes the input name and a list for storing the operations as its parameters. It recursively
         calls itself to check if there is a parent patchset for the given patchset and if there is, it checks if
         the remotes are same. If not, it throws a ValueError. These operations are appended to the patch_set_operations
         list.
         '''
-        parent_sha = self._patch_sets[name][2]
-        if parent_sha in self._patch_sets:
-            if self._patch_sets[parent_sha][0] == self._patch_sets[name][0]:
-                self.get_parent_patchset_operations(parent_sha, patch_set_operations)
-                patch_set_operations.append(self._patch_set_operations[parent_sha])
+        parent_sha = self._patch_sets[(name, remote)][2]
+        if (parent_sha, remote) in self._patch_sets:
+            if self._patch_sets[(parent_sha, remote)][0] == self._patch_sets[(name, remote)][0]:
+                self.get_parent_patchset_operations(parent_sha, remote, patch_set_operations)
+                patch_set_operations.append(self._patch_set_operations[(parent_sha, remote)])
             else:
                 raise ValueError(REMOTE_DIFFERENT_ERROR.format(parent_sha, self._patch_sets[parent_sha][0],
                 name, self._patch_sets[name][0]))
 
-    def get_patchset_operations(self, name=None):
+    def get_patchset_operations(self, name, remote):
         '''
         This method returns a list of patchset operations. If name of the patchset is provided as a parameter,
         it gives the operations of that patchset otherwise operations of all patchsets are returned.
         The parent patchset's operations are listed first if there are any.
         '''
-        if name:
-            patch_set_operations = []
-            if name in self._patch_sets:
-                self.get_parent_patchset_operations(name, patch_set_operations)
-                patch_set_operations.append(self._patch_set_operations[name])
-                return patch_set_operations
-            raise ValueError(PATCHSET_UNKNOWN_ERROR.format(name, self._fileref))
-        else:
-            return self._patch_set_operations
+        patch_set_operations = []
+        if (name, remote) in self._patch_sets:
+            self.get_parent_patchset_operations(name, remote, patch_set_operations)
+            patch_set_operations.append(self._patch_set_operations[(name, remote)])
+            return patch_set_operations
+        raise ValueError(PATCHSET_UNKNOWN_ERROR.format(name, self._fileref))
+
 class _PatchSet():
     def __init__(self, element):
         try:
@@ -1315,12 +1317,14 @@ def main():
             test_manifest.write_current_combo('TESTCOMBO', 'TestManifest.xml')
             print('Updated current combo: {}'.format(test_manifest.general_config.current_combo))
 
-        print('\nPatchsets')
+        print('\nPatchsets:')
         print(test_manifest.get_all_patchsets)
-        print('\nPatchset Operations\n')
-        print(test_manifest.get_patchset_operations())
-        print(test_manifest.get_all_patchsets_in_combos())
-        print(test_manifest.get_patchset('test'))
+        print('\nTest Patchset:')
+        print(test_manifest.get_patchset("test", "firmware.boot.uefi.iafw.devops.ci.cr.tools"))
+        print('\nPatchset Operations:\n')
+        print(test_manifest.get_patchset_operations("test", "firmware.boot.uefi.iafw.devops.ci.cr.tools"))
+        print('\nPatchsets for a specific combo:')
+        print(test_manifest.get_patchsets_for_combo("edkrepo_3.0.3"))
 
         print(separator_string)
         if test_manifest.is_pin_file():
