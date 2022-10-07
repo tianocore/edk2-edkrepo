@@ -20,18 +20,17 @@ from git.exc import GitCommandError
 
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import DryRunArgument, SubmoduleSkipArgument, SourceManifestRepoArgument
+from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.sync_args as arguments
-from edkrepo.common.progress_handler import GitProgressHandler
-from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoManifestNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
-from edkrepo.common.humble import SYNC_UNCOMMITED_CHANGES, SYNC_MANIFEST_NOT_FOUND, SYNC_URL_CHANGE, SYNC_COMBO_CHANGE
+from edkrepo.common.humble import SYNC_MANIFEST_NOT_FOUND
 from edkrepo.common.humble import SYNC_SOURCE_MOVE_WARNING, SYNC_REMOVE_WARNING, SYNC_REMOVE_LIST_END_FORMATTING
 from edkrepo.common.humble import SYNC_MANIFEST_DIFF_WARNING, SYNC_MANIFEST_UPDATE
 from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, SYNC_REPO_CHANGE, SYNCING, FETCHING, UPDATING_MANIFEST
 from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_TARGET, SYNC_ERROR
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
-from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL, SYNC_INCOMPATIBLE_COMBO
+from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL
 from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL, SYNC_MOVE_FAILED
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
@@ -51,7 +50,7 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos, get_manifest_repo_path
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
+from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo.config.config_factory import get_workspace_manifest_file
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
@@ -293,7 +292,6 @@ class SyncCommand(EdkrepoCommand):
 
         # Does the current combo exist in the new manifest? If not check to see if you can use the repo sources from
         # the default combo
-        initial_combos = combinations_in_manifest(initial_manifest)
         new_combos = combinations_in_manifest(new_manifest_to_check)
         if current_combo not in new_combos:
             new_sources_for_current_combo = new_manifest_to_check.get_repo_sources(new_manifest_to_check.general_config.default_combo)
