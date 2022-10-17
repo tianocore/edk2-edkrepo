@@ -99,11 +99,6 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # Fetch notes
         repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
 
-        # Add the primary remote so that a reference to the latest code is available when
-        # using a mirror.
-        if add_primary_repo_remote(repo, repo_to_clone, args.verbose):
-            fetch_from_primary_repo(repo, repo_to_clone, args.verbose)
-
         # Handle branch/commit/tag checkout if needed. If a combination of these are specified the
         # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked
         # out
@@ -149,9 +144,6 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
             # Add the commit template if it exists.
             update_repo_commit_template(workspace_dir, repo, repo_to_clone, config, global_manifest_directory)
 
-        # Check to see if mirror is in sync with primary repo
-        if not in_sync_with_primary(repo, repo_to_clone, args.verbose):
-            ui_functions.print_warning_msg(MIRROR_BEHIND_PRIMARY_REPO)
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
@@ -590,33 +582,6 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_m
 def update_editor_config(config, global_manifest_directory):
     return
 
-def has_primary_repo_remote(repo, verbose=False):
-    """
-    Checks to see if the repo has a primary remote.
-    """
-    return False
-
-def add_primary_repo_remote(repo, repo_data, verbose=False):
-    """
-    Adds a primary remote if a mirror is being used.
-    Returns:
-      True - Primary remote added
-      False - Primary remote not added
-    """
-    return True
-
-def fetch_from_primary_repo(repo, repo_data, verbose=False):
-    """
-    Performs a fetch from the primary remote.
-    """
-    return
-
-def in_sync_with_primary(repo, repo_data, verbose=False):
-    """
-    Checks to see if the current branch of the mirror is in sync with the
-    primary repo branch.
-    """
-    return True
 
 def check_single_remote_connection(remote_url):
     """
