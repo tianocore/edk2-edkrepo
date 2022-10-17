@@ -41,7 +41,6 @@ from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_c
 from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
 from edkrepo.common.common_repo_functions import update_editor_config
 from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
-from edkrepo.common.common_repo_functions import has_primary_repo_remote, fetch_from_primary_repo, in_sync_with_primary
 from edkrepo.common.common_repo_functions import update_hooks, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
 from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig
@@ -198,18 +197,13 @@ class SyncCommand(EdkrepoCommand):
                         repo.remotes.origin.fetch()
                     else:
                         raise
-                if has_primary_repo_remote(repo, args.verbose):
-                    fetch_from_primary_repo(repo, repo_to_sync, args.verbose)
+
                 if not args.override and not repo.is_ancestor(ancestor_rev='HEAD', rev='origin/{}'.format(repo_to_sync.branch)):
                     ui_functions.print_info_msg(SYNC_COMMITS_ON_TARGET.format(repo_to_sync.branch, repo_to_sync.root), header = False)
                     local_commits = True
                     sync_error = True
                 if not args.fetch and (not local_commits or args.override):
                     repo.head.reset(commit='origin/{}'.format(repo_to_sync.branch), working_tree=True)
-
-                # Check to see if mirror is up to date
-                if not in_sync_with_primary(repo, repo_to_sync, args.verbose):
-                    ui_functions.print_info_msg(MIRROR_BEHIND_PRIMARY_REPO, header = False)
 
                 # Switch back to the initially active branch before exiting
                 repo.heads[initial_active_branch.name].checkout()
