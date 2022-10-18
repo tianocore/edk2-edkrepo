@@ -27,6 +27,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 import edkrepo.commands.arguments.list_pins_args as arguments
 import edkrepo.commands.humble.list_pins_humble as humble
 from edkrepo.common.common_repo_functions import find_less
+from edkrepo.common.logger import get_logger
 from edkrepo_manifest_parser.edk_manifest import ManifestXml, CiIndexXml
 
 class ListPinsCommand(EdkrepoCommand):
@@ -53,6 +54,7 @@ class ListPinsCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        logger = get_logger()
         less_path, use_less = find_less()
         if use_less:
             output_string = ''
@@ -84,12 +86,12 @@ class ListPinsCommand(EdkrepoCommand):
                     manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
                 manifest = ManifestXml(manifest_path)
         if manifest.general_config.pin_path is None:
-            print(humble.NO_PIN_FOLDER)
+            logger.info(humble.NO_PIN_FOLDER)
             return
         pin_folder = os.path.normpath(os.path.join(manifest_directory, manifest.general_config.pin_path))
         if args.verbose:
             if not use_less:
-                print(humble.PIN_FOLDER.format(pin_folder))
+                logger.info(humble.PIN_FOLDER.format(pin_folder))
             else:
                 output_string = (humble.PIN_FOLDER.format(pin_folder))
         for dirpath, _, filenames in os.walk(pin_folder):
@@ -106,13 +108,12 @@ class ListPinsCommand(EdkrepoCommand):
                 sys.stdout = stdout
                 if pin.project_info.codename == manifest.project_info.codename:
                     if not use_less:
-                        print('Pin File: {}'.format(file))
-                        if args.verbose and not args.description:
-                            print('Parsing Errors: {}\n'.format(parse_output.strip()))
-                        elif args.verbose and args.description:
-                            print('Parsing Errors: {}'.format(parse_output.strip()))
+                        logger.info('Pin File: {}'.format(file))
+                        if not args.description:
+                            logger.info('Parsing Errors: {}\n'.format(parse_output.strip()), extra={'verbose':args.verbose})
                         if args.description:
-                            print('Description: {}\n'.format(pin.project_info.description))
+                            logger.info('Parsing Errors: {}'.format(parse_output.strip()), extra={'verbose':args.verbose})
+                            logger.info('Description: {}\n'.format(pin.project_info.description))
                     elif use_less:
                         output_string = separator.join((output_string, 'Pin File: {}'.format(file)))
                         if args.verbose and not args.description:

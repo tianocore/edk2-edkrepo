@@ -163,3 +163,16 @@ COMMIT_MESSAGE = 'Pin file for project: {0} \nPin Description: {1}'
 
 # Common submodule error messages
 SUBMODULE_DEINIT_FAILED = 'Warning: Unable to remove all submodule content'
+
+# Logging messages
+GIT_VERSION = "Git Version: {}"
+LFS_VERSION = "LFS Version: {}"
+EDKREPO_VERSION = "edkrepo Version: {}"
+PYTHON_VERSION = "Python Version: {}"
+ENVIRONMENT_VARIABLES = "Environment Variables: {}"
+GIT_CONFIG = "Git Config: {}"
+LINE_BREAK = "\n\n" + "-"*50
+
+# Logging errors
+REMOVE_LOG_FAILED = "Failed to clear logs at {}"
+DISK_SPACE_ERROR = "Due to unavailability of disk space, edkrepo cannot generate log files at {}. Clear some space for it to work."

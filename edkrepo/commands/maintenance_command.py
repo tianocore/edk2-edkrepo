@@ -17,6 +17,7 @@ from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.arguments import maintenance_args as arguments
 from edkrepo.commands.humble import maintenance_humble as humble
 from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig, set_long_path_support
+from edkrepo.common.logger import get_logger
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
@@ -37,15 +38,15 @@ class MaintenanceCommande(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-
+        logger = get_logger()
         # Configure git long path support
-        ui_functions.print_info_msg(humble.LONGPATH_CONFIG, header = False)
+        logger.info(humble.LONGPATH_CONFIG)
         set_long_path_support()
-        print()
+        logger.info("")
 
         # Remove unneeded instead of entries from git global config
-        ui_functions.print_info_msg(humble.CLEAN_INSTEAD_OFS, header = False)
-        print()
+        logger.info(humble.CLEAN_INSTEAD_OFS)
+        logger.info("")
 
         # If in a valid workspace run the following for each repo:
         # git reflog --expire, git gc, git remote prune origin
@@ -53,8 +54,8 @@ class MaintenanceCommande(EdkrepoCommand):
             workspace_path = get_workspace_path()
         except EdkrepoWorkspaceInvalidException:
             workspace_path = None
-            ui_functions.print_error_msg(humble.NO_WOKKSPACE, header = False)
-            print()
+            logger.error(humble.NO_WOKKSPACE)
+            logger.info("")
 
         if workspace_path:
             manifest = get_workspace_manifest()
@@ -62,11 +63,11 @@ class MaintenanceCommande(EdkrepoCommand):
             for repo_to_maintain in repos_to_maintain:
                 local_repo_path = os.path.join(workspace_path, repo_to_maintain.root)
                 repo = Repo(local_repo_path)
-                ui_functions.print_info_msg(humble.REPO_MAINTENANCE.format(repo_to_maintain.root), header = False)
-                ui_functions.print_info_msg(humble.REFLOG_EXPIRE, header = False)
+                logger.info(humble.REPO_MAINTENANCE.format(repo_to_maintain.root))
+                logger.info(humble.REFLOG_EXPIRE)
                 repo.git.reflog('expire', '--expire=now', '--all')
-                ui_functions.print_info_msg(humble.GC_AGGRESSIVE, header = False)
+                logger.info(humble.GC_AGGRESSIVE)
                 repo.git.gc('--aggressive', '--prune=now')
-                ui_functions.print_info_msg(humble.REMOTE_PRUNE, header = False)
+                logger.info(humble.REMOTE_PRUNE)
                 repo.git.remote('prune', 'origin')
-                print()
+                logger.info("")

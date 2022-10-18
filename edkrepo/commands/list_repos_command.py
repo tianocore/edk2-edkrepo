@@ -20,6 +20,7 @@ import edkrepo.commands.humble.list_repos_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.logger import get_logger
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 
@@ -48,9 +49,10 @@ class ListReposCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        print()
+        logger = get_logger()
+        logger.info("")
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
-        print()
+        logger.info("")
 
         cfg_manifest_repos, user_config_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
@@ -63,13 +65,12 @@ class ListReposCommand(EdkrepoCommand):
         for manifest_repo in cfg_manifest_repos:
             # Get path to global manifest file
             global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
-            if args.verbose:
-                print(humble.MANIFEST_DIRECTORY)
-                print(global_manifest_directory)
-                print()
+            logger.info(humble.MANIFEST_DIRECTORY, extra={'verbose':args.verbose})
+            logger.info(global_manifest_directory, extra={'verbose':args.verbose})
+            logger.info("", extra={'verbose':args.verbose})
             #Create a dictionary containing all the manifests listed in the CiIndex.xml file
             index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
-            print(index_path)
+            logger.info(index_path)
             ci_index_xml = CiIndexXml(index_path)
             config_manifest_repos_project_list = ci_index_xml.project_list
             if args.archived:
@@ -88,10 +89,9 @@ class ListReposCommand(EdkrepoCommand):
         for manifest_repo in user_config_manifest_repos:
              # Get path to global manifest file
             global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
-            if args.verbose:
-                print(humble.MANIFEST_DIRECTORY)
-                print(global_manifest_directory)
-                print()
+            logger.info(humble.MANIFEST_DIRECTORY, extra={'verbose':args.verbose})
+            logger.info(global_manifest_directory, extra={'verbose':args.verbose})
+            logger.info("", extra={'verbose':args.verbose})
             #Create a dictionary containing all the manifests listed in the CiIndex.xml file
             index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
             ci_index_xml = CiIndexXml(index_path)
@@ -130,7 +130,7 @@ class ListReposCommand(EdkrepoCommand):
 
         #Determine the names of the repositories
         self.generate_repo_names(repo_urls, manifests, args.archived)
-        print(humble.REPOSITORIES)
+        logger.info(humble.REPOSITORIES)
 
         #If the user provided a list of repositories to view, check to make sure
         #at least one repository will be shown, if not provide an error
@@ -142,8 +142,8 @@ class ListReposCommand(EdkrepoCommand):
             if args.repos and repo_name not in args.repos:
                 continue
             repo = self.repo_names[repo_name][0]
-            print(humble.REPO_NAME_AND_URL.format(repo_name, repo))
-            print(humble.BRANCHES)
+            logger.info(humble.REPO_NAME_AND_URL.format(repo_name, repo))
+            logger.info(humble.BRANCHES)
 
             #Determine the list of branches that used by any branch combination in any manifest
             branches = set()
@@ -167,7 +167,7 @@ class ListReposCommand(EdkrepoCommand):
 
             #For each interesting branch in the current git repository...
             for branch in branches:
-                print(humble.BRANCH_FORMAT_STRING.format(branch))
+                logger.info(humble.BRANCH_FORMAT_STRING.format(branch))
 
                 #Determine the branch combinations that use that branch
                 for project_name in manifests:
@@ -201,9 +201,9 @@ class ListReposCommand(EdkrepoCommand):
                             #Print the branch combination name, if this is the default branch combination,
                             #then print it in green color with *'s around it
                             if default_combo == combo:
-                                print(humble.DEFAULT_COMBO_FORMAT_STRING.format(project_name_print, combo))
+                                logger.info(humble.DEFAULT_COMBO_FORMAT_STRING.format(project_name_print, combo))
                             else:
-                                print(humble.COMBO_FORMAT_STRING.format(project_name_print, combo))
+                                logger.info(humble.COMBO_FORMAT_STRING.format(project_name_print, combo))
 
     def get_repo_url(self, repo_url):
         if repo_url[-4:].lower() == '.git':

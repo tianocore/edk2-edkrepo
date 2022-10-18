@@ -14,6 +14,7 @@ from git import Repo
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.checkout_pin_args as arguments
 import edkrepo.commands.humble.checkout_pin_humble as humble
+from edkrepo.common.logger import get_logger
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, reset_sparse_checkout, sparse_checkout
 from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest
@@ -50,6 +51,7 @@ class CheckoutPinCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        logger = get_logger()
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
 
@@ -74,15 +76,14 @@ class CheckoutPinCommand(EdkrepoCommand):
         self.__pin_matches_project(pin, manifest, workspace_path)
         sparse_enabled = sparse_checkout_enabled(workspace_path, manifest_sources)
         if sparse_enabled:
-            ui_functions.print_info_msg(SPARSE_RESET, header = False)
+            logger.info(SPARSE_RESET)
             reset_sparse_checkout(workspace_path, manifest_sources)
         submodule_combo = pin.general_config.current_combo
         try:
             deinit_full(workspace_path, manifest, args.verbose)
         except Exception as e:
-            ui_functions.print_error_msg(SUBMODULE_DEINIT_FAILED, header = False)
-            if args.verbose:
-                ui_functions.print_error_msg(e, header = False)
+            logger.error(SUBMODULE_DEINIT_FAILED)
+            logger.error(e, extra={'verbose':args.verbose})
         pin_repo_sources = pin.get_repo_sources(pin.general_config.current_combo)
         try:
             checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest)
@@ -94,7 +95,7 @@ class CheckoutPinCommand(EdkrepoCommand):
                 cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
             maintain_submodules(workspace_path, pin, submodule_combo, args.verbose, cache_path)
             if sparse_enabled:
-                ui_functions.print_info_msg(SPARSE_CHECKOUT, header = False)
+                logger.info(SPARSE_CHECKOUT, header = False)
                 sparse_checkout(workspace_path, pin_repo_sources, manifest)
 
     def __get_pin_path(self, args, workspace_path, manifest_repo_path, manifest):
@@ -115,13 +116,13 @@ class CheckoutPinCommand(EdkrepoCommand):
         else:
             raise EdkrepoInvalidParametersException(humble.NOT_FOUND)
 
-    def __pin_matches_project(self, pin, manifest, workspace_path):
+    def __pin_matches_project(self, logger, pin, manifest, workspace_path):
         if pin.project_info.codename != manifest.project_info.codename:
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
         elif not set(pin.remotes).issubset(set(manifest.remotes)):
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
         elif pin.general_config.current_combo not in combinations_in_manifest(manifest):
-            ui_functions.print_warning_msg(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo), header = False)
+            logger.warning(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo))
         combo_name = pin.general_config.current_combo
         pin_sources = pin.get_repo_sources(combo_name)
         pin_root_remote = {source.root:source.remote_name for source in pin_sources}

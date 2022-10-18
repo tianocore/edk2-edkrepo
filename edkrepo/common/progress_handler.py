@@ -8,7 +8,8 @@
 #
 
 from git import RemoteProgress
-
+from edkrepo.common.logger import get_logger
+logger = get_logger()
 class GitProgressHandler(RemoteProgress):
     def __init__(self):
         super().__init__()
@@ -16,4 +17,4 @@ class GitProgressHandler(RemoteProgress):
 
     def update(self, *args):
         self.__max_line_len = max(self.__max_line_len, len(self._cur_line))
-        print(self._cur_line.ljust(self.__max_line_len), end="\r")
+        logger.info(self._cur_line.ljust(self.__max_line_len), end="\r")

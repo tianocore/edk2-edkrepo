@@ -25,11 +25,17 @@ from git.exc import GitCommandError
 
 from edkrepo.commands import command_factory
 from edkrepo.config import config_factory
+from edkrepo.common.edkrepo_version import EdkrepoVersion
 from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoGlobalConfigNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoWarningException
 from edkrepo.common.edkrepo_exception import EdkrepoConfigFileInvalidException
 from edkrepo.common.humble import KEYBOARD_INTERRUPT, GIT_CMD_ERROR
+from edkrepo.common.humble import LINE_BREAK, PYTHON_VERSION, LFS_VERSION
+from edkrepo.common.humble import KEYBOARD_INTERRUPT, GIT_CMD_ERROR
+from edkrepo.common.humble import EDKREPO_VERSION, GIT_VERSION, ENVIRONMENT_VARIABLES, GIT_CONFIG
 from edkrepo.common.pathfix import get_actual_path
+from edkrepo.common.logger import get_logger
+
 
 def generate_command_line(command):
     parser = argparse.ArgumentParser()
@@ -164,10 +170,10 @@ def main():
         config["cfg_file"] = config_factory.GlobalConfig()
         config["user_cfg_file"] = config_factory.GlobalUserConfig()
     except EdkrepoGlobalConfigNotFoundException as e:
-        print("Error: {}".format(str(e)))
+        logger.error("Error: {}".format(str(e)))
         return e.exit_code
     except EdkrepoConfigFileInvalidException as e:
-        print("Error: {}".format(str(e)))
+        logger.error("Error: {}".format(str(e)))
         return e.exit_code
 
     parser = generate_command_line(command)
@@ -179,40 +185,56 @@ def main():
         return 0
     parsed_args = parser.parse_args()
     command_name = parsed_args.subparser_name
+
+    git_version_output = subprocess.getoutput('git --version')
+    lfs_version_output = subprocess.getoutput('git-lfs version')
+    python_version_output = str(sys.version_info.major) + "." + str(sys.version_info.minor) + "." + str(sys.version_info.micro)
+    edkrepo_version = EdkrepoVersion(pkg_resources.get_distribution('edkrepo').version)
+    environment_info = json.dumps(dict(os.environ), indent=2)
+    git_config_values = subprocess.getoutput('git config --list --show-scope --show-origin')
+    logger.info(GIT_VERSION.format(git_version_output), extra = {'normal': False})
+    logger.info(LFS_VERSION.format(lfs_version_output), extra = {'normal': False})
+    logger.info(PYTHON_VERSION.format(python_version_output), extra = {'normal': False})
+    logger.info(EDKREPO_VERSION.format(edkrepo_version.version_string()), extra = {'normal': False})
+    logger.info(ENVIRONMENT_VARIABLES.format(environment_info), extra={'normal': False})
+    logger.info(GIT_CONFIG.format(git_config_values), extra={'normal': False})
+
     try:
         command.run_command(command_name, parsed_args, config)
     except EdkrepoWarningException as e:
-        print("Warning: {}".format(str(e)))
+        logger.warning("Warning: {}".format(str(e)))
         return e.exit_code
     except EdkrepoException as e:
         if parsed_args.verbose:
             traceback.print_exc()
-        print("Error: {}".format(str(e)))
+        logger.error("Error: {}".format(str(e)))
         return e.exit_code
     except GitCommandError as e:
         if parsed_args.verbose:
             traceback.print_exc()
         out_str = ''
         out_str = ' '.join(e.command)
-        print(GIT_CMD_ERROR.format(out_str))
-        print(e.stdout.strip())
-        print(e.stderr.strip())
+        logger.error(GIT_CMD_ERROR.format(out_str))
+        logger.warning(e.stdout.strip())
+        logger.warning(e.stderr.strip())
         return e.status
     except KeyboardInterrupt:
         if parsed_args.verbose:
             traceback.print_exc()
-        print(KEYBOARD_INTERRUPT)
+        logger.warning(KEYBOARD_INTERRUPT)
         return 1
     except Exception as e:
         if parsed_args.verbose:
             traceback.print_exc()
-        print("Error: {}".format(str(e)))
+        logger.error("Error: {}".format(str(e)))
         return 1
-    if parsed_args.performance:
-        print('\nExecution Time: {}'.format(dt.datetime.now() - start_time))
+
+    logger.info('Execution Time: {}'.format(dt.datetime.now() - start_time), extra = {'normal': parsed_args.performance})
+    logger.info(LINE_BREAK, extra={'normal': False})
     return 0
 
 if __name__ == "__main__":
+    logger = get_logger()
     try:
         sys.exit(main())
     except Exception as e:

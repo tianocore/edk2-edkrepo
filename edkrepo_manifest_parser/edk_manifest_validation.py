@@ -17,6 +17,7 @@ from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from edkrepo.common.humble import MANIFEST_NAME_INCONSISTENT
 from edkrepo.common.humble import INDEX_DUPLICATE_NAMES
 from edkrepo.common.edkrepo_exception import EdkrepoVerificationException
+from edkrepo.common.logger import get_logger
 from edkrepo.common.humble import VERIFY_ERROR_HEADER
 
 class ValidateManifest:
@@ -120,13 +121,13 @@ def get_manifest_validation_status(manifestfile_validation):
     return manifest_error
 
 def print_manifest_errors(manifestfile_validation):
-    print(VERIFY_ERROR_HEADER)
+    logger.info(VERIFY_ERROR_HEADER)
     for manifestfile in manifestfile_validation.keys():
         for result in manifestfile_validation[manifestfile]:
             if not result[1]:
-                print ("File name: {} ".format(manifestfile))
-                print ("Error type: {} ".format(result[0]))
-                print("Error message: {} \n".format(result[2]))
+                logger.error("File name: {} ".format(manifestfile))
+                logger.error("Error type: {} ".format(result[0]))
+                logger.error("Error message: {} \n".format(result[2]))
 def main():
     parser = argparse.ArgumentParser()
     # Add mutually exclusive arguments group
@@ -147,13 +148,14 @@ def main():
 
     # Check status.If any error print errors and raise exception.
     if not manifest_error:
-        print("Manifest validation status: PASS \n")
+        logger.info("Manifest validation status: PASS \n")
     else:
         print_manifest_errors(manifestfile_validation)
         raise EdkrepoVerificationException(("Manifest validation status: FAIL \n"))
     return 0
 
 if __name__ == '__main__':
+    logger = get_logger()
     try:
         sys.exit(main())
     except Exception as e:
