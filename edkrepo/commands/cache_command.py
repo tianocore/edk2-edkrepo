@@ -18,6 +18,7 @@ from edkrepo.commands.humble.cache_humble import CACHE_INFO_LINE, PROJECT_NOT_FO
 from edkrepo.commands.humble.cache_humble import UNABLE_TO_LOAD_MANIFEST, UNABLE_TO_PARSE_MANIFEST
 from edkrepo.common.common_cache_functions import add_missing_cache_repos
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
+from edkrepo.common.logger import get_logger
 from edkrepo.common.edkrepo_exception import EdkrepoCacheException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
@@ -70,6 +71,7 @@ class CacheCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        logger = get_logger()
         if not args.info:
         # Process enable disable requests
             if args.disable:
@@ -85,8 +87,7 @@ class CacheCommand(EdkrepoCommand):
 
         # Get the current state now that we have processed enable/disable
         cache_state = config['user_cfg_file'].caching_state
-
-        ui_functions.print_info_msg(CACHE_ENABLED.format(cache_state))
+        logger.info(CACHE_ENABLED.format(cache_state))
         if not cache_state:
             return
         # State is enabled so make sure cache directory exists
@@ -110,7 +111,7 @@ class CacheCommand(EdkrepoCommand):
 
         # Display all the cache information
         if args.info:
-            ui_functions.print_info_msg(CACHE_INFO)
+            logger.info(CACHE_INFO)
             info = cache_obj.get_cache_info(args.verbose)
             if args.format == 'json':
                 cache_json_out = _create_cache_json_object(info)
@@ -121,7 +122,7 @@ class CacheCommand(EdkrepoCommand):
 
         # Do an update if requested
         if args.update:
-            ui_functions.print_info_msg(CACHE_FETCH)
+            logger.info(CACHE_FETCH)
             cache_obj.update_cache(verbose=True)
 
         # Close the cache repos

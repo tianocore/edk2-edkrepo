@@ -29,6 +29,7 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
+from edkrepo.common.logger import get_logger
 import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from project_utils.submodule import maintain_submodules
@@ -74,6 +75,7 @@ class CloneCommand(EdkrepoCommand):
 
 
     def run_command(self, args, config):
+        logger = get_logger()
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
 
         name_or_manifest = args.ProjectNameOrManifestFile
@@ -198,5 +200,5 @@ class CloneCommand(EdkrepoCommand):
             # Command line disables sparse checkout
             use_sparse = False
         if use_sparse:
-            ui_functions.print_info_msg(SPARSE_CHECKOUT)
+            logger.info(SPARSE_CHECKOUT)
             sparse_checkout(workspace_dir, repo_sources_to_clone, manifest)

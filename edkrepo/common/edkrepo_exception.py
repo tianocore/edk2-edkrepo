@@ -110,3 +110,10 @@ class EdkrepoInvalidConfigOptionException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 125)
 
+class EdkrepoVersionException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 126)
+
+class EdkrepoLogsRemoveException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 127)

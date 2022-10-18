@@ -18,7 +18,7 @@ from colorama import Fore
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.log_args as arguments
 from edkrepo.common.common_repo_functions import sort_commits, find_less
-import edkrepo.common.ui_functions as ui_functions
+from edkrepo.common.logger import get_logger
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 
 class LogCommand(EdkrepoCommand):
@@ -45,11 +45,12 @@ class LogCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        logger = get_logger()
         if args.number:
             try:
                 args.number = int(args.number)
             except ValueError:
-                print("Error: \'{}\' is not an integer".format(args.number))
+                logger.error("Error: \'{}\' is not an integer".format(args.number))
                 return
 
         workspace_path = get_workspace_path()
@@ -70,12 +71,12 @@ class LogCommand(EdkrepoCommand):
                                                                   Fore.CYAN,
                                                                   os.path.basename(commit.repo.working_dir),
                                                                   Fore.RESET,
-                                                                  ui_functions.safe_str(commit.summary))
+                                                                  logger.safe_str(commit.summary))
                 if use_less:
                     output_string = separator.join((output_string, oneline))
 
                 else:
-                    print(oneline)
+                    logger.info(oneline)
             else:
                 time_string = datetime.utcfromtimestamp(commit.authored_date - commit.author_tz_offset).strftime("%c")
                 time_zone_string = "{}{:04.0f}".format("-" if commit.author_tz_offset > 0 else "+",
@@ -88,21 +89,21 @@ class LogCommand(EdkrepoCommand):
                 author_string = "Author: {} <{}>".format(commit.author.name, commit.author.email)
                 date_string = "Date:   {} {}".format(time_string, time_zone_string)
                 if use_less:
-                    output_string = separator.join((output_string, hexsha_string, ui_functions.safe_str(author_string), date_string))
+                    output_string = separator.join((output_string, hexsha_string, logger.safe_str(author_string), date_string))
 
                     commit_string = ""
                     for line in commit.message.splitlines():
-                        commit_string = separator.join((commit_string, ui_functions.safe_str("    {}".format(line))))
+                        commit_string = separator.join((commit_string, logger.safe_str("    {}".format(line))))
 
                     output_string = separator.join((output_string, commit_string, separator))
                 else:
-                    print(hexsha_string)
-                    ui_functions.print_safe(author_string)
-                    print(date_string)
-                    print("")
+                    logger.info(hexsha_string)
+                    logger.print_safe(author_string)
+                    logger.info(date_string)
+                    logger.info("")
                     for line in commit.message.splitlines():
-                        ui_functions.print_safe("    {}".format(line))
-                    print("")
+                        logger.print_safe("    {}".format(line))
+                    logger.info("")
         if less_path:
             less_output = subprocess.Popen([str(less_path), '-F', '-R', '-S', '-X', '-K'], stdin=subprocess.PIPE, stdout=sys.stdout, universal_newlines=True)
             less_output.communicate(input=output_string)

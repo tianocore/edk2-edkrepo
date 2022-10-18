@@ -16,6 +16,7 @@ from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.clean_args as arguments
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.common.logger import get_logger
 
 class CleanCommand(EdkrepoCommand):
     def __init__(self):
@@ -45,6 +46,7 @@ class CleanCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        logger = get_logger()
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
         manifest_config = manifest.general_config
@@ -57,4 +59,4 @@ class CleanCommand(EdkrepoCommand):
                                     n=(not args.force),
                                     q=(args.quiet and args.force))
             if result:
-                ui_functions.print_info_msg(result, header = False)
+                logger.info(result)

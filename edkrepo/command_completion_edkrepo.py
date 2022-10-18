@@ -18,16 +18,18 @@ from edkrepo.common.common_repo_functions import combinations_in_manifest
 from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.logger import get_logger
 from edkrepo.config import config_factory
 from edkrepo.config.config_factory import get_workspace_manifest
+logger = get_logger()
 
 def checkout(parsed_args, config):
     manifest = get_workspace_manifest()
-    print(' '.join(combinations_in_manifest(manifest)))
+    logger.info(' '.join(combinations_in_manifest(manifest)))
 
 def current_combo(parsed_args, config):
     manifest = get_workspace_manifest()
-    print(" [{}]".format(manifest.general_config.current_combo))
+    logger.info(" [{}]".format(manifest.general_config.current_combo))
 
 def checkout_pin(parsed_args, config):
     pins = []
@@ -56,11 +58,11 @@ def checkout_pin(parsed_args, config):
                 pin = ManifestXml(pin_file)
                 parse_output = sys.stdout.getvalue()
                 sys.stdout = stdout
-                if parsed_args.verbose and parse_output.strip() != '':
-                    print('Pin {} Parsing Errors: {}\n'.format(file, parse_output.strip()))
+                if parse_output.strip() != '':
+                    logger.info('Pin {} Parsing Errors: {}\n'.format(file, parse_output.strip()), extra={'verbose': parsed_args.verbose})
                 if pin.project_info.codename == manifest.project_info.codename:
                     pins.append(file)
-        print(' '.join(pins))
+        logger.info(' '.join(pins), extra={'verbose': parsed_args.verbose})
 
 # To add command completions for a new command, add an entry to this dictionary.
 command_completions = {
@@ -91,7 +93,7 @@ def main():
     except Exception as e:
         if parsed_args.verbose:
             traceback.print_exc()
-            print("Error: {}".format(str(e)))
+            logger.error("Error: {}".format(str(e)), extra={'verbose':parsed_args.verbose})
         return 1
     return 0
 

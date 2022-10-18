@@ -14,6 +14,7 @@ import edkrepo.commands.arguments.manifest_repo_args as arguments
 import edkrepo.commands.humble.manifest_repos_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.logger import get_logger
 import edkrepo.common.ui_functions as ui_functions
 
 
@@ -72,13 +73,14 @@ class ManifestRepos(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        logger = get_logger()
         cfg_repos, user_cfg_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
         if args.action == 'list':
             for repo in cfg_repos:
-                ui_functions.print_info_msg(humble.CFG_LIST_ENTRY.format(repo), header = False)
+                logger.info(humble.CFG_LIST_ENTRY.format(repo))
             for repo in user_cfg_repos:
-                ui_functions.print_info_msg(humble.USER_CFG_LIST_ENTRY.format(repo), header = False)
+                logger.info(humble.USER_CFG_LIST_ENTRY.format(repo))
 
 
         elif (args.action == ('add' or 'remove')) and not args.name:
