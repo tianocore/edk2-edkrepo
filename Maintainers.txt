@@ -34,7 +34,7 @@ EDK II
 ------
 W: https://github.com/tianocore/tianocore.github.io/wiki/EDK-II
 L: https://edk2.groups.io/g/devel/
-T: git - https://github.com/tianocore/edk2-staging.git
+T: git - https://github.com/tianocore/edk2-edkrepo
 
 Responsible Disclosure, Reporting Security Issues
 -------------------------------------------------
@@ -44,7 +44,7 @@ Tools
 -----
 
 EdkRepo
-W: https://github.com/tianocore/edk2-staging/tree/EdkRepo
+W: https://github.com/tianocore/edk2-edkrepo
 M: Nate DeSimone <nathaniel.l.desimone@intel.com>
 M: Ashley DeSimone <ashley.e.desimone@intel.com>
-R: Kevin Sun <kevin.sun@intel.com>
+M: Kevin Sun <kevin.sun@intel.com>
