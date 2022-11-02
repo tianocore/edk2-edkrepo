@@ -78,7 +78,7 @@ PRIMARY_REMOTE_NAME = 'primary'
 
 
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
-    created_patch_sets = []
+    # created_patch_sets = []
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -104,7 +104,7 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked out
         if repo_to_clone.patch_set:
             patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
-            created_patch_sets.append((repo_to_clone.patch_set, repo_to_clone.remote_name))
+            # created_patch_sets.append((repo_to_clone.patch_set, repo_to_clone.remote_name))
             create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
         elif repo_to_clone.commit:
             if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
@@ -150,22 +150,22 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
 
 
     # Create patch set branches
-    patchsets_in_manifest = manifest.get_patchsets_for_combo()
-    if patchsets_in_manifest:
-        default_combo_repo = None
+    # patchsets_in_manifest = manifest.get_patchsets_for_combo()
+    # if patchsets_in_manifest:
+    #     default_combo_repo = None
 
-        for combo, patch in patchsets_in_manifest.items():
-            for repo_to_clone in manifest.get_repo_sources(combo):
-                if getattr(repo_to_clone, "patch_set"):
-                    repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
-                    if (getattr(patch, "name"), getattr(repo_to_clone, "remote_name")) not in created_patch_sets:
-                        patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"), getattr(repo_to_clone, "remote_name"))
-                        create_local_branch(getattr(repo_to_clone, "patch_set"), patch, global_manifest_path, manifest, repo)
-                    else:
-                        default_combo_repo = repo
+    #     for combo, patch in patchsets_in_manifest.items():
+    #         for repo_to_clone in manifest.get_repo_sources(combo):
+    #             if getattr(repo_to_clone, "patch_set"):
+    #                 repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
+    #                 if (getattr(patch, "name"), getattr(repo_to_clone, "remote_name")) not in created_patch_sets:
+    #                     patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"), getattr(repo_to_clone, "remote_name"))
+    #                     create_local_branch(getattr(repo_to_clone, "patch_set"), patch, global_manifest_path, manifest, repo)
+    #                 else:
+    #                     default_combo_repo = repo
 
-        if default_combo_repo is not None:
-            default_combo_repo.git.checkout(created_patch_sets[0][0])
+    #     if default_combo_repo is not None:
+    #         default_combo_repo.git.checkout(created_patch_sets[0][0])
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
@@ -809,7 +809,7 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
     path = os.path.join(repo_path, "repo")
     json_path = os.path.join(path, "patchset_{}.json".format(os.path.basename(repo.working_dir)))
     remote_list = manifest_obj.remotes
-    operations_list = manifest_obj.get_patchset_operations(patchset.name)
+    operations_list = manifest_obj.get_patchset_operations(patchset.name, patchset.remote)
     REMOTE_IN_REMOTE_LIST = False
     for remote in remote_list:
         if patchset.remote == remote.name:
@@ -890,7 +890,7 @@ def apply_patchset_operations(repo, remote, operations_list, global_manifest_pat
                             except:
                                 raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                             try:
-                                repo.git.cherry_pick(operation.sha)
+                                repo.git.execute(['git', 'cherry-pick', operation.sha, '-x'])
                             except:
                                 raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
                             try:
@@ -905,6 +905,6 @@ def apply_patchset_operations(repo, remote, operations_list, global_manifest_pat
                     except:
                         raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                     try:
-                        repo.git.cherry_pick(operation.sha)
+                        repo.git.execute(['git', 'cherry-pick', operation.sha, '-x'])
                     except:
                         raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
