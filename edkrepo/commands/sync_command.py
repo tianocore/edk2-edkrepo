@@ -522,6 +522,8 @@ class SyncCommand(EdkrepoCommand):
                                 section = 'includeIf "gitdir:%(prefix){}/"'.format(gitdir)
                             else:
                                 section = 'includeIf "gitdir:{}/"'.format(gitdir)
+                            if gitglobalconfig.has_section(section):
+                                gitglobalconfig.remove_section(section)
                             gitglobalconfig.add_section(section)
                             gitglobalconfig.set(section, 'path', path)
                             gitglobalconfig.release()
