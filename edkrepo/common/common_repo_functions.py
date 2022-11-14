@@ -822,7 +822,10 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
                 parent_patchset = manifest_obj.get_patchset(patchset.parent_sha, patchset.remote)
                 repo.git.checkout(parent_patchset[2], b=name)
             except:
-                repo.git.checkout(patchset.parent_sha, b=name)
+                if patchset.parent_sha in repo.tags:
+                    repo.git.checkout("tags/{}".format(patchset.parent_sha), b=name)
+                else:
+                    repo.git.checkout(patchset.parent_sha, b=name)
             try:
                 apply_patchset_operations(repo, remote, operations_list, global_manifest_path, remote_list)
                 head_sha = repo.git.execute(['git', 'rev-parse', 'HEAD'])
