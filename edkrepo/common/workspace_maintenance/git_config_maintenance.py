@@ -30,22 +30,14 @@ def clean_git_globalconfig():
         for section in git_globalconfig.sections():
             data = includeif_regex.match(section)
             if data:
-                gitrepo_path = data.group(1)
                 gitconfig_path = git_globalconfig.get(section, 'path')
-                if _path_is_new_style(gitrepo_path):
-                    gitrepo_path = _remove_new_style_prefix(gitrepo_path)
                 if _path_is_new_style(gitconfig_path):
                     gitconfig_path = _remove_new_style_prefix(gitconfig_path)
                 if sys.platform == "win32":
-                    gitrepo_path = gitrepo_path[1:]
                     gitconfig_path = gitconfig_path[1:]
-                gitrepo_path = os.path.normpath(gitrepo_path)
                 gitconfig_path = os.path.normpath(gitconfig_path)
-                (repo_manifest_path, _) = os.path.split(gitconfig_path)
-                repo_manifest_path = os.path.join(repo_manifest_path, "Manifest.xml")
-                if not os.path.isdir(gitrepo_path) and not os.path.isfile(gitconfig_path):
-                    if not os.path.isfile(repo_manifest_path):
-                        git_globalconfig.remove_section(section)
+                if not os.path.isfile(gitconfig_path):
+                    git_globalconfig.remove_section(section)
             data_old = includeif_regex_old.match(section)
             if data_old:
                 git_globalconfig.remove_section(section)
