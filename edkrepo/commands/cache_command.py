@@ -138,18 +138,23 @@ def _create_cache_json_object(info):
     return [_create_cache_dict_item(item) for item in info]
 
 def _get_manifest(project, config, source_manifest_repo=None):
-    try:
-        manifest_repo, source_cfg, manifest_path = find_project_in_all_indices(
-            project,
-            config['cfg_file'],
-            config['user_cfg_file'],
-            PROJECT_NOT_FOUND.format(project),
-            NO_INSTANCE.format(project),
-            source_manifest_repo)
-    except Exception:
-        raise EdkrepoCacheException(UNABLE_TO_LOAD_MANIFEST)
+    if os.path.exists(project):
+        manifest_path = project
+    else:
+        try:
+            manifest_repo, source_cfg, manifest_path = find_project_in_all_indices(
+                project,
+                config['cfg_file'],
+                config['user_cfg_file'],
+                PROJECT_NOT_FOUND.format(project),
+                NO_INSTANCE.format(project),
+                source_manifest_repo)
+        except Exception:
+            raise EdkrepoCacheException(UNABLE_TO_LOAD_MANIFEST)
     try:
         manifest = ManifestXml(manifest_path)
+        print(manifest)
+        sys.exit()
     except Exception:
         raise EdkrepoCacheException(UNABLE_TO_PARSE_MANIFEST)
     return manifest
