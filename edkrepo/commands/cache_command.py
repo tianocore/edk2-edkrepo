@@ -8,6 +8,7 @@
 #
 
 import os
+import json
 
 import edkrepo.commands.arguments.cache_args as arguments
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
@@ -51,6 +52,11 @@ class CacheCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.COMMAND_INFO_HELP})
+        args.append({'name': 'format',
+                     'positional': False,
+                     'required': False,
+                     'action': 'store',
+                     'help-text': arguments.COMMAND_FORMAT_HELP})
         args.append({'name': 'path',
                      'positional': False,
                      'required': False,
@@ -64,7 +70,6 @@ class CacheCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-
         if not args.info:
         # Process enable disable requests
             if args.disable:
@@ -107,8 +112,12 @@ class CacheCommand(EdkrepoCommand):
         if args.info:
             ui_functions.print_info_msg(CACHE_INFO)
             info = cache_obj.get_cache_info(args.verbose)
-            for item in info:
-                ui_functions.print_info_msg(CACHE_INFO_LINE.format(item.path, item.remote, item.url))
+            if args.format == 'json':
+                cache_json_out = _create_cache_json_object(info)
+                ui_functions.print_info_msg(json.dumps(cache_json_out, indent=2), header=False)
+            else:
+                for item in info:
+                    ui_functions.print_info_msg(CACHE_INFO_LINE.format(item.path, item.remote, item.url))
 
         # Do an update if requested
         if args.update:
@@ -118,6 +127,15 @@ class CacheCommand(EdkrepoCommand):
         # Close the cache repos
         cache_obj.close(args.verbose)
 
+def _create_cache_json_object(info):
+    def _create_cache_dict_item(item):
+        return {
+            'path': item.path,
+            'remote': item.remote,
+            'url': item.url
+        }
+
+    return [_create_cache_dict_item(item) for item in info]
 
 def _get_manifest(project, config, source_manifest_repo=None):
     try:
