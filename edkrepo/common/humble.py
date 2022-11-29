@@ -51,6 +51,7 @@ SYNC_UPDATE_FIX = 'To checkout the new SHA/tag/branch run edkrepo checkout on th
 SYNC_BRANCH_CHANGE_ON_LOCAL = 'The SHA, tag or branch defined in the current combo has changed from {} to {} for the {} repo.\n The current workspace is not on the SHA/tag/branch defined in the initial combo. Unable to checkout new SHA/tag/branch.\n' + SYNC_UPDATE_FIX
 SYNC_REBASE_CALC_FAIL = 'Unable to calculate if a rebase is required for the current branch'
 SYNC_INCOMPATIBLE_COMBO = 'No compatible combinations found in the latest manifest file. Cloning a new workspace is recommended. ' + SYNC_EXIT
+SYNC_AUTOMATIC_REMOTE_PRUNE = 'Performing automatic remote prune...'
 SYNC_MANIFEST_UPDATE_FAILED = 'Failed to update manifest.'
 
 #informational messages for sync_command.py
