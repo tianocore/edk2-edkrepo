@@ -220,5 +220,15 @@ class RepoCache(object):
                     print(CACHE_FETCH_REMOTE.format(dir_name, remote.url))
                 remote.fetch(progress=GitProgressHandler())
 
+    def is_sha_cached(self, url_or_name, sha, verbose=False):
+        repo = self._get_repo(self._create_name(url_or_name))
+        output_data = repo.git.execute(['git', 'cat-file', '-e', sha])
+        if output_data:
+            return False
+        else:
+            return True
+
+
+
     def clean_cache(self, verbose=False):
         raise NotImplementedError
