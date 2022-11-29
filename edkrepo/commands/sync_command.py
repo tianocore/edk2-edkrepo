@@ -31,7 +31,7 @@ from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, SYNC_REPO_CHANG
 from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_TARGET, SYNC_ERROR
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL
-from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL, SYNC_MOVE_FAILED
+from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL, SYNC_MOVE_FAILED, SYNC_AUTOMATIC_REMOTE_PRUNE
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
@@ -201,7 +201,13 @@ class SyncCommand(EdkrepoCommand):
                         prune_needed = True
                     if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
                         prune_needed = True
+                    prune_needed_heuristic_str = "error: cannot lock ref"
+                    if e.stdout.strip().find(prune_needed_heuristic_str) != -1:
+                        prune_needed = True
+                    if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
+                        prune_needed = True
                     if prune_needed:
+                        ui_functions.print_info_msg(SYNC_AUTOMATIC_REMOTE_PRUNE)
                         time.sleep(1.0)
                         repo.git.remote('prune', 'origin')
                         time.sleep(1.0)
@@ -280,7 +286,13 @@ class SyncCommand(EdkrepoCommand):
                     prune_needed = True
                 if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
                     prune_needed = True
+                prune_needed_heuristic_str = "error: cannot lock ref"
+                if e.stdout.strip().find(prune_needed_heuristic_str) != -1:
+                    prune_needed = True
+                if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
+                    prune_needed = True
                 if prune_needed:
+                    ui_functions.print_info_msg(SYNC_AUTOMATIC_REMOTE_PRUNE)
                     # The sleep is to give the operating system time to close all the file handles that Git has open
                     time.sleep(1.0)
                     repo.git.remote('prune', 'origin')
