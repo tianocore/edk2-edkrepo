@@ -636,10 +636,18 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
             sparse_checkout(workspace_path, current_repos, manifest)
 
 def get_latest_sha(repo, branch, remote_or_url='origin'):
-    try:
-        (latest_sha, _) = repo.git.ls_remote(remote_or_url, 'refs/heads/{}'.format(branch)).split()
-    except:
-        latest_sha = None
+    if repo is None:
+        try:
+            ls_remote_output = subprocess.run('git ls-remote {} {}'.format(remote_or_url, branch),
+                                               stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+            latest_sha = ls_remote_output.stdout.split()[0]
+        except:
+            latest_sha = None
+    else:
+        try:
+            (latest_sha, _) = repo.git.ls_remote(remote_or_url, 'refs/heads/{}'.format(branch)).split()
+        except:
+            latest_sha = None
     return latest_sha
 
 def get_full_path(file_name):

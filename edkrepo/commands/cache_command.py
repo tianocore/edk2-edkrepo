@@ -18,6 +18,7 @@ from edkrepo.commands.humble.cache_humble import CACHE_INFO_LINE, PROJECT_NOT_FO
 from edkrepo.commands.humble.cache_humble import UNABLE_TO_LOAD_MANIFEST, UNABLE_TO_PARSE_MANIFEST
 from edkrepo.common.common_cache_functions import add_missing_cache_repos
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
+from edkrepo.common.common_repo_functions import get_latest_sha
 from edkrepo.common.edkrepo_exception import EdkrepoCacheException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
@@ -66,6 +67,10 @@ class CacheCommand(EdkrepoCommand):
                      'positional': True,
                      'required': False,
                      'help-text': arguments.COMMAND_PROJECT_HELP})
+        args.append({'name': 'selective',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.SELECTIVE_HELP})
         args.append(SourceManifestRepoArgument)
         return metadata
 
@@ -122,9 +127,16 @@ class CacheCommand(EdkrepoCommand):
         # Do an update if requested
         if args.update:
             if args.project:
-                for remote in manifest.remotes:
-                    ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote.name))
-                    cache_obj.update_cache(url_or_name=remote.name, verbose=True)
+                if args.selective:
+                    used_refs = _get_used_refs(manifest, cache_obj)
+                    for remote in used_refs.keys():
+                        for ref in used_refs[remote]:
+                            ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote))
+                            cache_obj.update_cache(url_or_name=remote, sha_or_branch=used_refs[ref], verbose=True)
+                else:
+                    for remote in manifest.remotes:
+                        ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote.name))
+                        cache_obj.update_cache(url_or_name=remote.name, verbose=True)
             else:
                 ui_functions.print_info_msg(CACHE_FETCH)
                 cache_obj.update_cache(verbose=True)
@@ -161,3 +173,33 @@ def _get_manifest(project, config, source_manifest_repo=None):
     except Exception:
         raise EdkrepoCacheException(UNABLE_TO_PARSE_MANIFEST)
     return manifest
+
+
+def _get_used_refs(manifest, cache_obj):
+    used_refs = {}
+    combo_list = [c.name for c in manifest.combinations]
+    for combo in combo_list:
+        sources = manifest.get_repo_sources(combo)
+        for source in sources:
+            # Order or precedence for cloning SHA(commit) -> Tag -> Branch
+            # If more than one is listed fetch the highest priority
+            refs = []
+            if source.commit:
+                already_cached = cache_obj.is_sha_cached(source.remote_name, source.commit)
+                if not already_cached:
+                    refs.append(source.commit)
+            if source.tag:
+                already_cached = cache_obj.is_sha_cached(source.remote_name, source.tag)
+                if not already_cached:
+                    refs.append(source.tag)
+            if source.branch:
+                head_sha = get_latest_sha(None, source.branch, remote_or_url=source.remote_url)
+                if head_sha is None:
+                    refs.append(source.branch)
+                else:
+                    already_cached = cache_obj.is_sha_cached(source.remote_name, head_sha)
+                    if not already_cached:
+                        refs.append(source.branch)
+            if refs:
+                used_refs[source.remote_name] = refs
+    return used_refs
