@@ -847,6 +847,12 @@ class _PatchSet():
         except KeyError as k:
             raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
 
+    def __eq__(self, other_patchset):
+        if isinstance(other_patchset, _PatchSet):
+            return (self.name, self.remote, self.parentSha, self.fetchBranch) == \
+            (other_patchset.name, other_patchset.remote, other_patchset.parentSha, other_patchset.fetchBranch)
+        return False
+
     @property
     def tuple(self):
         return PatchSet(self.remote, self.name, self.parentSha, self.fetchBranch)
