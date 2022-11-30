@@ -13,7 +13,7 @@ import json
 import edkrepo.commands.arguments.cache_args as arguments
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SourceManifestRepoArgument
-from edkrepo.commands.humble.cache_humble import CACHE_ENABLED, CACHE_FETCH, CACHE_INFO
+from edkrepo.commands.humble.cache_humble import CACHE_ENABLED, CACHE_FETCH, SINGLE_CACHE_FETCH, CACHE_INFO
 from edkrepo.commands.humble.cache_humble import CACHE_INFO_LINE, PROJECT_NOT_FOUND, NO_INSTANCE
 from edkrepo.commands.humble.cache_humble import UNABLE_TO_LOAD_MANIFEST, UNABLE_TO_PARSE_MANIFEST
 from edkrepo.common.common_cache_functions import add_missing_cache_repos
@@ -121,8 +121,13 @@ class CacheCommand(EdkrepoCommand):
 
         # Do an update if requested
         if args.update:
-            ui_functions.print_info_msg(CACHE_FETCH)
-            cache_obj.update_cache(verbose=True)
+            if args.project:
+                for remote in manifest.remotes:
+                    ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote.name))
+                    cache_obj.update_cache(url_or_name=remote.name, verbose=True)
+            else:
+                ui_functions.print_info_msg(CACHE_FETCH)
+                cache_obj.update_cache(verbose=True)
 
         # Close the cache repos
         cache_obj.close(args.verbose)
@@ -153,8 +158,6 @@ def _get_manifest(project, config, source_manifest_repo=None):
             raise EdkrepoCacheException(UNABLE_TO_LOAD_MANIFEST)
     try:
         manifest = ManifestXml(manifest_path)
-        print(manifest)
-        sys.exit()
     except Exception:
         raise EdkrepoCacheException(UNABLE_TO_PARSE_MANIFEST)
     return manifest
