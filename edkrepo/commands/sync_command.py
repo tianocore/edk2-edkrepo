@@ -35,7 +35,7 @@ from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL, SYNC_MOVE_FAILED
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
-from edkrepo.common.common_repo_functions import check_patchset_similarity, clone_repos, create_repos, patchset_application_flow, patchset_operations_similarity, sparse_checkout_enabled
+from edkrepo.common.common_repo_functions import clone_repos, create_repos, patchset_branch_creation_flow, patchset_operations_similarity, sparse_checkout_enabled
 from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_single_manifest
 from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
 from edkrepo.common.common_repo_functions import update_editor_config
@@ -181,7 +181,7 @@ class SyncCommand(EdkrepoCommand):
             #Fetch notes
             repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
             if repo_to_sync.patch_set:
-                patchset_application_flow(repo_to_sync, repo, workspace_path, manifest, global_manifest_path)
+                patchset_branch_creation_flow(repo_to_sync, repo, workspace_path, manifest, global_manifest_path)
             elif repo_to_sync.commit is None and repo_to_sync.tag is None:
                 local_commits = False
                 initial_active_branch = repo.active_branch
@@ -313,7 +313,6 @@ class SyncCommand(EdkrepoCommand):
         write_included_config(new_manifest_to_check.remotes, new_manifest_to_check.submodule_alternate_remotes, local_manifest_dir)
 
         self.__check_submodule_config(workspace_path, new_manifest_to_check, new_sources_for_current_combo)
-        manifest_path = get_manifest_repo_path(new_manifest_to_check.general_config.source_manifest_repo, config)
         # Check that the repo sources lists are the same. If they are not the same and the override flag is not set, throw an exception.
         if not args.override and set(initial_sources) != set(new_sources):
             raise EdkrepoManifestChangedException(SYNC_REPO_CHANGE.format(initial_manifest.project_info.codename))
@@ -397,7 +396,7 @@ class SyncCommand(EdkrepoCommand):
             if len(sources_to_remove) > 0:
                 ui_functions.print_warning_msg(SYNC_REMOVE_LIST_END_FORMATTING, header = False)
             # Clone any new Git repositories
-            clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check, manifest_path)
+            clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check, global_manifest_directory)
             # Make a list of and only checkout repos that were newly cloned. Sync keeps repos on their initial active branches
             # cloning the entire combo can prevent existing repos from correctly being returned to their proper branch
             repos_to_checkout = []
@@ -410,18 +409,18 @@ class SyncCommand(EdkrepoCommand):
             new_repos_to_checkout, repos_to_create = self.__check_combo_patchset_sha_tag_branch(workspace_path, initial_common, new_common, initial_manifest, new_manifest_to_check)
             repos_to_checkout.extend(new_repos_to_checkout)
             if repos_to_checkout:
-                checkout_repos(args.verbose, args.override, repos_to_checkout, workspace_path, new_manifest_to_check, manifest_path)
+                checkout_repos(args.verbose, args.override, repos_to_checkout, workspace_path, new_manifest_to_check, global_manifest_directory)
 
             if repos_to_create:
-                create_repos(repos_to_create, workspace_path, new_manifest_to_check, manifest_path)
+                create_repos(repos_to_create, workspace_path, new_manifest_to_check, global_manifest_directory)
 
         if set(initial_sources) == set(new_sources):
             repos_to_checkout, repos_to_create = self.__check_combo_patchset_sha_tag_branch(workspace_path, initial_sources, new_sources, initial_manifest, new_manifest_to_check)
             if repos_to_checkout:
-                checkout_repos(args.verbose, args.override, repos_to_checkout, workspace_path, new_manifest_to_check, manifest_path)
+                checkout_repos(args.verbose, args.override, repos_to_checkout, workspace_path, new_manifest_to_check, global_manifest_directory)
 
             if repos_to_create:
-                create_repos(repos_to_create, workspace_path, new_manifest_to_check, manifest_path)
+                create_repos(repos_to_create, workspace_path, new_manifest_to_check, global_manifest_directory)
 
         #remove the old manifest file and copy the new one
         ui_functions.print_info_msg(UPDATING_MANIFEST, header = False)
@@ -453,7 +452,7 @@ class SyncCommand(EdkrepoCommand):
                     if initial_source.patch_set:
                         initial_patchset = initial_manifest.get_patchset(initial_source.patch_set, initial_source.remote_name)
                         new_patchset = new_manifest_to_check.get_patchset(new_source.patch_set, new_source.remote_name)
-                        if check_patchset_similarity(initial_patchset, new_patchset):
+                        if initial_patchset == new_patchset:
                             if not patchset_operations_similarity(initial_patchset, new_patchset, initial_manifest, new_manifest_to_check):
                                 repos_to_create.append(new_source)
                         else:
