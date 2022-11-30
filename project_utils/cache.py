@@ -222,6 +222,7 @@ class RepoCache(object):
                 if verbose:
                     print(CACHE_FETCH_REMOTE.format(dir_name, remote.url))
                 if sha_or_branch is not None and remote.name == dir_name:
+                    print('Fetching ref {}'.format(sha_or_branch))
                     remote.fetch(refspec=sha_or_branch, progress=GitProgressHandler())
                 else:
                     remote.fetch(progress=GitProgressHandler())
