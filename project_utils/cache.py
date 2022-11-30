@@ -197,9 +197,11 @@ class RepoCache(object):
             raise IndexError
         repo.remove_remote(repo.remotes[remote_name])
 
-    def update_cache(self, url_or_name=None, verbose=False):
+    def update_cache(self, url_or_name=None, sha_or_branch=None, verbose=False):
         if not self._repos:
             raise FileNotFoundError
+        if url_or_name is None and sha_or_branch is not None:
+            raise ValueError
         repo_dirs = self._repos.keys()
 
         if url_or_name is not None:
@@ -215,10 +217,14 @@ class RepoCache(object):
             except Exception:
                 print(CACHE_FAILED_TO_OPEN.format(dir_name))
                 continue
+
             for remote in repo.remotes:
                 if verbose:
                     print(CACHE_FETCH_REMOTE.format(dir_name, remote.url))
-                remote.fetch(progress=GitProgressHandler())
+                if sha_or_branch is not None and remote.name == dir_name:
+                    remote.fetch(refspec=sha_or_branch, progress=GitProgressHandler())
+                else:
+                    remote.fetch(progress=GitProgressHandler())
 
     def is_sha_cached(self, url_or_name, sha, verbose=False):
         repo = self._get_repo(self._create_name(url_or_name))
