@@ -79,7 +79,6 @@ PATCH = "Patch"
 REVERT = "Revert"
 
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
-    # created_patch_sets = []
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -105,7 +104,6 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked out
         if repo_to_clone.patch_set:
             patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
-            # created_patch_sets.append((repo_to_clone.patch_set, repo_to_clone.remote_name))
             create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
         elif repo_to_clone.commit:
             if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
@@ -148,25 +146,6 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
 
             # Add the commit template if it exists.
             update_repo_commit_template(workspace_dir, repo, repo_to_clone, global_manifest_directory)
-
-
-    # Create patch set branches
-    # patchsets_in_manifest = manifest.get_patchsets_for_combo()
-    # if patchsets_in_manifest:
-    #     default_combo_repo = None
-
-    #     for combo, patch in patchsets_in_manifest.items():
-    #         for repo_to_clone in manifest.get_repo_sources(combo):
-    #             if getattr(repo_to_clone, "patch_set"):
-    #                 repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
-    #                 if (getattr(patch, "name"), getattr(repo_to_clone, "remote_name")) not in created_patch_sets:
-    #                     patch = manifest.get_patchset(getattr(repo_to_clone, "patch_set"), getattr(repo_to_clone, "remote_name"))
-    #                     create_local_branch(getattr(repo_to_clone, "patch_set"), patch, global_manifest_path, manifest, repo)
-    #                 else:
-    #                     default_combo_repo = repo
-
-    #     if default_combo_repo is not None:
-    #         default_combo_repo.git.checkout(created_patch_sets[0][0])
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
@@ -419,38 +398,59 @@ def patchset_branch_creation_flow(repo, repo_obj, workspace_path, manifest, glob
     json_path = os.path.join(workspace_path, "repo")
     json_path = os.path.join(json_path, "patchset_{}.json".format(os.path.basename(repo_obj.working_dir)))
     patchset = manifest.get_patchset(repo.patch_set, repo.remote_name)
+    operations = manifest.get_patchset_operations(patchset.name, patchset.remote)
 
     if repo.patch_set in repo_obj.branches:
-        if is_branch_name_collision(json_path, repo.patch_set, repo_obj, global_manifest_path):
+        if is_branch_name_collision(json_path, repo.patch_set, repo_obj, global_manifest_path, operations):
             create_local_branch(repo.patch_set, patchset, global_manifest_path, manifest, repo_obj)
         else:
             repo_obj.git.checkout(repo.patch_set)
     else:
         create_local_branch(repo.patch_set, patchset, global_manifest_path, manifest, repo_obj)
 
-def is_branch_name_collision(json_path, patch_set, repo, global_manifest_path):
+def is_branch_name_collision(json_path, patchset_obj, repo, global_manifest_path, operations):
     repo_name = os.path.basename(repo.working_dir)
+    patchset_name = patchset_obj.name
     COLLISION = False
     for branch in repo.branches:
-        if str(branch) == patch_set:
+        if str(branch) == patchset_name:
             with open(json_path, 'r+') as f:
                 data = json.load(f)
                 patchset_data = data[repo_name]
                 for patchset in patchset_data:
-                    if patch_set in patchset.values():
-                        head = repo.git.execute(['git', 'rev-parse', patch_set])
+                    if patchset_name in patchset.values():
+                        head = repo.git.execute(['git', 'rev-parse', patchset_name])
+                        # detect change in branch
                         if patchset['head_sha'] != head:
                             patchset['head_sha'] = head
                             COLLISION = True
-                        if len(patchset.keys()) == 3:
-                            patch_file = list(patchset.keys())[-1]
-                            hash_of_patch_file = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, patch_file)))
-                            if patchset[patch_file] != hash_of_patch_file:
-                                patchset[patch_file] = hash_of_patch_file
-                                COLLISION = True
+
+                        # detect change in patch file
+                        if patchset['patch_file']:
+                            for patch in patchset['patch_file']:
+                                patch_file = patch['file_name']
+                                hash_of_patch_file = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, patch_file)))
+                                if patch['hash'] != hash_of_patch_file:
+                                    patch['hash'] = hash_of_patch_file
+                                    COLLISION = True
+
+                        # detect change in local manifest
+                        if patchset['remote'] != patchset_obj.remote:
+                            patchset['remote'] = patchset_obj.remote
+                            COLLISION = True
+                        if patchset['parent_sha'] != patchset_obj.parent_sha:
+                            patchset['parent_sha'] = patchset_obj.parent_sha
+                            COLLISION = True
+                        if patchset['fetch_branch'] != patchset_obj.fetch_branch:
+                            patchset['fetch_branch'] = patchset_obj.fetch_branch
+                            COLLISION = True
+                        if patchset['patchset_operations'] != operations:
+                            patchset['patchset_operations'] = operations
+                            COLLISION = True
+
                         if COLLISION:
-                            branch.rename(patch_set + '_' + time.strftime("%Y/%m/%d_%H_%M_%S"))
-                            patchset[patch_set] = patch_set + '_' + time.strftime("%Y/%m/%d_%H_%M_%S")
+                            branch.rename(patchset_name + '_' + time.strftime("%Y/%m/%d_%H_%M_%S"))
+                            patchset[patchset_name] = patchset_name + '_' + time.strftime("%Y/%m/%d_%H_%M_%S")
                             f.seek(0)
                             json.dump(data, f, indent=4)
                             return True
@@ -831,13 +831,21 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
 
     json_str = {
         patchset.name: name,
-        "head_sha": head_sha
+        "head_sha": head_sha,
+        "remote": patchset.remote,
+        "parent_sha": patchset.parent_sha,
+        "fetch_branch": patchset.fetch_branch,
+        "patchset_operations": operations_list,
+        "patch_file": []
     }
 
     for operations in operations_list:
         for operation in operations:
             if operation.type == "Patch":
-                json_str[operation.file] = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, operation.file)))
+                json_str["patch_file"].append({
+                        "file_name": operation.file,
+                        "hash": get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, operation.file)))
+                    })
 
     if not os.path.isfile(json_path):
         with open(json_path, 'w') as f:
