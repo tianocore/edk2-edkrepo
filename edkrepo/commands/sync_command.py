@@ -455,8 +455,10 @@ class SyncCommand(EdkrepoCommand):
                         if initial_patchset == new_patchset:
                             if not patchset_operations_similarity(initial_patchset, new_patchset, initial_manifest, new_manifest_to_check):
                                 repos_to_create.append(new_source)
-                        else:
+                                break
                             repos_to_checkout.append(new_source)
+                        else:
+                            repos_to_create.append(new_source)
                         break
                     elif initial_source.commit and initial_source.commit != new_source.commit:
                         if repo.head.object.hexsha != initial_source.commit:
