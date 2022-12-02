@@ -68,6 +68,7 @@ class RepoCache(object):
         if verbose:
             print(CACHE_FETCH_REMOTE.format(remote_name, url))
         repo.remotes[remote_name].fetch(progress=GitProgressHandler())
+        repo.git.execute(['git', 'lfs', 'fetch', '--all'])
 
     def open(self, verbose=False):
         """
@@ -224,8 +225,10 @@ class RepoCache(object):
                 if sha_or_branch is not None and remote.name == dir_name:
                     print('Fetching ref {}'.format(sha_or_branch))
                     remote.fetch(refspec=sha_or_branch, progress=GitProgressHandler())
+                    repo.git.execute(['git', 'lfs', 'fetch', '{}'.format(remote.name), '{}'.format(sha_or_branch), '--recent'])
                 else:
                     remote.fetch(progress=GitProgressHandler())
+                    repo.git.execute(['git', 'lfs', 'fetch', '--recent'])
 
     def is_sha_cached(self, url_or_name, sha, verbose=False):
         repo = self._get_repo(self._create_name(url_or_name))
