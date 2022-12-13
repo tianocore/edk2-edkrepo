@@ -57,9 +57,10 @@ INVALID_PROJECTNAME_ERROR = "Invalid input: {} not found in CiIndexXml"
 UNSUPPORTED_TYPE_ERROR = "{} is not a supported xml type: {}"
 INVALID_XML_ERROR = "{} is not a valid xml file ({})"
 PATCHSET_UNKNOWN_ERROR = "Could not find a PatchSet named '{}' in '{}'"
-REMOTE_DIFFERENT_ERROR = "The remote for patchset {}/{} is different from {}/{}"
-NO_PATCHSET_IN_COMBO = "The Combination: {} does not have any patchsets."
+REMOTE_DIFFERENT_ERROR = "The remote for Patchset {}/{} is different from {}/{}"
+NO_PATCHSET_IN_COMBO = "The Combination: {} does not have any Patchsets."
 NO_PATCHSET_EXISTS = "The Patchset: {} does not exist"
+INVALID_PATCHSET_NAME_ERROR = "The Patchset cannot be named: {}. Please rename the Patchset"
 
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
@@ -341,6 +342,8 @@ class ManifestXml(BaseXmlHelper):
         subroot = self._tree.find('PatchSets')
         if subroot is not None:
             for patchset in subroot.iter(tag='PatchSet'):
+                if patchset.attrib['name'] == "main" or patchset.attrib['name'] == "master":
+                    raise ValueError(INVALID_PATCHSET_NAME_ERROR.format(patchset.attrib['name']))
                 self._patch_sets[(patchset.attrib['name'], getattr(_PatchSet(patchset).tuple, "remote"))] =_PatchSet(patchset).tuple
                 operations = []
                 for subelem in patchset:
