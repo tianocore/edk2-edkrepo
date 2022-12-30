@@ -7,50 +7,49 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import collections
+import json
 import os
 import shutil
 import sys
-import unicodedata
 import urllib.request
 import subprocess
 import traceback
+import hashlib
+import time
 
 import git
 from git import Repo
 import colorama
 
-from edkrepo.config.config_factory import get_edkrepo_global_data_directory
+from edkrepo.common.edkrepo_exception import EdkrepoBranchExistsException, EdkrepoException, EdkrepoLocalBranchExistsException, EdkrepoRevertFailedException, EdkrepoCherryPickFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
-from edkrepo.common.edkrepo_exception import EdkrepoVerificationException
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.common.progress_handler import GitProgressHandler
+from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, BRANCH_EXISTS, CHECKING_OUT_DEFAULT, CHECKING_OUT_PATCHSET, LOCAL_BRANCH_EXISTS
+from edkrepo.common.humble import FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST, COLLISION_DETECTED
+from edkrepo.common.humble import REMOTE_CREATION_FAILED, REMOTE_NOT_FOUND, REMOVE_REMOTE_FAILED
 from edkrepo.common.humble import MISSING_BRANCH_COMMIT
 from edkrepo.common.humble import UNCOMMITED_CHANGES, CHECKOUT_UNCOMMITED_CHANGES
 from edkrepo.common.humble import CHECKING_OUT_COMMIT, CHECKING_CONNECTION
 from edkrepo.common.humble import CHECKING_OUT_BRANCH
-from edkrepo.common.humble import VERIFY_ERROR_HEADER
-from edkrepo.common.humble import VERIFY_EXCEPTION_MSG
-from edkrepo.common.humble import INDEX_DUPLICATE_NAMES
-from edkrepo.common.humble import LOAD_MANIFEST_FAILED
-from edkrepo.common.humble import MANIFEST_NAME_INCONSISTENT
 from edkrepo.common.humble import CHECKOUT_NO_REMOTE
 from edkrepo.common.humble import SPARSE_CHECKOUT
 from edkrepo.common.humble import SPARSE_RESET
 from edkrepo.common.humble import CHECKING_OUT_COMBO
 from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
 from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
-from edkrepo.common.humble import GEN_A_NOT_IN_B, GEN_FOUND_MULT_A_IN_B
 from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
 from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
-from edkrepo.common.humble import ADD_PRIMARY_REMOTE, REMOVE_PRIMARY_REMOTE
-from edkrepo.common.humble import FETCH_PRIMARY_REMOTE, MIRROR_PRIMARY_SHA, TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR, SUBMODULE_FAILURE
+from edkrepo.common.humble import TAG_AND_BRANCH_SPECIFIED
+from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR
 from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
-from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX, VERIFY_GLOBAL_FAIL
+from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
 from edkrepo.common.logger import get_logger
 from edkrepo.common.pathfix import get_actual_path, expanduser
@@ -61,9 +60,8 @@ from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
-from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException, EdkrepoWarningException
-from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoHookNotFoundException
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+from edkrepo.common.edkrepo_exception import EdkrepoHookNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
@@ -78,10 +76,11 @@ from project_utils.submodule import deinit_full, maintain_submodules
 CLEAR_LINE = '\x1b[K'
 DEFAULT_REMOTE_NAME = 'origin'
 PRIMARY_REMOTE_NAME = 'primary'
+PATCH = "Patch"
+REVERT = "Revert"
 logger = get_logger()
 
-
-def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, cache_obj=None):
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -102,10 +101,13 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         # Fetch notes
         repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
 
-        # Handle branch/commit/tag checkout if needed. If a combination of these are specified the
-        # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked
-        # out
-        if repo_to_clone.commit:
+        # Handle patchset/branch/commit/tag checkout if needed. While checking out, patchset has the highest priority.
+        # If patchset is not present then, if a combination of these are specified the
+        # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked out
+        if repo_to_clone.patch_set:
+            patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
+            create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
+        elif repo_to_clone.commit:
             if repo_to_clone.branch or repo_to_clone.tag:
                 logger.info(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root), extra={'verbose': args.verbose})
             repo.git.checkout(repo_to_clone.commit)
@@ -145,8 +147,7 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
             install_hooks(project_client_side_hooks, local_repo_path, repo_to_clone, config, global_manifest_directory)
 
             # Add the commit template if it exists.
-            update_repo_commit_template(workspace_dir, repo, repo_to_clone, config, global_manifest_directory)
-
+            update_repo_commit_template(workspace_dir, repo, repo_to_clone, global_manifest_directory)
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
@@ -341,53 +342,161 @@ def check_branches(sources, workspace_path):
             except:
                 raise EdkrepoManifestInvalidException(CHECKOUT_NO_REMOTE.format(repo_to_check.root))
 
-
-def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest):
+def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest, global_manifest_path):
     if not override:
         try:
             check_dirty_repos(manifest, workspace_path)
         except EdkrepoUncommitedChangesException:
             raise EdkrepoUncommitedChangesException(CHECKOUT_UNCOMMITED_CHANGES)
-    check_branches(repos_to_checkout, workspace_path)
+    #check_branches(repos_to_checkout, workspace_path)
     for repo_to_checkout in repos_to_checkout:
-        if repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
-            logger.info(CHECKING_OUT_BRANCH.format(repo_to_checkout.branch, repo_to_checkout.root))
-        elif repo_to_checkout.commit is not None:
-            logger.info(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
+        if verbose:
+            if repo_to_checkout.patch_set:
+                logger.info(CHECKING_OUT_PATCHSET.format(repo_to_checkout.patch_set, repo_to_checkout.root))
+            elif repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
+                logger.info(CHECKING_OUT_BRANCH.format(repo_to_checkout.branch, repo_to_checkout.root))
+            elif repo_to_checkout.commit is not None:
+                logger.info(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
-        # Checkout the repo onto the correct branch/commit/tag if multiple attributes are provided in
-        # the source section for the manifest the order of priority is the followiwng 1)commit
-        # 2) tag 3)branch with the highest priority attribute provided beinng checked out
-        if repo_to_checkout.commit:
-            if repo_to_checkout.branch or repo_to_checkout.tag:
-                logger.info(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root), extra={'verbose': verbose})
-            if override:
-                repo.git.checkout(repo_to_checkout.commit, '--force')
-            else:
-                repo.git.checkout(repo_to_checkout.commit)
-        elif repo_to_checkout.tag and repo_to_checkout.commit is None:
-            if repo_to_checkout.branch:
-                logger.info(TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root), extra={'verbose': verbose})
-            if override:
-                repo.git.checkout(repo_to_checkout.tag, '--force')
-            else:
-                repo.git.checkout(repo_to_checkout.tag)
-        elif repo_to_checkout.branch and (repo_to_checkout.commit is None and repo_to_checkout.tag is None):
-            branch_name = repo_to_checkout.branch
-            if branch_name in repo.heads:
-                local_branch = repo.heads[branch_name]
-            else:
-                local_branch = repo.create_head(branch_name, repo.remotes['origin'].refs[branch_name])
-            #check to see if the branch being checked out has a tracking branch if not set one up
-            if repo.heads[local_branch.name].tracking_branch() is None:
-                repo.heads[local_branch.name].set_tracking_branch(repo.remotes['origin'].refs[branch_name])
-            if override:
-                repo.heads[local_branch.name].checkout(force=True)
-            else:
-                repo.heads[local_branch.name].checkout()
+
+        # Checkout the repo onto the correct patchset/branch/commit/tag if multiple attributes are provided in
+        # the source section for the manifest the order of priority is the followiwng 1)patchset 2)commit
+        # 3) tag 4)branch with the highest priority attribute provided beinng checked out
+        if repo_to_checkout.patch_set:
+            try:
+                patchset_branch_creation_flow(repo_to_checkout, repo, workspace_path, manifest, global_manifest_path, override)
+            except EdkrepoLocalBranchExistsException:
+                raise
         else:
-            raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+            if repo_to_checkout.commit:
+                if repo_to_checkout.branch or repo_to_checkout.tag:
+                    logger.info(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root), extra={'verbose': verbose})
+                if override:
+                    repo.git.checkout(repo_to_checkout.commit, '--force')
+                else:
+                    repo.git.checkout(repo_to_checkout.commit)
+            elif repo_to_checkout.tag and repo_to_checkout.commit is None:
+                if repo_to_checkout.branch:
+                    logger.info(TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root), extra={'verbose': verbose})
+                if override:
+                    repo.git.checkout(repo_to_checkout.tag, '--force')
+                else:
+                    repo.git.checkout(repo_to_checkout.tag)
+            elif repo_to_checkout.branch and (repo_to_checkout.commit is None and repo_to_checkout.tag is None):
+                branch_name = repo_to_checkout.branch
+                if branch_name in repo.heads:
+                    local_branch = repo.heads[branch_name]
+                else:
+                    local_branch = repo.create_head(branch_name, repo.remotes['origin'].refs[branch_name])
+                #check to see if the branch being checked out has a tracking branch if not set one up
+                if repo.heads[local_branch.name].tracking_branch() is None:
+                    repo.heads[local_branch.name].set_tracking_branch(repo.remotes['origin'].refs[branch_name])
+                if override:
+                    repo.heads[local_branch.name].checkout(force=True)
+                else:
+                    repo.heads[local_branch.name].checkout()
+            else:
+                raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+
+def patchset_branch_creation_flow(repo, repo_obj, workspace_path, manifest, global_manifest_path, override):
+    json_path = os.path.join(workspace_path, "repo")
+    json_path = os.path.join(json_path, "patchset_{}.json".format(os.path.basename(repo_obj.working_dir)))
+    patchset = manifest.get_patchset(repo.patch_set, repo.remote_name)
+    operations_list = manifest.get_patchset_operations(patchset.name, patchset.remote)
+    ops = []
+    for operations in operations_list:
+        for operation in operations:
+            ops.append(operation._asdict())
+
+    if repo.patch_set in repo_obj.branches:
+        try:
+            COLLISION = is_branch_name_collision(json_path, patchset, repo_obj, global_manifest_path, ops, override)
+        except EdkrepoLocalBranchExistsException:
+            raise
+        if COLLISION:
+            ui_functions.print_info_msg(COLLISION_DETECTED.format(repo.patch_set))
+            create_local_branch(repo.patch_set, patchset, global_manifest_path, manifest, repo_obj)
+        else:
+            repo_obj.git.checkout(repo.patch_set)
+    else:
+        create_local_branch(repo.patch_set, patchset, global_manifest_path, manifest, repo_obj)
+
+def is_branch_name_collision(json_path, patchset_obj, repo, global_manifest_path, operations, override):
+    repo_name = os.path.basename(repo.working_dir)
+    patchset_name = patchset_obj.name
+    COLLISION = False
+    BRANCH_IN_JSON = False
+    for branch in repo.branches:
+        if str(branch) == patchset_name:
+            with open(json_path, 'r+') as f:
+                data = json.load(f)
+                patchset_data = data[repo_name]
+                for patchset in patchset_data:
+                    if patchset_name in patchset.values():
+                        BRANCH_IN_JSON = True
+
+                        # detect change in branch
+                        head = repo.git.execute(['git', 'rev-parse', patchset_name])
+                        if patchset['head_sha'] != head:
+                            COLLISION = True
+
+                        # detect change in patch file
+                        if patchset['patch_file']:
+                            for patch in patchset['patch_file']:
+                                patch_file = patch['file_name']
+                                hash_of_patch_file = get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, patch_file)))
+                                if patch['hash'] != hash_of_patch_file:
+                                    COLLISION = True
+
+                        # detect change in local manifest
+                        if patchset['remote'] != patchset_obj.remote or patchset['parent_sha'] != patchset_obj.parent_sha \
+                             or patchset['fetch_branch'] != patchset_obj.fetch_branch or operations != patchset['patchset_operations']:
+                            COLLISION = True
+
+                        if COLLISION:
+                            branch.rename(patchset_name + '_' + time.strftime("%Y/%m/%d_%H_%M_%S"))
+                            patchset[patchset_name] = patchset_name + '_' + time.strftime("%Y/%m/%d_%H_%M_%S")
+                            f.seek(0)
+                            json.dump(data, f, indent=4)
+                            return True
+    if not BRANCH_IN_JSON:
+        if not override:
+            raise EdkrepoLocalBranchExistsException(LOCAL_BRANCH_EXISTS.format(patchset_name))
+        else:
+            return False
+    else:
+        return False
+
+def patchset_operations_similarity(initial_patchset, new_patchset, initial_manifest, new_manifest):
+    return initial_manifest.get_patchset_operations(initial_patchset.name, initial_patchset.remote) \
+            == new_manifest.get_patchset_operations(new_patchset.name, new_patchset.remote)
+
+def create_repos(repos_to_create, workspace_path, manifest, global_manifest_path):
+    for repo_to_create in repos_to_create:
+        local_repo_path = os.path.join(workspace_path, repo_to_create.root)
+        repo = Repo(local_repo_path)
+        json_path = os.path.join(workspace_path, "repo")
+        json_path = os.path.join(json_path, "patchset_{}.json".format(os.path.basename(repo.working_dir)))
+        repo_name = os.path.basename(repo.working_dir)
+        patch_set = repo_to_create.patch_set
+        for branch in repo.branches:
+            if str(branch) == patch_set:
+                COLLISION = False
+                with open(json_path, 'r+') as f:
+                    data = json.load(f)
+                    patchset_data = data[repo_name]
+                    for patch_data in patchset_data:
+                        if patch_set in patch_data.values():
+                            branch.rename(patch_set + '_' + time.strftime("%Y/%m/%d_%H_%M_%S"))
+                            patch_data[patch_set] = patch_set + '_' + time.strftime("%Y/%m/%d_%H_%M_%S")
+                            f.seek(0)
+                            json.dump(data, f, indent=4)
+                            COLLISION = True
+                            break
+                if COLLISION:
+                    patchset = manifest.get_patchset(repo_to_create.patch_set, repo_to_create.remote_name)
+                    create_local_branch(patch_set, patchset, global_manifest_path, manifest, repo)
 
 def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
     logger.info(VERIFY_GLOBAL)
@@ -445,7 +554,7 @@ def combination_is_in_manifest(combination, manifest):
     return combination in combination_names
 
 
-def checkout(combination, verbose=False, override=False, log=None, cache_obj=None):
+def checkout(combination, global_manifest_path, verbose=False, override=False, log=None, cache_obj=None):
     workspace_path = get_workspace_path()
     manifest = get_workspace_manifest()
 
@@ -503,17 +612,20 @@ def checkout(combination, verbose=False, override=False, log=None, cache_obj=Non
     logger.info(CHECKING_OUT_COMBO.format(combo))
 
     try:
-        checkout_repos(verbose, override, repo_sources, workspace_path, manifest)
+        checkout_repos(verbose, override, repo_sources, workspace_path, manifest, global_manifest_path)
         current_repos = repo_sources
         # Update the current checkout combo in the manifest only if this
         # combination exists in the manifest
         if combination_is_in_manifest(combo, manifest):
             manifest.write_current_combo(combo)
-    except:
+
+    except EdkrepoException as e:
         logger.warning(traceback.format_exc(), extra={'verbose': verbose})
+        logger.error(e)
         logger.error(CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
+
         # Return to the initial combo, since there was an issue with cheking out the selected combo
-        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest)
+        checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest, global_manifest_path)
     finally:
         cache_path = None
         if cache_obj is not None:
@@ -543,7 +655,7 @@ def get_full_path(file_name):
             return file_path
     return None
 
-def update_repo_commit_template(workspace_dir, repo, repo_info, config, global_manifest_directory):
+def update_repo_commit_template(workspace_dir, repo, repo_info, global_manifest_directory):
     # Open the local manifest and get any templates
     manifest = edk_manifest.ManifestXml(os.path.join(workspace_dir, 'repo', 'Manifest.xml'))
     templates = manifest.commit_templates
@@ -670,3 +782,158 @@ def find_git_version():
     cur_git_version = GitVersion(cur_git_ver_string)
 
     return cur_git_version
+
+def get_unique_branch_name(branch_name_prefix, repo):
+    branch_names = [x.name for x in repo.heads]
+    if branch_name_prefix not in branch_names:
+        return branch_name_prefix
+    index = 1
+    while True:
+        branch_name = "{}-{}".format(branch_name_prefix, index)
+        if branch_name not in branch_names:
+            return branch_name
+
+
+def get_hash_of_file(file):
+    sha256 = hashlib.sha256()
+    with open(file, 'rb') as f:
+        while True:
+            chunk = f.read(65536)
+            if not chunk:
+                break
+            sha256.update(chunk)
+
+        return sha256.hexdigest()
+
+def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo):
+    for branch in repo.branches:
+        if name == str(branch):
+            raise EdkrepoBranchExistsException(BRANCH_EXISTS.format(name))
+
+    path = repo.working_tree_dir
+    repo_path = os.path.dirname(path)
+    path = os.path.join(repo_path, "repo")
+    json_path = os.path.join(path, "patchset_{}.json".format(os.path.basename(repo.working_dir)))
+    remote_list = manifest_obj.remotes
+    operations_list = manifest_obj.get_patchset_operations(patchset.name, patchset.remote)
+    REMOTE_IN_REMOTE_LIST = False
+    for remote in remote_list:
+        if patchset.remote == remote.name:
+            REMOTE_IN_REMOTE_LIST = True
+            try:
+                repo.remotes.origin.fetch(patchset.fetch_branch, progress=GitProgressHandler())
+            except:
+                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
+            try:
+                parent_patchset = manifest_obj.get_patchset(patchset.parent_sha, patchset.remote)
+                repo.git.checkout(parent_patchset[2], b=name)
+            except:
+                if patchset.parent_sha in repo.tags:
+                    repo.git.checkout("tags/{}".format(patchset.parent_sha), b=name)
+                else:
+                    repo.git.checkout(patchset.parent_sha, b=name)
+            try:
+                apply_patchset_operations(repo, operations_list, global_manifest_path, remote_list)
+                head_sha = repo.git.execute(['git', 'rev-parse', 'HEAD'])
+            except (EdkrepoPatchFailedException, EdkrepoRevertFailedException, git.GitCommandError, EdkrepoCherryPickFailedException) as exception:
+                print(exception)
+                print(CHECKING_OUT_DEFAULT)
+                repo.git.checkout(os.path.basename(repo.git.execute(['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'])))
+                repo.git.execute(['git', 'branch', '-D', '{}'.format(name)])
+                return
+
+    if not REMOTE_IN_REMOTE_LIST:
+        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
+
+    ops_list = []
+    for operations in operations_list:
+        for operation in operations:
+            ops_list.append(operation._asdict())
+
+    json_str = {
+        patchset.name: name,
+        "head_sha": head_sha,
+        "remote": patchset.remote,
+        "parent_sha": patchset.parent_sha,
+        "fetch_branch": patchset.fetch_branch,
+        "patchset_operations": ops_list,
+        "patch_file": []
+    }
+
+    for operations in operations_list:
+        for operation in operations:
+            if operation.type == "Patch":
+                json_str["patch_file"].append({
+                        "file_name": operation.file,
+                        "hash": get_hash_of_file(os.path.normpath(os.path.join(global_manifest_path, operation.file)))
+                    })
+
+    if not os.path.isfile(json_path):
+        with open(json_path, 'w') as f:
+            json.dump({os.path.basename(repo.working_dir): [json_str]}, f, indent=4)
+        f.close()
+    else:
+        with open(json_path, "r+") as f:
+            data = json.load(f)
+            data[os.path.basename(repo.working_dir)].append(json_str)
+            f.seek(0)
+            json.dump(data, f, indent=4)
+        f.close()
+
+def is_merge_conflict(repo):
+    status = repo.git.status(porcelain=True).split()
+    return True if 'UU' in status else False
+
+def apply_patchset_operations(repo, operations_list, global_manifest_path, remote_list):
+    for operations in operations_list:
+        for operation in operations:
+            if operation.type == PATCH:
+                path = os.path.normpath(os.path.join(global_manifest_path, operation.file))
+                if os.path.isfile(path):
+                    try:
+                        repo.git.execute(['git', 'am', path, '--ignore-whitespace'])
+                    except:
+                        repo.git.execute(['git', 'am', '--abort'])
+                        raise EdkrepoPatchFailedException(APPLYING_PATCH_FAILED.format(operation.file))
+                else:
+                    raise EdkrepoPatchNotFoundException(PATCHFILE_DOES_NOT_EXIST.format(operation.file))
+            elif operation.type == REVERT:
+                try:
+                    repo.git.execute(['git', 'revert', operation.sha, '--no-edit'])
+                except:
+                    raise EdkrepoRevertFailedException(APPLYING_REVERT_FAILED.format(operation.sha))
+            else:
+                if operation.source_remote:
+                    REMOTE_FOUND = False
+                    for remote in remote_list:
+                        if operation.source_remote == remote.name:
+                            REMOTE_FOUND = True
+                            try:
+                                repo.git.execute(['git', 'remote', 'add', operation.source_remote, remote.url])
+                            except :
+                                raise EdkrepoRemoteAddException(REMOTE_CREATION_FAILED.format(operation.source_remote))
+                            try:
+                                repo.git.execute(['git', 'fetch', operation.source_remote, operation.source_branch])
+                            except:
+                                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                            try:
+                                repo.git.execute(['git', 'cherry-pick', operation.sha, '-x'])
+                            except:
+                                if is_merge_conflict(repo):
+                                    repo.git.execute(['git', 'cherry-pick', '--abort'])
+                                raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
+                            try:
+                                repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
+                            except:
+                                raise EdkrepoRemoteRemoveException(REMOVE_REMOTE_FAILED.format(operation.source_remote))
+                    if not REMOTE_FOUND:
+                        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(operation.source_remote))
+                else:
+                    try:
+                        repo.remotes.origin.fetch(operation.source_branch)
+                    except:
+                        raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                    try:
+                        repo.git.execute(['git', 'cherry-pick', operation.sha, '-x'])
+                    except:
+                        raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))

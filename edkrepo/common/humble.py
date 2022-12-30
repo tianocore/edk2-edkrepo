@@ -51,6 +51,7 @@ SYNC_UPDATE_FIX = 'To checkout the new SHA/tag/branch run edkrepo checkout on th
 SYNC_BRANCH_CHANGE_ON_LOCAL = 'The SHA, tag or branch defined in the current combo has changed from {} to {} for the {} repo.\n The current workspace is not on the SHA/tag/branch defined in the initial combo. Unable to checkout new SHA/tag/branch.\n' + SYNC_UPDATE_FIX
 SYNC_REBASE_CALC_FAIL = 'Unable to calculate if a rebase is required for the current branch'
 SYNC_INCOMPATIBLE_COMBO = 'No compatible combinations found in the latest manifest file. Cloning a new workspace is recommended. ' + SYNC_EXIT
+SYNC_MANIFEST_UPDATE_FAILED = 'Failed to update manifest.'
 
 #informational messages for sync_command.py
 SYNCING = 'Syncing {0} to latest {1} branch ...'
@@ -87,6 +88,7 @@ CHECKOUT_COMBO_UNSUCCESSFULL = 'The combination {} was not able to be checked ou
 CHECKING_OUT_COMBO = 'Checking out combination: {0} ...'
 CHECKING_OUT_BRANCH = 'Checking out {0} branch for {1} repo ...'
 CHECKING_OUT_COMMIT = 'Checking detached HEAD on commit {0} for {1} repo ...'
+CHECKING_OUT_PATCHSET = 'Checking out {0} patchset for {1} repo ...'
 
 # Messages for config_factory.py
 MIRROR_PRIMARY_REPOS_MISSING = 'The edkrepo global configuration file missing [primary-repos] section.'
@@ -177,3 +179,17 @@ LINE_BREAK = "\n\n" + "-"*50
 # Logging errors
 REMOVE_LOG_FAILED = "Failed to clear logs at {}"
 DISK_SPACE_ERROR = "Due to unavailability of disk space, edkrepo cannot generate log files. Clear some space for it to work."
+
+# Creating Local Branch Error Messages
+BRANCH_EXISTS = "The branch {} already exists."
+REMOTE_NOT_FOUND = "Could not find the remote {}"
+REMOTE_CREATION_FAILED = "Failed to add the remote {}"
+FETCH_BRANCH_DOES_NOT_EXIST = "The branch {} does not exist"
+PATCHFILE_DOES_NOT_EXIST = "The patch file {} does not exist"
+APPLYING_PATCH_FAILED = "Unable to apply the patch file {}"
+APPLYING_REVERT_FAILED = "Failed to revert to the commit {}"
+APPLYING_CHERRY_PICK_FAILED = "Failed to cherry pick the commit {}"
+REMOVE_REMOTE_FAILED = "Failed to remove the remote {}"
+CHECKING_OUT_DEFAULT = "Failed to apply one of the patchset operations. Checking out back to the default branch"
+LOCAL_BRANCH_EXISTS = "The branch {} already exists. Please resolve the branch name conflict before checking out again."
+COLLISION_DETECTED = "A branch with the same name detected. Renaming the old {} branch and creating a new one from the manifest."

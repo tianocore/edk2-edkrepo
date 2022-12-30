@@ -27,11 +27,11 @@ from edkrepo.common.pathfix import get_subst_drive_dict
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.logger import get_logger
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from project_utils.submodule import maintain_submodules
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 
@@ -78,7 +78,6 @@ class CloneCommand(EdkrepoCommand):
         logger = get_logger()
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
 
-        name_or_manifest = args.ProjectNameOrManifestFile
         workspace_dir = args.Workspace
         # Check to see if requested workspace exists. If not create it. If so check for empty
         if workspace_dir == '.':
@@ -107,6 +106,8 @@ class CloneCommand(EdkrepoCommand):
                                                                     args.source_manifest_repo)
         except EdkrepoManifestNotFoundException:
             raise EdkrepoInvalidParametersException(CLONE_INVALID_PROJECT_ARG)
+
+        manifest_repository_path = get_manifest_repo_path(manifest_repo, config)
 
         # If this manifest is in a defined manifest repository validate the manifest within the manifest repo
         if manifest_repo in cfg:
@@ -178,7 +179,7 @@ class CloneCommand(EdkrepoCommand):
         cache_obj = get_repo_cache_obj(config)
         if cache_obj is not None:
             add_missing_cache_repos(cache_obj, manifest, args.verbose)
-        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, cache_obj)
+        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, cache_obj)
 
         # Init submodules
         if not args.skip_submodule:

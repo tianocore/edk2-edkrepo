@@ -6,11 +6,6 @@
 # Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
-# Standard modules
-import sys
-import os
-
-# Third-Party modules
 
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
@@ -20,6 +15,7 @@ from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import checkout, combination_is_in_manifest
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import get_manifest_repo_path
 
 
 class CheckoutCommand(EdkrepoCommand):
@@ -42,7 +38,10 @@ class CheckoutCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-        if combination_is_in_manifest(args.Combination, get_workspace_manifest()):
-            checkout(args.Combination, args.verbose, args.override, get_repo_cache_obj(config))
+        manifest = get_workspace_manifest()
+        manifest_repo = manifest.general_config.source_manifest_repo
+        global_manifest_path = get_manifest_repo_path(manifest_repo, config)
+        if combination_is_in_manifest(args.Combination, manifest):
+            checkout(args.Combination, global_manifest_path, args.verbose, args.override, get_repo_cache_obj(config))
         else:
             raise EdkrepoInvalidParametersException(humble.NO_COMBO.format(args.Combination))

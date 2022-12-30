@@ -54,4 +54,7 @@ class ComboCommand(EdkrepoCommand):
                 sources = manifest.get_repo_sources(combo)
                 length = len(max([source.root for source in sources], key=len))
                 for source in sources:
-                    logger.info("    {} : {}".format(source.root.ljust(length), source.branch))
+                    if source.branch:
+                        logger.info("    {} : {}".format(source.root.ljust(length), source.branch))
+                    elif source.patch_set:
+                        logger.info("    {} : {}".format(source.root.ljust(length), source.patch_set))

@@ -20,24 +20,23 @@ from git.exc import GitCommandError
 
 # Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import DryRunArgument, SubmoduleSkipArgument, SourceManifestRepoArgument
+from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.sync_args as arguments
-from edkrepo.common.progress_handler import GitProgressHandler
-from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoManifestNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoManifestNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
-from edkrepo.common.humble import SYNC_UNCOMMITED_CHANGES, SYNC_MANIFEST_NOT_FOUND, SYNC_URL_CHANGE, SYNC_COMBO_CHANGE
+from edkrepo.common.humble import SYNC_MANIFEST_NOT_FOUND, SYNC_MANIFEST_UPDATE_FAILED
 from edkrepo.common.humble import SYNC_SOURCE_MOVE_WARNING, SYNC_REMOVE_WARNING, SYNC_REMOVE_LIST_END_FORMATTING
 from edkrepo.common.humble import SYNC_MANIFEST_DIFF_WARNING, SYNC_MANIFEST_UPDATE
 from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, SYNC_REPO_CHANGE, SYNCING, FETCHING, UPDATING_MANIFEST
 from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_TARGET, SYNC_ERROR
 from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
-from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL, SYNC_INCOMPATIBLE_COMBO
+from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL
 from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL, SYNC_MOVE_FAILED
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.logger import get_logger
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
-from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout_enabled
+from edkrepo.common.common_repo_functions import clone_repos, create_repos, patchset_branch_creation_flow, patchset_operations_similarity, sparse_checkout_enabled
 from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_single_manifest
 from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
 from edkrepo.common.common_repo_functions import update_editor_config
@@ -51,8 +50,8 @@ from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest, get_edkrepo_global_data_directory
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos, get_manifest_repo_path
+from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo.config.config_factory import get_workspace_manifest_file
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
@@ -101,12 +100,13 @@ class SyncCommand(EdkrepoCommand):
         except:
             pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
         source_global_manifest_repo = find_source_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+
+        global_manifest_directory = get_manifest_repo_path(source_global_manifest_repo, config)
+
         cfg_manifest_repos, user_cfg_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
         if source_global_manifest_repo in cfg_manifest_repos:
-            global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
             verify_single_manifest(config['cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
         elif source_global_manifest_repo in user_cfg_manifest_repos:
-            global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(source_global_manifest_repo)
             verify_single_manifest(config['user_cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
         else:
             global_manifest_directory = None
@@ -132,7 +132,12 @@ class SyncCommand(EdkrepoCommand):
 
         # Get the latest manifest if requested
         if args.update_local_manifest:  # NOTE: hyphens in arg name replaced with underscores due to argparse
-            self.__update_local_manifest(args, logger, config, initial_manifest, workspace_path, global_manifest_directory)
+            try:
+                self.__update_local_manifest(args, config, initial_manifest, workspace_path, global_manifest_directory)
+            except EdkrepoException as e:
+                if args.verbose:
+                    logger.error(e)
+                logger.info(SYNC_MANIFEST_UPDATE_FAILED)
         manifest = get_workspace_manifest()
         if args.update_local_manifest:
             try:
@@ -166,6 +171,8 @@ class SyncCommand(EdkrepoCommand):
         if not args.update_local_manifest: #Performance optimization, __update_local_manifest() will do this
             self.__check_submodule_config(workspace_path, manifest, repo_sources_to_sync)
         clean_git_globalconfig()
+        manifest_repo = manifest.general_config.source_manifest_repo
+        global_manifest_path = get_manifest_repo_path(manifest_repo, config)
         for repo_to_sync in repo_sources_to_sync:
             local_repo_path = os.path.join(workspace_path, repo_to_sync.root)
             # Update any hooks
@@ -174,7 +181,9 @@ class SyncCommand(EdkrepoCommand):
             repo = Repo(local_repo_path)
             #Fetch notes
             repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
-            if repo_to_sync.commit is None and repo_to_sync.tag is None:
+            if repo_to_sync.patch_set:
+                patchset_branch_creation_flow(repo_to_sync, repo, workspace_path, manifest, global_manifest_path)
+            elif repo_to_sync.commit is None and repo_to_sync.tag is None:
                 local_commits = False
                 initial_active_branch = repo.active_branch
                 repo.remotes.origin.fetch("refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_sync.branch))
@@ -230,7 +239,7 @@ class SyncCommand(EdkrepoCommand):
 
             # Update commit message templates
             if global_manifest_directory is not None:
-                update_repo_commit_template(workspace_path, repo, repo_to_sync, config, global_manifest_directory)
+                update_repo_commit_template(workspace_path, repo, repo_to_sync, global_manifest_directory)
 
         if sync_error:
             logger.error(SYNC_ERROR)
@@ -287,12 +296,11 @@ class SyncCommand(EdkrepoCommand):
             raise EdkrepoManifestNotFoundException(SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
         initial_manifest_remotes = {name:url for name, url in initial_manifest.remotes}
         ci_index_xml_rel_path = os.path.normpath(ci_index_xml.get_project_xml(initial_manifest.project_info.codename))
-        global_manifest_path = os.path.join(global_manifest_directory, ci_index_xml_rel_path)
-        new_manifest_to_check = ManifestXml(global_manifest_path)
+        global_manifest = os.path.join(global_manifest_directory, ci_index_xml_rel_path)
+        new_manifest_to_check = ManifestXml(global_manifest)
 
         # Does the current combo exist in the new manifest? If not check to see if you can use the repo sources from
         # the default combo
-        initial_combos = combinations_in_manifest(initial_manifest)
         new_combos = combinations_in_manifest(new_manifest_to_check)
         if current_combo not in new_combos:
             new_sources_for_current_combo = new_manifest_to_check.get_repo_sources(new_manifest_to_check.general_config.default_combo)
@@ -305,7 +313,6 @@ class SyncCommand(EdkrepoCommand):
         write_included_config(new_manifest_to_check.remotes, new_manifest_to_check.submodule_alternate_remotes, local_manifest_dir)
 
         self.__check_submodule_config(workspace_path, new_manifest_to_check, new_sources_for_current_combo)
-
         # Check that the repo sources lists are the same. If they are not the same and the override flag is not set, throw an exception.
         if not args.override and set(initial_sources) != set(new_sources):
             raise EdkrepoManifestChangedException(SYNC_REPO_CHANGE.format(initial_manifest.project_info.codename))
@@ -389,7 +396,7 @@ class SyncCommand(EdkrepoCommand):
             if len(sources_to_remove) > 0:
                 logger.warning(SYNC_REMOVE_LIST_END_FORMATTING)
             # Clone any new Git repositories
-            clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check)
+            clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check, global_manifest_directory)
             # Make a list of and only checkout repos that were newly cloned. Sync keeps repos on their initial active branches
             # cloning the entire combo can prevent existing repos from correctly being returned to their proper branch
             repos_to_checkout = []
@@ -398,15 +405,28 @@ class SyncCommand(EdkrepoCommand):
                     for source in sources_to_clone:
                         if source.root == new_source.root:
                             repos_to_checkout.append(source)
-            repos_to_checkout.extend(self.__check_combo_sha_tag_branch(logger, workspace_path, initial_common, new_common))
+
+            new_repos_to_checkout, repos_to_create = self.__check_combo_patchset_sha_tag_branch(logger, workspace_path, initial_common, new_common, initial_manifest, new_manifest_to_check)
+            repos_to_checkout.extend(new_repos_to_checkout)
             if repos_to_checkout:
-                checkout_repos(args.verbose, args.override, repos_to_checkout, workspace_path, new_manifest_to_check)
+                checkout_repos(args.verbose, args.override, repos_to_checkout, workspace_path, new_manifest_to_check, global_manifest_directory)
+
+            if repos_to_create:
+                create_repos(repos_to_create, workspace_path, new_manifest_to_check, global_manifest_directory)
+
+        if set(initial_sources) == set(new_sources):
+            repos_to_checkout, repos_to_create = self.__check_combo_patchset_sha_tag_branch(logger, workspace_path, initial_sources, new_sources, initial_manifest, new_manifest_to_check)
+            if repos_to_checkout:
+                checkout_repos(args.verbose, args.override, repos_to_checkout, workspace_path, new_manifest_to_check, global_manifest_directory)
+
+            if repos_to_create:
+                create_repos(repos_to_create, workspace_path, new_manifest_to_check, global_manifest_directory)
 
         #remove the old manifest file and copy the new one
         logger.info(UPDATING_MANIFEST)
         local_manifest_path = os.path.join(local_manifest_dir, 'Manifest.xml')
         os.remove(local_manifest_path)
-        shutil.copy(global_manifest_path, local_manifest_path)
+        shutil.copy(global_manifest, local_manifest_path)
 
         # Update the source manifest repository tag in the local copy of the manifest XML
         new_manifest = ManifestXml(local_manifest_path)
@@ -418,17 +438,29 @@ class SyncCommand(EdkrepoCommand):
         except EdkrepoManifestNotFoundException:
             pass
 
-    def __check_combo_sha_tag_branch(self, logger, workspace_path, initial_sources, new_sources):
+    def __check_combo_patchset_sha_tag_branch(self, logger, workspace_path, initial_sources, new_sources, initial_manifest, new_manifest_to_check):
         # Checks for changes in the defined SHAs, Tags or branches in the checked out combo. Returns
         # a list of repos to checkout. Checks to see if user is on appropriate SHA, tag or branch and
         # throws and exception if not.
         repos_to_checkout = []
+        repos_to_create = []
         for initial_source in initial_sources:
             for new_source in new_sources:
                 if initial_source.root == new_source.root and initial_source.remote_name == new_source.remote_name and initial_source.remote_url == new_source.remote_url:
                     local_repo_path = os.path.join(workspace_path, initial_source.root)
                     repo = Repo(local_repo_path)
-                    if initial_source.commit and initial_source.commit != new_source.commit:
+                    if initial_source.patch_set:
+                        initial_patchset = initial_manifest.get_patchset(initial_source.patch_set, initial_source.remote_name)
+                        new_patchset = new_manifest_to_check.get_patchset(new_source.patch_set, new_source.remote_name)
+                        if initial_patchset == new_patchset:
+                            if not patchset_operations_similarity(initial_patchset, new_patchset, initial_manifest, new_manifest_to_check):
+                                repos_to_create.append(new_source)
+                                break
+                            repos_to_checkout.append(new_source)
+                        else:
+                            repos_to_create.append(new_source)
+                        break
+                    elif initial_source.commit and initial_source.commit != new_source.commit:
                         if repo.head.object.hexsha != initial_source.commit:
                             logger.info(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root))
                         repos_to_checkout.append(new_source)
@@ -444,7 +476,7 @@ class SyncCommand(EdkrepoCommand):
                             logger.info(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root))
                         repos_to_checkout.append(new_source)
                         break
-        return repos_to_checkout
+        return repos_to_checkout, repos_to_create
 
     def __check_for_new_manifest(self, args, logger, config, initial_manifest, workspace_path, global_manifest_directory):
         #if the manifest repository for the current manifest was not found then there is no project with the manifest

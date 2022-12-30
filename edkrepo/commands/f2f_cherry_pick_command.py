@@ -20,7 +20,7 @@ import uuid
 from git import Repo
 from colorama import Fore
 
-from edkrepo.common.common_repo_functions import sparse_checkout_enabled, get_full_path
+from edkrepo.common.common_repo_functions import sparse_checkout_enabled, get_full_path, get_unique_branch_name
 from edkrepo.common.logger import get_logger
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.common.edkrepo_exception import EdkrepoAbortCherryPickException, EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
@@ -428,15 +428,6 @@ def get_common_folder_name(folder1, folder2, config):
     else:
         return ''
 
-def get_unique_branch_name(branch_name_prefix, repo):
-    branch_names = [x.name for x in repo.heads]
-    if branch_name_prefix not in branch_names:
-        return branch_name_prefix
-    index = 1
-    while True:
-        branch_name = "{}-{}".format(branch_name_prefix, index)
-        if branch_name not in branch_names:
-            return branch_name
 
 def cherry_pick_operations_to_include_folder_list(cherry_pick_operations):
     include_folder_list = []
