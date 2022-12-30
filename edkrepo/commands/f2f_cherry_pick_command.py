@@ -21,6 +21,7 @@ from git import Repo
 from colorama import Fore
 
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, get_full_path, get_unique_branch_name
+from edkrepo.common.logger import get_logger
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.common.edkrepo_exception import EdkrepoAbortCherryPickException, EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException
@@ -93,8 +94,9 @@ class F2fCherryPickCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        logger = get_logger()
         if args.list_templates:
-            _list_templates()
+            _list_templates(logger)
             return
         continue_operation = vars(args)['continue']
         commit_ish = vars(args)['commit-ish']
@@ -116,7 +118,7 @@ class F2fCherryPickCommand(EdkrepoCommand):
             except EdkrepoAbortCherryPickException:
                 return
 
-        _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cherry_pick_info)
+        _complete_cherry_pick(args, logger, continue_operation, repo_info, commit_info, cherry_pick_info)
 
 def _start_new_cherry_pick(args, json_path):
     (cherry_pick_operations, repo_path) = _parse_arguments(args)
@@ -128,7 +130,7 @@ def _start_new_cherry_pick(args, json_path):
     repo_info = RepoInfo(repo_path, json_path, repo)
     return (repo_info, cherry_pick_operations)
 
-def _prep_new_cherry_pick(args, repo, commit_ish, config, cherry_pick_operations):
+def _prep_new_cherry_pick(args, logger, repo, commit_ish, config, cherry_pick_operations):
     # Check for staged, unstaged, and untracked files
 
     # Require everything be totally clean before attempting Folder to Folder voodoo
@@ -220,7 +222,7 @@ def _abort_cherry_pick(repo, json_path, original_branch, original_head, f2f_src_
         repo.git.branch('-D', f2f_cherry_pick_src)
     return
 
-def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cherry_pick_info):
+def _complete_cherry_pick(args, logger, continue_operation, repo_info, commit_info, cherry_pick_info):
     # Unpack namedtuples
 
     (repo_path, json_path, repo) = (repo_info.repo_path, repo_info.json_path, repo_info.repo)
@@ -255,13 +257,13 @@ def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cher
         if not cherry_pick_operations_template:
             cherry_pick_operations_template = cherry_pick_operations
         if continue_operation:
-            ui_functions.print_info_msg(humble.F2F_CHERRY_PICK_NUM_COMMITS_CONTINUE.format(len(todo_commits)))
+            logger.info(humble.F2F_CHERRY_PICK_NUM_COMMITS_CONTINUE.format(len(todo_commits)))
         else:
-            ui_functions.print_info_msg(humble.F2F_CHERRY_PICK_NUM_COMMITS_NEW.format(len(todo_commits)))
+            logger.info(humble.F2F_CHERRY_PICK_NUM_COMMITS_NEW.format(len(todo_commits)))
         while todo_commits:
             source_commit = todo_commits[0]
-            ui_functions.print_info_msg(humble.F2F_CHERRY_PICK_ESTIMATE_REMAINING_OPERATIONS.format(len(todo_commits), len(todo_commits) * len(cherry_pick_operations_template)))
-            ui_functions.print_info_msg(humble.F2F_CHERRY_PICK_CURRENT_COMMIT.format(source_commit))
+            logger.info(humble.F2F_CHERRY_PICK_ESTIMATE_REMAINING_OPERATIONS.format(len(todo_commits), len(todo_commits) * len(cherry_pick_operations_template)))
+            logger.info(humble.F2F_CHERRY_PICK_CURRENT_COMMIT.format(source_commit))
             if not continue_operation:
                 # Now that the change delta is known, we can optimize the cherry pick operation
                 cherry_pick_operations = _optimize_f2f_cherry_pick_operations(cherry_pick_operations_template, repo, source_commit)
@@ -270,14 +272,17 @@ def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cher
                 f2f_dest_branch = get_unique_branch_name('f2f-dest', repo)
 
                 # Inform the user w.r.t. what is about to happen
-                ui_functions.print_warning_msg(humble.F2F_CHERRY_PICK_NUM_CHERRY_PICKS.format(len(cherry_pick_operations)), header=False)
+                if num_cherry_picks == 1:
+                    logger.warning(humble.F2F_CHERRY_PICK_NUM_CHERRY_PICKS.format(len(cherry_pick_operations)))
+                else:
+                    logger.info(humble.F2F_CHERRY_PICK_NUM_CHERRY_PICKS_PLURAL.format(len(cherry_pick_operations)))
                 for index in range(len(cherry_pick_operations)):
-                    ui_functions.print_info_msg(humble.F2F_CHERRY_PICK_CHERRY_PICK_NUM.format(index + 1))
+                    logger.info(humble.F2F_CHERRY_PICK_CHERRY_PICK_NUM.format(index + 1))
                     for folder in cherry_pick_operations[index]:
-                        ui_functions.print_info_msg("{} -> {} -> {}".format(folder.source, folder.intermediate, folder.destination), header=False)
+                        logger.info("{} -> {} -> {}".format(folder.source, folder.intermediate, folder.destination))
                         if len(folder.source_excludes) > 0:
-                            ui_functions.print_info_msg(humble.F2F_CHERRY_PICK_CHERRY_PICK_EXCLUDE_LIST.format(repr(folder.source_excludes)))
-                    ui_functions.print_info_msg('', header=False)
+                            logger.info(humble.F2F_CHERRY_PICK_CHERRY_PICK_EXCLUDE_LIST.format(repr(folder.source_excludes)))
+                    logger.info('')
             if continue_operation:
                 #
                 # Finish up the current cherry pick operation now that merge conflicts are resolved
@@ -365,7 +370,7 @@ def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cher
                 start_commit = str(repo.commit('HEAD~{}'.format(num_cherry_picks)))
                 end_commit = str(repo.commit('HEAD'))
                 commit_message = repo.commit('HEAD').message
-                ui_functions.print_info_msg(commit_message)
+                logger.info(commit_message)
                 f2f_cherry_pick_squash = get_unique_branch_name('f2f-cherry-pick-squash', repo)
                 try:
                     squash_commits(start_commit, end_commit, f2f_cherry_pick_squash, commit_message, repo, False)
@@ -376,8 +381,8 @@ def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cher
                     if f2f_cherry_pick_squash in repo.heads:
                         repo.git.branch('-D', f2f_cherry_pick_squash)
             # Current source_commit is successful, let user know and move the commit to the completed list
-            ui_functions.print_info_msg('',header=False)
-            ui_functions.print_info_msg(humble.F2F_CHERRY_PICK_SUCCESSFUL)
+            logger.info()
+            logger.info(humble.F2F_CHERRY_PICK_SUCCESSFUL)
             todo_commits.remove(source_commit)
             complete_commits.append(source_commit)
     finally:
@@ -484,7 +489,7 @@ def strip_commit_message(commit, repo, source_commit=None, append_sha=False):
     del os.environ['GIT_EDITOR']
     del os.environ['COMMIT_MESSAGE']
 
-def _perform_cherry_pick(commit, repo, verbose):
+def _perform_cherry_pick(commit, logger, repo, verbose):
     merge_conflict = False
     p = Popen(['git', 'cherry-pick', commit], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
     stdout = p.communicate()[0]
@@ -495,12 +500,12 @@ def _perform_cherry_pick(commit, repo, verbose):
             merge_conflict = True
             stdout = stdout.replace("hint: and commit the result with 'git commit'",'')
             sys.stdout.write(stdout)
-            ui_functions.print_info_msg('',header=False)
-            ui_functions.print_warning_msg(humble.F2F_CHERRY_PICK_MERGE_CONFLICT_LINE1)
-            ui_functions.print_warning_msg(humble.F2F_CHERRY_PICK_MERGE_CONFLICT_LINE2, header=False)
-            ui_functions.print_info_msg('',header=False)
-            ui_functions.print_warning_msg(humble.F2F_CHERRY_PICK_MERGE_CONFLICT_LINE3, header=False)
-            ui_functions.print_warning_msg(humble.F2F_CHERRY_PICK_MERGE_CONFLICT_LINE4, header=False)
+            logger.info('')
+            logger.warning(humble.F2F_CHERRY_PICK_MERGE_CONFLICT_LINE1)
+            logger.warning(humble.F2F_CHERRY_PICK_MERGE_CONFLICT_LINE2)
+            logger.info('')
+            logger.warning(humble.F2F_CHERRY_PICK_MERGE_CONFLICT_LINE3)
+            logger.warning(humble.F2F_CHERRY_PICK_MERGE_CONFLICT_LINE4)
         else:
             sys.stdout.write(stdout)
             raise EdkrepoGitException(humble.F2F_CHERRY_PICK_GIT_FAILURE.format(p.returncode))
@@ -764,7 +769,7 @@ def _restore_f2f_cherry_pick_state(repo_path):
             data['in_progress_commit']['source_commit'], data['append_sha'],
             cp_operations_template, data['complete_commits'], data['todo_commits'], data['squash'])
 
-def _init_f2f_cherry_pick_operations(cherry_pick_operations, repo, src_commit, dest_commit, config):
+def _init_f2f_cherry_pick_operations(cherry_pick_operations, logger, repo, src_commit, dest_commit, config):
     repo_path = repo.working_tree_dir
     # Normalize all the paths
     used_common_folder_paths = []
@@ -782,10 +787,10 @@ def _init_f2f_cherry_pick_operations(cherry_pick_operations, repo, src_commit, d
             source = os.path.relpath(source, repo_path).replace(os.sep, '/')
             destination = os.path.relpath(destination, repo_path).replace(os.sep, '/')
             if not git_path_exists(source, src_commit, repo):
-                ui_functions.print_warning_msg(humble.F2F_CHERRY_PICK_PATH_NOT_EXIST.format(source, src_commit))
+                logger.warning(humble.F2F_CHERRY_PICK_PATH_NOT_EXIST.format(source, src_commit))
                 continue
             if not git_path_exists(destination, dest_commit, repo):
-                ui_functions.print_warning_msg(humble.F2F_CHERRY_PICK_PATH_NOT_EXIST.format(destination, dest_commit))
+                logger.warning(humble.F2F_CHERRY_PICK_PATH_NOT_EXIST.format(destination, dest_commit))
                 continue
             source_excludes = []
             for exclude in folder.source_excludes:
@@ -932,18 +937,18 @@ def _path_in_changed_files(path, changed_files):
             file_path = os.path.dirname(file_path)
     return False
 
-def _list_templates():
+def _list_templates(logger):
     manifest = get_workspace_manifest()
     f2f_templates = manifest.folder_to_folder_mappings
     for template in f2f_templates:
-        ui_functions.print_info_msg('{}Template {}<-->{}{}'.format(Fore.MAGENTA, template.project1, template.project2, Fore.RESET), header=False)
+        logger.info('{}Template {}<-->{}{}'.format(Fore.MAGENTA, template.project1, template.project2, Fore.RESET))
         for folder in template.folders:
-            ui_functions.print_info_msg("{}<-->{}".format(folder.project1_folder, folder.project2_folder), header=False)
-            if len(folder.excludes) == 0:
-                ui_functions.print_info_msg("Excludes:", header=False)
+            logger.info("{}<-->{}".format(folder.project1_folder, folder.project2_folder))
+            if len(folder.excludes) > 0:
+                logger.info("Excludes:")
                 for exclude in folder.excludes:
-                    ui_functions.print_info_msg('\t{}'.format(exclude.path))
-        ui_functions.print_info_msg('',header=False)
+                    logger.info('\t{}'.format(exclude.path))
+        logger.info('')
 
 def _parse_arguments(args):
     cherry_pick_operations = []

@@ -25,6 +25,7 @@ from git import Repo
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.reset_args as arguments
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+from edkrepo.common.logger import get_logger
 import edkrepo.common.ui_functions as ui_functions
 class ResetCommand(EdkrepoCommand):
     def __init__(self):
@@ -43,6 +44,7 @@ class ResetCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        logger = get_logger()
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
         manifest_config = manifest.general_config
@@ -50,6 +52,5 @@ class ResetCommand(EdkrepoCommand):
         for repo_to_reset in repo_sources_to_reset:
             local_repo_path = os.path.join(workspace_path, repo_to_reset.root)
             repo = Repo(local_repo_path)
-            if args.verbose:
-                ui_functions.print_info_msg("{}Resetting {}".format("Hard " if args.hard else "", repo_to_reset.root))
+            logger.info("{}Resetting {}".format("Hard " if args.hard else "", repo_to_reset.root), extra={'verbose': args.verbose})
             repo.head.reset(working_tree=args.hard)

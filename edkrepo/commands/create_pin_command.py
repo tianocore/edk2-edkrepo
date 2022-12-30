@@ -23,6 +23,7 @@ from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humb
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
+from edkrepo.common.logger import get_logger
 from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 import edkrepo.common.ui_functions as ui_functions
@@ -54,7 +55,7 @@ class CreatePinCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
-
+        logger = get_logger()
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
 
@@ -73,7 +74,7 @@ class CreatePinCommand(EdkrepoCommand):
         repo_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
 
         # get the repo sources and commit ids for the pin
-        ui_functions.print_info_msg(GENERATING_PIN_DATA.format(manifest.project_info.codename, manifest.general_config.current_combo), header = False)
+        logger.info(GENERATING_PIN_DATA.format(manifest.project_info.codename, manifest.general_config.current_combo))
         updated_repo_sources = []
         for repo_source in repo_sources:
             local_repo_path = os.path.join(workspace_path, repo_source.root)
@@ -81,15 +82,14 @@ class CreatePinCommand(EdkrepoCommand):
                 raise EdkrepoWorkspaceCorruptException(MISSING_REPO.format(repo_source.root))
             repo = Repo(local_repo_path)
             commit_id = repo.head.commit.hexsha
-            if args.verbose:
-                ui_functions.print_info_msg(GENERATING_REPO_DATA.format(repo_source.root), header = False)
-                ui_functions.print_info_msg(BRANCH.format(repo_source.branch), header = False)
-                ui_functions.print_info_msg(COMMIT.format(commit_id), header = False)
+            logger.info(GENERATING_REPO_DATA.format(repo_source.root), extra={'verbose':args.verbose})
+            logger.info(BRANCH.format(repo_source.branch), extra={'verbose':args.verbose})
+            logger.info(COMMIT.format(commit_id), extra={'verbose':args.verbose})
             updated_repo_source = repo_source._replace(commit=commit_id)
             updated_repo_sources.append(updated_repo_source)
 
         # create the pin
-        ui_functions.print_info_msg(WRITING_PIN_FILE.format(pin_file_name), header = False)
+        logger.info(WRITING_PIN_FILE.format(pin_file_name))
         manifest.generate_pin_xml(args.Description, manifest.general_config.current_combo, updated_repo_sources,
                                   filename=pin_file_name)
 

@@ -112,7 +112,8 @@ class EdkrepoInvalidConfigOptionException(EdkrepoException):
 
 class EdkrepoManifestRepoNotFoundException(EdkrepoException):
     def __init__(self, message):
-        super().__initi__(message, 126)
+        super().__init__(message, 126)
+        
 class EdkrepoRevertFailedException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 127)
@@ -156,3 +157,11 @@ class EdkrepoPatchFailedException(EdkrepoException):
 class EdkrepoLocalBranchExistsException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 137)
+        
+class EdkrepoVersionException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 138)
+
+class EdkrepoLogsRemoveException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 139)
