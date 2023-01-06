@@ -427,6 +427,8 @@ def is_branch_name_collision(json_path, patchset_obj, repo, global_manifest_path
     BRANCH_IN_JSON = False
     for branch in repo.branches:
         if str(branch) == patchset_name:
+            if not os.path.isfile(json_path):
+                break
             with open(json_path, 'r+') as f:
                 data = json.load(f)
                 patchset_data = data[repo_name]
