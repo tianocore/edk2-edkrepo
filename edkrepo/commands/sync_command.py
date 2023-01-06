@@ -181,7 +181,7 @@ class SyncCommand(EdkrepoCommand):
             #Fetch notes
             repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
             if repo_to_sync.patch_set:
-                patchset_branch_creation_flow(repo_to_sync, repo, workspace_path, manifest, global_manifest_path)
+                patchset_branch_creation_flow(repo_to_sync, repo, workspace_path, manifest, global_manifest_path, args.override)
             elif repo_to_sync.commit is None and repo_to_sync.tag is None:
                 local_commits = False
                 initial_active_branch = repo.active_branch
