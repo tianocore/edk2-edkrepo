@@ -8,6 +8,7 @@
 #
 
 import os
+import re
 import traceback
 import shutil
 
@@ -18,6 +19,7 @@ import edkrepo.config.config_factory as cfg
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoInvalidParametersException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException, EdkrepoManifestRepoNotFoundException
+from edkrepo.common.pathfix import expanduser
 from edkrepo.common.progress_handler import GitProgressHandler
 import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as humble
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
@@ -39,7 +41,8 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
     # Sync the repository if it exists locally
     else:
         repo = Repo(local_path)
-        if url in repo.remotes['origin'].urls:
+        all_remote_urls = _calculate_all_remotes(list(repo.remotes['origin'].urls))
+        if url in all_remote_urls:
             if repo.is_dirty(untracked_files=True) and not reset_hard:
                 raise EdkrepoUncommitedChangesException(humble.SINGLE_MAN_REPO_DIRTY.format(local_path))
             elif repo.is_dirty(untracked_files=True) and reset_hard:
@@ -59,6 +62,23 @@ def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
             shutil.move(local_path, new_path)
             print (humble.CLONE_SINGLE_MAN_REPO.format(local_path, url))
             repo = Repo.clone_from(url, local_path, progress=GitProgressHandler(), single_branch=True, branch=branch)
+
+def _calculate_all_remotes(url_list):
+    remote_urls = []
+    for url in url_list:
+        remote_urls.append(url)
+        redirect = _scan_for_redirected_url(url)
+        if redirect:
+            remote_urls.append(redirect)
+    return remote_urls
+
+def _scan_for_redirected_url(url):
+    global_gitconfig_path = os.path.normpath(expanduser("~/.gitconfig"))
+    with git.GitConfigParser(global_gitconfig_path, read_only=False) as git_globalconfig:
+        section_name = 'url "{}"'.format(url)
+        if section_name in git_globalconfig.sections():
+            return git_globalconfig.get(section_name, 'insteadOf')
+    return None
 
 def pull_all_manifest_repos(edkrepo_cfg, edkrepo_user_cfg, reset_hard=False):
     '''
