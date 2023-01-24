@@ -61,6 +61,7 @@ REMOTE_DIFFERENT_ERROR = "The remote for Patchset {}/{} is different from {}/{}"
 NO_PATCHSET_IN_COMBO = "The Combination: {} does not have any Patchsets."
 NO_PATCHSET_EXISTS = "The Patchset: {} does not exist"
 INVALID_PATCHSET_NAME_ERROR = "The Patchset cannot be named: {}. Please rename the Patchset"
+PATCHSET_PARENT_CIRCULAR_DEPENDENCY = "The PatchSet parent failed to be determined through recursion.  Check manifest for circular dependencies in daisy-chained PatchSet"
 
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
@@ -835,8 +836,11 @@ class ManifestXml(BaseXmlHelper):
         '''
         patch_set_operations = []
         if (name, remote) in self._patch_sets:
-            self.get_parent_patchset_operations(name, remote, patch_set_operations)
-            patch_set_operations.append(self._patch_set_operations[(name, remote)])
+            try:
+                self.get_parent_patchset_operations(name, remote, patch_set_operations)
+                patch_set_operations.append(self._patch_set_operations[(name, remote)])
+            except RecursionError:
+                raise ValueError(PATCHSET_PARENT_CIRCULAR_DEPENDENCY)
             return patch_set_operations
         raise ValueError(PATCHSET_UNKNOWN_ERROR.format(name, self._fileref))
 

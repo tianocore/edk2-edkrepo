@@ -77,6 +77,7 @@ DEFAULT_REMOTE_NAME = 'origin'
 PRIMARY_REMOTE_NAME = 'primary'
 PATCH = "Patch"
 REVERT = "Revert"
+PATCHSET_CIRCULAR_DEPENDENCY_ERROR = "The PatchSet {} has a circular dependency with another PatchSet"
 
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
     for repo_to_clone in repos_to_clone:
@@ -842,12 +843,26 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
                 repo.remotes.origin.fetch(patchset.fetch_branch, progress=GitProgressHandler())
             except:
                 raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
+            parent_patchsets = list()
             try:
-                parent_patchset = manifest_obj.get_patchset(patchset.parent_sha, patchset.remote)
-                repo.git.checkout(parent_patchset[2], b=name)
-            except:
-                if patchset.parent_sha in repo.tags:
-                    repo.git.checkout("tags/{}".format(patchset.parent_sha), b=name)
+                parent_patchsets.append(manifest_obj.get_patchset(patchset.parent_sha, patchset.remote))
+                while True:
+                    # Allow daisy-chaining PatchSet.  Continue until KeyError is caught.
+                    parent_patchsets.append(manifest_obj.get_patchset(parent_patchsets[-1].parent_sha, parent_patchsets[-1].remote))
+                    if parent_patchsets.count(parent_patchsets[-1]) > 1:
+                        # Do not continue to branch creation step if a circular dependency is detected between multiple PatchSet.
+                        raise ValueError(PATCHSET_CIRCULAR_DEPENDENCY_ERROR.format(parent_patchsets[-1]))
+            except KeyError:
+                if parent_patchsets != list():
+                    base_patchset_parent_sha = parent_patchsets[-1].parent_sha
+                    if base_patchset_parent_sha in repo.tags:
+                        # tag names are prioritized over branch names
+                        repo.git.checkout("refs/tags/{}".format(base_patchset_parent_sha), b=name)
+                    else:
+                        repo.git.checkout(base_patchset_parent_sha, b=name)
+                elif patchset.parent_sha in repo.tags:
+                    # tag names are prioritized over branch names
+                    repo.git.checkout("refs/tags/{}".format(patchset.parent_sha), b=name)
                 else:
                     repo.git.checkout(patchset.parent_sha, b=name)
             try:
