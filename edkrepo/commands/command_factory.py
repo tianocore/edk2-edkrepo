@@ -29,14 +29,14 @@ def _is_command(CommandClass):
     has_get_metadata = False
     has_run_command = False
     for func in funcs:
-        if func[0] == 'get_metadata' and len(inspect.getargspec(func[1])[0]) == 1:
+        if func[0] == 'get_metadata' and len(inspect.getfullargspec(func[1])[0]) == 1:
             try:
                 cmd.get_metadata()
                 has_get_metadata = True
             except:
                 has_get_metadata = False
         if func[0] == 'run_command':
-            arg_spec = inspect.getargspec(func[1])
+            arg_spec = inspect.getfullargspec(func[1])
             if len(arg_spec[0]) == 3 and arg_spec[0][1] == "args" and arg_spec[0][2] == "config":
                 has_run_command = True
     if has_get_metadata and has_run_command:
