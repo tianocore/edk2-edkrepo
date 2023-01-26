@@ -126,8 +126,9 @@ Git 2.27.0 is the version that has received the most validation, though any vers
 - [Direct Link - Git for Windows 2.27.0 - 64 Bit](https://github.com/git-for-windows/git/releases/download/v2.27.0.windows.1/Git-2.27.0-64-bit.exe)
 - [Direct Link - Git for Windows 2.27.0 - 32 Bit](https://github.com/git-for-windows/git/releases/download/v2.27.0.windows.1/Git-2.27.0-32-bit.exe)
 
-Python 3.8.8 or later is recommended due to performance improvements and [CVE-2021-3177](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3177). You can get Python from here: https://www.python.org/
-
+Python 3.8.8 or later is recommended due to performance improvements and [CVE-2021-3177](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3177). You can get Python from here: https://www.python.org/  
+Windows installer .exe will fail if Python 3.8.8 or later is not detected.  
+  
 ### Install Process
 1. Run the installer .exe
 2. Click Install
