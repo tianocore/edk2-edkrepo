@@ -433,6 +433,9 @@ def is_branch_name_collision(json_path, patchset_obj, repo, global_manifest_path
                 data = json.load(f)
                 patchset_data = data[repo_name]
                 for patchset in patchset_data:
+                    if patchset_name == patchset['parent_sha']:
+                        # Do not match a patchset branch name against a daisy-chained-patchset parent_sha value
+                        continue
                     if patchset_name in patchset.values():
                         BRANCH_IN_JSON = True
 
