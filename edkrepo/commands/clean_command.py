@@ -42,6 +42,11 @@ class CleanCommand(EdkrepoCommand):
                      'positional' : False,
                      'required' : False,
                      'help-text' : arguments.DIRS_HELP})
+        args.append({'name' : 'include-ignored',
+                     'short-name': 'x',
+                     'positional' : False,
+                     'required' : False,
+                     'help-text' : arguments.INCLUDE_IGNORED})
         return metadata
 
     def run_command(self, args, config):
@@ -55,6 +60,7 @@ class CleanCommand(EdkrepoCommand):
             result = repo.git.clean(f=args.force,
                                     d=args.dirs,
                                     n=(not args.force),
-                                    q=(args.quiet and args.force))
+                                    q=(args.quiet and args.force),
+                                    x=(args.include_ignored))
             if result:
                 ui_functions.print_info_msg(result, header = False)

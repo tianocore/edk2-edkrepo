@@ -16,3 +16,4 @@ CLEAN_COMMAND_DESCRIPTION = 'Deletes untracked files from all repositories in th
 FORCE_HELP = 'Without this flag untracked files are listed but not deleted'
 QUIET_HELP = 'Don\'t list files as they are deleted'
 DIRS_HELP = 'Remove directories in addition to files'
+INCLUDE_IGNORED = 'Removes all untracked files'
