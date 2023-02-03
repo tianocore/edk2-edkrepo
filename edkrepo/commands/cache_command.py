@@ -79,9 +79,8 @@ class CacheCommand(EdkrepoCommand):
         # Process enable disable requests
             if args.disable:
                 config['user_cfg_file'].set_caching_state(False)
-            elif args.enable:
+            elif args.enable or args.update:
                 config['user_cfg_file'].set_caching_state(True)
-
             # Write the cache location to the user_cfg
             if not args.path:
                 config['user_cfg_file'].set_cache_path(cache_path=None, default=True)
@@ -110,7 +109,7 @@ class CacheCommand(EdkrepoCommand):
                 pass
 
         # If manifest is provided attempt to add any remotes that do not exist
-        if manifest is not None:
+        if manifest is not None and not args.info:
             add_missing_cache_repos(cache_obj, manifest, True)
 
         # Display all the cache information
@@ -125,7 +124,7 @@ class CacheCommand(EdkrepoCommand):
                     ui_functions.print_info_msg(CACHE_INFO_LINE.format(item.path, item.remote, item.url))
 
         # Do an update if requested
-        if args.update:
+        if args.update and not args.info:
             if args.project:
                 if args.selective:
                     used_refs = _get_used_refs(manifest, cache_obj)
