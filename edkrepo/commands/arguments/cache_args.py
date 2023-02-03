@@ -14,7 +14,7 @@ COMMAND_DESCRIPTION = ('Manages local caching support for project repos.  The go
                        'is to improve clone performance')
 COMMAND_ENABLE_HELP = 'Enables caching support on the system.'
 COMMAND_DISABLE_HELP = 'Disables caching support on the system.'
-COMMAND_UPDATE_HELP = 'Update the repo cache for all cached projects.'
+COMMAND_UPDATE_HELP = 'Update the repo cache for all cached projects. Will enable cache if currently disabled'
 COMMAND_INFO_HELP = 'Display the current cache information.'
 COMMAND_FORMAT_HELP = 'Change the format that the cache information is displayed in.'
 COMMAND_PROJECT_HELP = 'Project or manifest/pin file to add to the cache.'
