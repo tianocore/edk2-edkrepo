@@ -638,17 +638,23 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
 def get_latest_sha(repo, branch, remote_or_url='origin'):
     if repo is None:
         try:
-            ls_remote_output = subprocess.run('git ls-remote {} {}'.format(remote_or_url, branch),
-                                               stdout=subprocess.PIPE, universal_newlines=True, shell=True)
-            latest_sha = ls_remote_output.stdout.split()[0]
+            ls_remote_output = subprocess.run('git ls-remote {} refs/heads/{}'.format(remote_or_url, branch),
+                                               stdout=subprocess.PIPE, universal_newlines=True, shell=True).stdout
         except:
-            latest_sha = None
+            return None
     else:
         try:
-            (latest_sha, _) = repo.git.ls_remote(remote_or_url, 'refs/heads/{}'.format(branch)).split()
+            ls_remote_output = repo.git.ls_remote(remote_or_url, 'refs/heads/{}'.format(branch))
         except:
-            latest_sha = None
-    return latest_sha
+            return None
+    if ls_remote_output == '':
+        return None
+    output_split = ls_remote_output.split()
+    (latest_sha, ref_name) = (output_split[0], output_split[1])
+    if ref_name == 'refs/heads/{}'.format(branch):
+        return latest_sha
+    else:
+        return None
 
 def get_full_path(file_name):
     paths = os.environ['PATH'].split(os.pathsep)
