@@ -11,8 +11,10 @@ import os
 import shutil
 
 from git import Repo
+from git.exc import GitCommandError
 
 from edkrepo.common.progress_handler import GitProgressHandler
+from edkrepo.common.edkrepo_exception import EdkrepoGitException
 from project_utils.project_utils_strings import CACHE_ADD_REMOTE, CACHE_ADDING_REPO, CACHE_CHECK_ROOT_DIR
 from project_utils.project_utils_strings import CACHE_FAILED_TO_CLOSE, CACHE_FAILED_TO_OPEN, CACHE_FETCH_REMOTE
 from project_utils.project_utils_strings import CACHE_REMOTE_EXISTS, CACHE_REMOVE_REPO, CACHE_REPO_EXISTS
@@ -230,20 +232,28 @@ class RepoCache(object):
                 if sha_or_branch is not None and remote.name == dir_name:
                     print('Fetching ref {}'.format(sha_or_branch))
                     remote.fetch(refspec=sha_or_branch, progress=GitProgressHandler())
-                    repo.git.execute(['git', 'lfs', 'fetch', '{}'.format(remote.name), '{}'.format(sha_or_branch), '--recent'])
+                    try:
+                        repo.git.execute(['git', 'lfs', 'fetch', '{}'.format(remote.name), '{}'.format(sha_or_branch), '--recent'])
+                    except GitCommandError:
+                        print('No recent LFS object found in {}:{}'.format(remote.name, sha_or_branch))
+                        pass
                 else:
                     remote.fetch(progress=GitProgressHandler())
-                    repo.git.execute(['git', 'lfs', 'fetch', '--recent'])
+                    try:
+                        repo.git.execute(['git', 'lfs', 'fetch', '--recent'])
+                    except GitCommandError:
+                        print('No recent LFS object found in {}'.format(remote.name))
 
     def is_sha_cached(self, url_or_name, sha, verbose=False):
         repo = self._get_repo(self._create_name(url_or_name))
-        output_data = repo.git.execute(['git', 'cat-file', '-e', sha])
-        if output_data:
-            return False
-        else:
-            return True
-
-
+        try:
+            output_data = repo.git.execute(['git', 'cat-file', '-e', sha])
+            return (not output_data)
+        except GitCommandError as e:
+            if (e.stdout == '' and e.stderr == '' and e.status == 1):  # https://git-scm.com/docs/git-cat-file
+                return False
+            else:
+                raise EdkrepoGitException(e)
 
     def clean_cache(self, verbose=False):
         raise NotImplementedError

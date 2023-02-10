@@ -132,7 +132,7 @@ class CacheCommand(EdkrepoCommand):
                     for remote in used_refs.keys():
                         for ref in used_refs[remote]:
                             ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote))
-                            cache_obj.update_cache(url_or_name=remote, sha_or_branch=used_refs[ref], verbose=True)
+                            cache_obj.update_cache(url_or_name=remote, sha_or_branch=ref, verbose=True)
                 else:
                     for remote in manifest.remotes:
                         ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote.name))
