@@ -586,8 +586,9 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
             sparse_diff = True
         if sparse_diff:
             break
-    if set([combo, manifest.general_config.current_combo]).issubset(set([data.combination for data in manifest.sparse_data])):
-        sparse_diff =  True
+    if set([combo, manifest.general_config.current_combo]).isdisjoint(set([data.combination for data in manifest.sparse_data])) == False :
+        if combo != manifest.general_config.current_combo:
+            sparse_diff =  True
 
     # Recompute the sparse checkout if the dynamic sparse list is being used or
     # there is a difference in the sparse settings / static sparse definition
