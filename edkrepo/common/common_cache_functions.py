@@ -39,6 +39,6 @@ def add_missing_cache_repos(cache_obj, manifest, verbose=False):
     alt_submodules = manifest.submodule_alternate_remotes
     if alt_submodules:
         print('Adding and fetching new submodule remotes... (this could also take a while)')
-        cache_obj.add_repo(name=SUBMODULE_CACHE_REPO_NAME, verbose=verbose)
+        cache_obj.add_repo(name=SUBMODULE_CACHE_REPO_NAME, default_remote=False, verbose=verbose)
         for alt in alt_submodules:
-            cache_obj.add_remote(alt.alternate_url, SUBMODULE_CACHE_REPO_NAME, verbose)
+            cache_obj.add_remote(alt.alternate_url, SUBMODULE_CACHE_REPO_NAME, default_remote=False, verbose=verbose)
