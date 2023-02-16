@@ -61,7 +61,7 @@ class RepoCache(object):
             raise FileNotFoundError
         return [x for x in os.listdir(self._cache_root_path) if os.path.isdir(self._get_repo_path(x))]
 
-    def _add_and_fetch_remote(self, repo, remote_name, url, verbose=False):
+    def _add_and_fetch_remote(self, repo, url, remote_name, verbose=False):
         if verbose:
             print(CACHE_ADD_REMOTE.format(remote_name, url))
         repo.create_remote(remote_name, url)
@@ -128,7 +128,7 @@ class RepoCache(object):
                 self.close()
             shutil.rmtree(self._cache_root_path, ignore_errors=True)
 
-    def add_repo(self, url=None, name=None, verbose=False):
+    def add_repo(self, url=None, name=None, default_remote=True, verbose=False):
         """
         Adds a repo to the cache if it does not already exist.
 
@@ -140,7 +140,9 @@ class RepoCache(object):
             dir_name = self._create_name(name)
         else:
             dir_name = self._create_name(url)
-        if url is not None:
+        if default_remote:
+            remote_name = 'origin'
+        elif url is not None:
             remote_name = self._create_name(url)
         repo_path = self._get_repo_path(dir_name)
 
@@ -154,7 +156,7 @@ class RepoCache(object):
             self._repos[dir_name] = Repo.init(repo_path, bare=True)
 
         if remote_name is not None and remote_name not in self._repos[dir_name].remotes:
-            self._add_and_fetch_remote(self._get_repo(dir_name), remote_name, url)
+            self._add_and_fetch_remote(self._get_repo(dir_name), url, remote_name, verbose)
         return dir_name
 
     def remove_repo(self, url=None, name=None, verbose=False):
@@ -176,8 +178,11 @@ class RepoCache(object):
         self._repos.pop(dir_name).close()
         shutil.rmtree(os.path.join(self._cache_root_path, dir_name), ignore_errors=True)
 
-    def add_remote(self, url, name, verbose=False):
-        remote_name = self._create_name(url)
+    def add_remote(self, url, name, default_remote=True, verbose=False):
+        if default_remote:
+            remote_name = 'origin'
+        else:
+            remote_name = self._create_name(url)
         dir_name = self._create_name(name)
         if dir_name not in self._repos:
             raise ValueError
@@ -186,7 +191,7 @@ class RepoCache(object):
             if verbose:
                 print(CACHE_REMOTE_EXISTS.format(remote_name))
             return
-        self._add_and_fetch_remote(repo, remote_name, url, verbose)
+        self._add_and_fetch_remote(repo, url, remote_name, verbose)
 
     def remove_remote(self, url, name, verbose=False):
         remote_name = self._create_name(url)
