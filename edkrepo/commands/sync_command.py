@@ -326,10 +326,12 @@ class SyncCommand(EdkrepoCommand):
 
         self.__check_submodule_config(workspace_path, new_manifest_to_check, new_sources_for_current_combo)
         # Check that the repo sources lists are the same. If they are not the same and the override flag is not set, throw an exception.
-        if not args.override and set(initial_sources) != set(new_sources):
+        initial_source_repos = set([(source.remote_name, source.remote_url, source.root) for source in set(initial_sources)])
+        new_source_repos = set([(source.remote_name, source.remote_url, source.root) for source in set(new_sources)])
+        if not args.override and initial_source_repos != new_source_repos:
             raise EdkrepoManifestChangedException(SYNC_REPO_CHANGE.format(initial_manifest.project_info.codename))
-        elif args.override and set(initial_sources) != set(new_sources):
-            #get a set of repo source tuples that are not in both the new and old manifest
+        elif args.override and initial_source_repos != new_source_repos:
+            # get a set of repo source tuples that are not in both the new and old manifest
             uncommon_sources = []
             initial_common = []
             new_common = []
