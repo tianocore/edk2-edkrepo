@@ -120,7 +120,7 @@ Restart your shell so the new Pyenv shim for EdkRepo can take effect:
 ## Windows Instructions
 ### Pre-Requisites
 - Git 2.13.x or later
-- Python 3.5 or later
+- Python 3.8.8 or later
 
 Git 2.27.0 is the version that has received the most validation, though any version of Git 2.13 or later works fine. If you want to install 2.27.0, here are some links:
 - [Direct Link - Git for Windows 2.27.0 - 64 Bit](https://github.com/git-for-windows/git/releases/download/v2.27.0.windows.1/Git-2.27.0-64-bit.exe)
