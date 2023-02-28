@@ -3,7 +3,7 @@
 ## @file
 # sync_command.py
 #
-# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2023, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -22,16 +22,10 @@ from git.exc import GitCommandError
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.sync_args as arguments
+import edkrepo.commands.humble.sync_command as humble
 from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoManifestNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
-from edkrepo.common.humble import SYNC_MANIFEST_NOT_FOUND, SYNC_MANIFEST_UPDATE_FAILED
-from edkrepo.common.humble import SYNC_SOURCE_MOVE_WARNING, SYNC_REMOVE_WARNING, SYNC_REMOVE_LIST_END_FORMATTING
-from edkrepo.common.humble import SYNC_MANIFEST_DIFF_WARNING, SYNC_MANIFEST_UPDATE
-from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, SYNC_REPO_CHANGE, SYNCING, FETCHING, UPDATING_MANIFEST
-from edkrepo.common.humble import NO_SYNC_DETACHED_HEAD, SYNC_COMMITS_ON_TARGET, SYNC_ERROR
-from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, SYNC_NEEDS_REBASE, INCLUDED_FILE_NAME
-from edkrepo.common.humble import SYNC_BRANCH_CHANGE_ON_LOCAL
-from edkrepo.common.humble import SYNC_REBASE_CALC_FAIL, SYNC_MOVE_FAILED, SYNC_AUTOMATIC_REMOTE_PRUNE
+from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, INCLUDED_FILE_NAME
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
@@ -136,7 +130,7 @@ class SyncCommand(EdkrepoCommand):
             except EdkrepoException as e:
                 if args.verbose:
                     print(e)
-                print(SYNC_MANIFEST_UPDATE_FAILED)
+                print(humble.SYNC_MANIFEST_UPDATE_FAILED)
         manifest = get_workspace_manifest()
         if args.update_local_manifest:
             try:
@@ -189,9 +183,9 @@ class SyncCommand(EdkrepoCommand):
                 #The new branch may not exist in the heads list yet if it is a new branch
                 repo.git.checkout(repo_to_sync.branch)
                 if not args.fetch:
-                    ui_functions.print_info_msg(SYNCING.format(repo_to_sync.root, repo.active_branch), header = False)
+                    ui_functions.print_info_msg(humble.SYNCING.format(repo_to_sync.root, repo.active_branch), header = False)
                 else:
-                    ui_functions.print_info_msg(FETCHING.format(repo_to_sync.root, repo.active_branch), header = False)
+                    ui_functions.print_info_msg(humble.FETCHING.format(repo_to_sync.root, repo.active_branch), header = False)
                 try:
                     repo.remotes.origin.fetch()
                 except GitCommandError as e:
@@ -207,7 +201,7 @@ class SyncCommand(EdkrepoCommand):
                     if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
                         prune_needed = True
                     if prune_needed:
-                        ui_functions.print_info_msg(SYNC_AUTOMATIC_REMOTE_PRUNE)
+                        ui_functions.print_info_msg(humble.SYNC_AUTOMATIC_REMOTE_PRUNE)
                         time.sleep(1.0)
                         repo.git.remote('prune', 'origin')
                         time.sleep(1.0)
@@ -216,7 +210,7 @@ class SyncCommand(EdkrepoCommand):
                         raise
 
                 if not args.override and not repo.is_ancestor(ancestor_rev='HEAD', rev='origin/{}'.format(repo_to_sync.branch)):
-                    ui_functions.print_info_msg(SYNC_COMMITS_ON_TARGET.format(repo_to_sync.branch, repo_to_sync.root), header = False)
+                    ui_functions.print_info_msg(humble.SYNC_COMMITS_ON_TARGET.format(repo_to_sync.branch, repo_to_sync.root), header=False)
                     local_commits = True
                     sync_error = True
                 if not args.fetch and (not local_commits or args.override):
@@ -232,23 +226,23 @@ class SyncCommand(EdkrepoCommand):
                     branch_origin = next(itertools.islice(repo.iter_commits(), commit_count, commit_count + 1))
                     behind_count = int(repo.git.rev_list('--count', '{}..{}'.format(branch_origin.hexsha, latest_sha)))
                     if behind_count:
-                        ui_functions.print_info_msg(SYNC_NEEDS_REBASE.format(
+                        ui_functions.print_info_msg(humble.SYNC_NEEDS_REBASE.format(
                             behind_count=behind_count,
                             target_remote='origin',
                             target_branch=repo_to_sync.branch,
                             local_branch=initial_active_branch.name,
-                            repo_folder=repo_to_sync.root), header = False)
+                            repo_folder=repo_to_sync.root), header=False)
                 except:
-                    ui_functions.print_error_msg(SYNC_REBASE_CALC_FAIL, header = False)
+                    ui_functions.print_error_msg(humble.SYNC_REBASE_CALC_FAIL, header=False)
             elif args.verbose:
-                ui_functions.print_warning_msg(NO_SYNC_DETACHED_HEAD.format(repo_to_sync.root), header = False)
+                ui_functions.print_warning_msg(humble.NO_SYNC_DETACHED_HEAD.format(repo_to_sync.root), header=False)
 
             # Update commit message templates
             if global_manifest_directory is not None:
                 update_repo_commit_template(workspace_path, repo, repo_to_sync, global_manifest_directory)
 
         if sync_error:
-            ui_functions.print_error_msg(SYNC_ERROR, header = False)
+            ui_functions.print_error_msg(humble.SYNC_ERROR, header=False)
 
         # Initialize submodules
         if not args.skip_submodule:
@@ -292,7 +286,7 @@ class SyncCommand(EdkrepoCommand):
                 if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
                     prune_needed = True
                 if prune_needed:
-                    ui_functions.print_info_msg(SYNC_AUTOMATIC_REMOTE_PRUNE)
+                    ui_functions.print_info_msg(humble.SYNC_AUTOMATIC_REMOTE_PRUNE)
                     # The sleep is to give the operating system time to close all the file handles that Git has open
                     time.sleep(1.0)
                     repo.git.remote('prune', 'origin')
@@ -305,7 +299,7 @@ class SyncCommand(EdkrepoCommand):
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
         ci_index_xml = CiIndexXml(index_path)
         if initial_manifest.project_info.codename not in ci_index_xml.project_list:
-            raise EdkrepoManifestNotFoundException(SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
+            raise EdkrepoManifestNotFoundException(humble.SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
         initial_manifest_remotes = {name:url for name, url in initial_manifest.remotes}
         ci_index_xml_rel_path = os.path.normpath(ci_index_xml.get_project_xml(initial_manifest.project_info.codename))
         global_manifest = os.path.join(global_manifest_directory, ci_index_xml_rel_path)
@@ -329,7 +323,7 @@ class SyncCommand(EdkrepoCommand):
         initial_source_repos = set([(source.remote_name, source.remote_url, source.root) for source in set(initial_sources)])
         new_source_repos = set([(source.remote_name, source.remote_url, source.root) for source in set(new_sources)])
         if not args.override and initial_source_repos != new_source_repos:
-            raise EdkrepoManifestChangedException(SYNC_REPO_CHANGE.format(initial_manifest.project_info.codename))
+            raise EdkrepoManifestChangedException(humble.SYNC_REPO_CHANGE.format(initial_manifest.project_info.codename))
         elif args.override and initial_source_repos != new_source_repos:
             # get a set of repo source tuples that are not in both the new and old manifest
             uncommon_sources = []
@@ -394,21 +388,20 @@ class SyncCommand(EdkrepoCommand):
             for source in sources_to_move:
                 old_dir = os.path.join(workspace_path, source.root)
                 new_dir = generate_name_for_obsolete_backup(old_dir)
-                ui_functions.print_warning_msg(SYNC_SOURCE_MOVE_WARNING.format(source.root, new_dir), header = False)
+                ui_functions.print_warning_msg(humble.SYNC_SOURCE_MOVE_WARNING.format(source.root, new_dir), header = False)
                 new_dir = os.path.join(workspace_path, new_dir)
                 try:
                     shutil.move(old_dir, new_dir)
                 except:
-                    ui_functions.print_error_msg(SYNC_MOVE_FAILED.format(initial_dir=source.root, new_dir=new_dir), header = False)
+                    ui_functions.print_error_msg(humble.SYNC_MOVE_FAILED.format(initial_dir=source.root, new_dir=new_dir), header=False)
                     raise
             # Tell the user about any Git repositories that are no longer used.
             if len(sources_to_remove) > 0:
-                ui_functions.print_warning_msg(SYNC_REMOVE_WARNING, header = False)
+                ui_functions.print_warning_msg(humble.SYNC_REMOVE_WARNING, header = False)
             for source in sources_to_remove:
                 path_to_source = os.path.join(workspace_path, source.root)
                 ui_functions.print_warning_msg(path_to_source, header = False)
-            if len(sources_to_remove) > 0:
-                ui_functions.print_warning_msg(SYNC_REMOVE_LIST_END_FORMATTING, header = False)
+
             # Clone any new Git repositories
             clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check, global_manifest_directory)
             # Make a list of and only checkout repos that were newly cloned. Sync keeps repos on their initial active branches
@@ -437,7 +430,7 @@ class SyncCommand(EdkrepoCommand):
                 create_repos(repos_to_create, workspace_path, new_manifest_to_check, global_manifest_directory)
 
         #remove the old manifest file and copy the new one
-        ui_functions.print_info_msg(UPDATING_MANIFEST, header = False)
+        ui_functions.print_info_msg(humble.UPDATING_MANIFEST, header=False)
         local_manifest_path = os.path.join(local_manifest_dir, 'Manifest.xml')
         os.remove(local_manifest_path)
         shutil.copy(global_manifest, local_manifest_path)
@@ -476,18 +469,18 @@ class SyncCommand(EdkrepoCommand):
                         break
                     elif initial_source.commit and initial_source.commit != new_source.commit:
                         if repo.head.object.hexsha != initial_source.commit:
-                            ui_functions.print_info_msg(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header = False)
+                            ui_functions.print_info_msg(humble.SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header=False)
                         repos_to_checkout.append(new_source)
                         break
                     elif initial_source.tag and initial_source.tag != new_source.tag:
                         tag_sha = repo.git.rev_list('-n 1', initial_source.tag) #according to gitpython docs must change - to _
                         if tag_sha != repo.head.object.hexsha:
-                            ui_functions.print_info_msg(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header = False)
+                            ui_functions.print_info_msg(humble.SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header=False)
                         repos_to_checkout.append(new_source)
                         break
                     elif initial_source.branch and initial_source.branch != new_source.branch:
                         if repo.active_branch.name != initial_source.branch:
-                            ui_functions.print_info_msg(SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header = False)
+                            ui_functions.print_info_msg(humble.SYNC_BRANCH_CHANGE_ON_LOCAL.format(initial_source.branch, new_source.branch, initial_source.root), header = False)
                         repos_to_checkout.append(new_source)
                         break
         return repos_to_checkout, repos_to_create
@@ -499,7 +492,7 @@ class SyncCommand(EdkrepoCommand):
             if args.override:
                 return
             else:
-                raise EdkrepoManifestNotFoundException(SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
+                raise EdkrepoManifestNotFoundException(humble.SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
 
         #see if there is an entry in CiIndex.xml that matches the prject name of the current manifest
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
@@ -508,13 +501,13 @@ class SyncCommand(EdkrepoCommand):
             if args.override:
                 return
             else:
-                raise EdkrepoManifestNotFoundException(SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
+                raise EdkrepoManifestNotFoundException(humble.SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
         ci_index_xml_rel_path = ci_index_xml.get_project_xml(initial_manifest.project_info.codename)
         global_manifest_path = os.path.join(global_manifest_directory, os.path.normpath(ci_index_xml_rel_path))
         global_manifest = ManifestXml(global_manifest_path)
         if not initial_manifest.equals(global_manifest, True):
-            ui_functions.print_warning_msg(SYNC_MANIFEST_DIFF_WARNING, header = False)
-            ui_functions.print_info_msg(SYNC_MANIFEST_UPDATE, header = False)
+            ui_functions.print_warning_msg(humble.SYNC_MANIFEST_DIFF_WARNING, header=False)
+            ui_functions.print_info_msg(humble.SYNC_MANIFEST_UPDATE, header = False)
 
     def __check_submodule_config(self, workspace_path, manifest, repo_sources):
         gitconfigpath = os.path.normpath(expanduser("~/.gitconfig"))
