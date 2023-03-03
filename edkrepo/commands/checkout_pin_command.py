@@ -80,7 +80,7 @@ class CheckoutPinCommand(EdkrepoCommand):
         try:
             deinit_full(workspace_path, manifest, args.verbose)
         except Exception as e:
-            ui_functions.print_error_msg(SUBMODULE_DEINIT_FAILED, header = False)
+            ui_functions.print_error_msg(SUBMODULE_DEINIT_FAILED, header=False)
             if args.verbose:
                 ui_functions.print_error_msg(e, header = False)
         pin_repo_sources = pin.get_repo_sources(pin.general_config.current_combo)
@@ -121,7 +121,7 @@ class CheckoutPinCommand(EdkrepoCommand):
         elif not set(pin.remotes).issubset(set(manifest.remotes)):
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
         elif pin.general_config.current_combo not in combinations_in_manifest(manifest):
-            ui_functions.print_warning_msg(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo), header = False)
+            ui_functions.print_warning_msg(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo), header=True)
         combo_name = pin.general_config.current_combo
         pin_sources = pin.get_repo_sources(combo_name)
         pin_root_remote = {source.root:source.remote_name for source in pin_sources}
