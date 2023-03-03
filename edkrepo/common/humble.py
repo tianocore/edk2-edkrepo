@@ -9,9 +9,6 @@
 
 '''Contains informational and error messages outputted by the run_command functions of Edkrepo commands'''
 
-from colorama import Fore
-from colorama import Style
-
 # General error messages used by commands
 UNSUPPORTED_COMBO = 'The selected COMBINATION/SHA is not present in the project manifest file or does not exist. '
 UNCOMMITED_CHANGES = 'Uncommited changes present in {0} repo. '
@@ -32,7 +29,6 @@ NOT_GIT_REPO = 'The current directory does not appear to be a git repository'
 MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED = 'BRANCH or TAG name present with COMMIT ID in combination field for {} repo. Using COMMIT ID.\n'
 TAG_AND_BRANCH_SPECIFIED = 'BRANCH AND TAG name present in combination field for {} repo. Using TAG.\n'
 CHECKING_CONNECTION = 'Checking connection to remote url: {}\n'
-
 
 #error messages for clone_command.py
 CLONE_EXIT = '\nExiting without performing clone operation.'

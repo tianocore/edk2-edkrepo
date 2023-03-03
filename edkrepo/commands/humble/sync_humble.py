@@ -37,5 +37,3 @@ It is likely that {new_dir} contains your original code now.
 Please close any open editors to reconcile this problem.
 You may need to manually rename {new_dir} to {initial_dir} in some circumstances.\n'''
 SYNC_AUTOMATIC_REMOTE_PRUNE = 'Performing automatic remote prune...'
-
-

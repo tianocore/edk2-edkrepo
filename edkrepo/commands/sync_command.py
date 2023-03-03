@@ -388,12 +388,12 @@ class SyncCommand(EdkrepoCommand):
             for source in sources_to_move:
                 old_dir = os.path.join(workspace_path, source.root)
                 new_dir = generate_name_for_obsolete_backup(old_dir)
-                ui_functions.print_warning_msg(humble.SYNC_SOURCE_MOVE_WARNING.format(source.root, new_dir), header = False)
+                ui_functions.print_warning_msg(humble.SYNC_SOURCE_MOVE_WARNING.format(source.root, new_dir), header=True)
                 new_dir = os.path.join(workspace_path, new_dir)
                 try:
                     shutil.move(old_dir, new_dir)
                 except:
-                    ui_functions.print_error_msg(humble.SYNC_MOVE_FAILED.format(initial_dir=source.root, new_dir=new_dir), header=False)
+                    ui_functions.print_error_msg(humble.SYNC_MOVE_FAILED.format(initial_dir=source.root, new_dir=new_dir), header=True)
                     raise
             # Tell the user about any Git repositories that are no longer used.
             if len(sources_to_remove) > 0:
@@ -506,7 +506,7 @@ class SyncCommand(EdkrepoCommand):
         global_manifest_path = os.path.join(global_manifest_directory, os.path.normpath(ci_index_xml_rel_path))
         global_manifest = ManifestXml(global_manifest_path)
         if not initial_manifest.equals(global_manifest, True):
-            ui_functions.print_warning_msg(humble.SYNC_MANIFEST_DIFF_WARNING, header=False)
+            ui_functions.print_warning_msg(humble.SYNC_MANIFEST_DIFF_WARNING, header=True)
             ui_functions.print_info_msg(humble.SYNC_MANIFEST_UPDATE, header = False)
 
     def __check_submodule_config(self, workspace_path, manifest, repo_sources):
