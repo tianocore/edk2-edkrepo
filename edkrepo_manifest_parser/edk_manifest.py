@@ -598,15 +598,21 @@ class ManifestXml(BaseXmlHelper):
         if self._tree.find('SelectiveSubmoduleInitList'):
             selective_submodules_root = ET.SubElement(pin_root, 'SelectiveSubmoduleInitList')
 
+        patch_sets = None
+        if self._tree.find('PatchSets'):
+            patch_sets = ET.SubElement(pin_root, 'PatchSets')
+
         remote_root = ET.SubElement(pin_root, 'RemoteList')
         source_root = ET.SubElement(pin_root, 'Combination')
         source_root.attrib['name'] = self._combinations[combo_name].name
-
+        
+        for patch_set in self._tree.iter("PatchSet"):
+            patch_sets.append(patch_set)
         # Add tags for each RepoSource tuple in the list provided
         # Only one of Branch or SHA is required to write PIN and checkout code
         for src_tuple in repo_source_list:
             if (src_tuple.root is None or src_tuple.remote_name is None or src_tuple.remote_url is
-                    None or (src_tuple.commit is None and src_tuple.branch is None and src_tuple.tag is None)):
+                    None or ((src_tuple.commit is None and src_tuple.branch is None and src_tuple.tag is None) and src_tuple.patch_set is None)):
                 raise ValueError("Invalid input: empty values in source list")
 
             # the data to create the remote elements could also be retrieved
@@ -665,8 +671,14 @@ class ManifestXml(BaseXmlHelper):
                                                                  'commit': src_tuple.commit,
                                                                  'sparseCheckout': sparse,
                                                                  'enableSubmodule': sub})
+            elif src_tuple.patch_set:
+                elem = ET.SubElement(source_root, 'Source', {'localRoot': src_tuple.root,
+                                                                 'remote': src_tuple.remote_name,
+                                                                 'patchSet': src_tuple.patch_set,
+                                                                 'sparseCheckout': sparse,
+                                                                 'enableSubmodule': sub})
             else:
-                raise ValueError('Pin.xml cannot be generated with an empty commit value')
+                raise ValueError('Pin.xml cannot be generated with an empty commit value or empty patchset')
 
             elem.tail = '\n    '
 
@@ -684,6 +696,9 @@ class ManifestXml(BaseXmlHelper):
             selective_submodules_root.text = '\n    '
             selective_submodules_root.tail = '\n\n  '
             list(selective_submodules_root)[-1].tail = '\n  '
+        patch_sets.text = '\n    '
+        patch_sets.tail = '\n\n  '
+        list(patch_sets)[-1].tail = '\n  '
         remote_root.text = '\n    '
         remote_root.tail = '\n\n  '
         list(remote_root)[-1].tail = '\n  '
