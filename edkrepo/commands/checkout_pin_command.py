@@ -20,7 +20,7 @@ from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_rep
 from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET, SUBMODULE_DEINIT_FAILED
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoProjectMismatchException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
@@ -85,7 +85,7 @@ class CheckoutPinCommand(EdkrepoCommand):
                 ui_functions.print_error_msg(e, header = False)
         pin_repo_sources = pin.get_repo_sources(pin.general_config.current_combo)
         try:
-            checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest)
+            checkout_repos(args.verbose, args.override, pin_repo_sources, workspace_path, manifest, manifest_repo_path)
             manifest.write_current_combo(humble.PIN_COMBO.format(args.pinfile))
         finally:
             cache_path = None
@@ -98,22 +98,50 @@ class CheckoutPinCommand(EdkrepoCommand):
                 sparse_checkout(workspace_path, pin_repo_sources, manifest)
 
     def __get_pin_path(self, args, workspace_path, manifest_repo_path, manifest):
+        pin_path = None
+        if not args.pinfile.endswith('.xml'):
+            pin_name = '{}.xml'.format(args.pinfile)
+        else:
+            pin_name = args.pinfile
+
         if os.path.isabs(args.pinfile) and os.path.isfile(args.pinfile):
-            return os.path.normpath(args.pinfile)
-        elif manifest_repo_path is not None and os.path.isfile(os.path.join(manifest_repo_path, os.path.normpath(manifest.general_config.pin_path), args.pinfile)):
-            return os.path.join(manifest_repo_path, os.path.normpath(manifest.general_config.pin_path), args.pinfile)
-        elif manifest_repo_path is not None and os.path.isfile(os.path.join(manifest_repo_path, args.pinfile)):
-            return os.path.join(manifest_repo_path, args.pinfile)
-        elif os.path.isfile(os.path.join(workspace_path, args.pinfile)):
-            return os.path.join(workspace_path, args.pinfile)
-        elif os.path.isfile(os.path.join(workspace_path, 'repo', args.pinfile)):
-            return os.path.join(workspace_path, 'repo', args.pinfile)
-        elif not os.path.isfile(os.path.join(workspace_path, args.pinfile)) and os.path.dirname(args.pinfile) is None:
-            for dirpath, dirnames, filenames in os.walk(workspace_path):
-                if args.pinfile in filenames:
-                    return os.path.join(dirpath, args.pinfile)
+            pin_path = os.path.normpath(args.pinfile)
+        elif manifest_repo_path is not None:
+            pin_path = self.__find_pin_in_manifest_repo(pin_name, manifest_repo_path, manifest.general_config.pin_path)
+        else:
+            pin_path = self.__find_pin_in_workspace(workspace_path, pin_name)
+
+        if pin_path:
+            return pin_path
         else:
             raise EdkrepoInvalidParametersException(humble.NOT_FOUND)
+
+
+    def __find_pin_in_manifest_repo(self, pin_name, manifest_repo_path, pin_path):
+        expected_path_in_manifest_repo = os.path.normpath(os.path.join(manifest_repo_path, pin_path, pin_name))
+        path_if_at_root_of_man_repo = os.path.normpath(os.path.join(manifest_repo_path, pin_name))
+        if os.path.isfile(expected_path_in_manifest_repo):
+            return expected_path_in_manifest_repo
+        elif os.path.isfile(path_if_at_root_of_man_repo): # Corner case to catch pins that may have been placed in the root dir of the manifest repo.
+            return path_if_at_root_of_man_repo
+        else:
+            return None
+
+    def __find_pin_in_workspace(self, workspace_path, pin_name):
+        # Before walking the entire workspace attempt to locate the pin at the root and in the repo/ dir as a performance improvement.
+        path_at_wkspc_root = os.path.normpath(os.path.join(workspace_path, pin_name))
+        path_in_repo_dir = os.path.normpath(os.path.join(workspace_path, 'repo', pin_name))
+        if os.path.isfile(path_at_wkspc_root):
+            return path_at_wkspc_root
+        elif os.path.isfile(path_in_repo_dir):
+            return path_in_repo_dir
+        elif os.path.dirname(pin_name) is None:
+             for dirpath, dirnames, filenames in os.walk(workspace_path):
+                if pin_name in filenames:
+                    return os.path.join(dirpath, pin_name)
+        else:
+            return None
+
 
     def __pin_matches_project(self, pin, manifest, workspace_path):
         if pin.project_info.codename != manifest.project_info.codename:
