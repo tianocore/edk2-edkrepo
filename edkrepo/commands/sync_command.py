@@ -22,7 +22,7 @@ from git.exc import GitCommandError
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.sync_args as arguments
-import edkrepo.commands.humble.sync_command as humble
+import edkrepo.commands.humble.sync_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoManifestNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
 from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, INCLUDED_FILE_NAME
@@ -76,6 +76,10 @@ class SyncCommand(EdkrepoCommand):
                      'positional' : False,
                      'required' : False,
                      'help-text' : arguments.OVERRIDE_HELP})
+        args.append({'name' : 'tags',
+                     'short-name' : 't',
+                     'required' : False,
+                     'help-text': arguments.TAG_HELP})
         args.append(SubmoduleSkipArgument)
         args.append(SourceManifestRepoArgument)
         return metadata
@@ -168,12 +172,19 @@ class SyncCommand(EdkrepoCommand):
         global_manifest_path = get_manifest_repo_path(manifest_repo, config)
         for repo_to_sync in repo_sources_to_sync:
             local_repo_path = os.path.join(workspace_path, repo_to_sync.root)
+            repo = Repo(local_repo_path)
+            if not args.fetch:
+                ui_functions.print_info_msg(humble.SYNCING.format(repo_to_sync.root, repo.active_branch), header = False)
+            else:
+                ui_functions.print_info_msg(humble.FETCHING.format(repo_to_sync.root, repo.active_branch), header = False)
+
             # Update any hooks
             if global_manifest_directory is not None:
                 update_hooks(hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo_to_sync, config, global_manifest_directory)
-            repo = Repo(local_repo_path)
-            #Fetch notes
+
             repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
+            if args.tags:
+                repo.git.execute(['git', 'fetch', '--tags'])
             if repo_to_sync.patch_set:
                 patchset_branch_creation_flow(repo_to_sync, repo, workspace_path, manifest, global_manifest_path, args.override)
             elif repo_to_sync.commit is None and repo_to_sync.tag is None:
@@ -182,10 +193,7 @@ class SyncCommand(EdkrepoCommand):
                 repo.remotes.origin.fetch("refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_sync.branch))
                 #The new branch may not exist in the heads list yet if it is a new branch
                 repo.git.checkout(repo_to_sync.branch)
-                if not args.fetch:
-                    ui_functions.print_info_msg(humble.SYNCING.format(repo_to_sync.root, repo.active_branch), header = False)
-                else:
-                    ui_functions.print_info_msg(humble.FETCHING.format(repo_to_sync.root, repo.active_branch), header = False)
+
                 try:
                     repo.remotes.origin.fetch()
                 except GitCommandError as e:
