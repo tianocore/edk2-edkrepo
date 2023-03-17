@@ -102,8 +102,9 @@ class ListPinsCommand(EdkrepoCommand):
                     pin = ManifestXml(pin_file)
                 except TypeError:
                     continue
-                parse_output = sys.stdout.getvalue()
-                sys.stdout = stdout
+                finally:
+                    parse_output = sys.stdout.getvalue()
+                    sys.stdout = stdout
                 if pin.project_info.codename == manifest.project_info.codename:
                     if not use_less:
                         print('Pin File: {}'.format(file))
@@ -121,6 +122,6 @@ class ListPinsCommand(EdkrepoCommand):
                             output_string = separator.join((output_string, 'Parsing Errors: {}'.format(parse_output.strip())))
                         if args.description:
                             output_string = separator.join((output_string, 'Description: {}\n'.format(pin.project_info.description)))
+
         if less_path:
-            less_output = subprocess.Popen([str(less_path), '-F', '-R', '-S', '-X', '-K'], stdin=subprocess.PIPE, stdout=sys.stdout, universal_newlines=True)
-            less_output.communicate(input=output_string)
+            subprocess.run([str(less_path), '-F', '-R', '-S', '-X', '-K'], stdout=sys.stdout, input=output_string, universal_newlines=True)
