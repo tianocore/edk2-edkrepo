@@ -22,7 +22,7 @@ from git.exc import GitCommandError
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.sync_args as arguments
-import edkrepo.commands.humble.sync_command as humble
+import edkrepo.commands.humble.sync_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoManifestNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
 from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, INCLUDED_FILE_NAME
