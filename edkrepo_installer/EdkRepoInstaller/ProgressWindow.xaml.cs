@@ -2,7 +2,7 @@
   ProgressWindow.xaml.cs
 
 @copyright
-  Copyright 2016 - 2019 Intel Corporation. All rights reserved.<BR>
+  Copyright 2016 - 2023 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -253,7 +253,19 @@ namespace TianoCore.EdkRepoInstaller
 
         private void WorkerThreadFailed()
         {
-            InstallLogger.Log("Installation Failed.");
+            bool uninstall;
+            lock (CancelPendingLock)
+            {
+                uninstall = uninstallMode;
+            }
+            if (uninstall)
+            {
+                InstallLogger.Log("Uninstallation Failed.");
+            }
+            else
+            {
+                InstallLogger.Log("Installation Failed.");
+            }
             Dispatcher.BeginInvoke(new Action(delegate()
                 {
                     ExitCode = 1;
@@ -266,7 +278,14 @@ namespace TianoCore.EdkRepoInstaller
                     }
                     else
                     {
-                        MessageBox.Show("Installation Failed.", "Installation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        if (uninstall)
+                        {
+                            MessageBox.Show("Uninstallation Failed.", "Uninstallation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Installation Failed.", "Installation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
                         CancelButton.IsEnabled = true;
                     }
                 }));

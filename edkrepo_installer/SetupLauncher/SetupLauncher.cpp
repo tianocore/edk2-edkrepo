@@ -2,7 +2,7 @@
   SetupLauncher.cpp
 
 @copyright
-  Copyright 2016 - 2019 Intel Corporation. All rights reserved.<BR>
+  Copyright 2016 - 2023 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -18,8 +18,49 @@
 TCHAR DotNetInstallerFileName[]   = _T("NDP452-KB2901954-Web.exe");
 TCHAR EdkRepoInstallerFileName[]  = _T("EdkRepoInstaller.exe");
 extern const TCHAR *g_szNetfx40VersionString;
+BOOLEAN g_SilentMode = FALSE;
 bool IsNetfx452Installed();
 bool CheckNetfxVersionUsingMscoree(const TCHAR*);
+
+void
+DisplayErrorMessage (
+  LPTSTR ErrorMessage
+  )
+{
+  DWORD             StringLength;
+  DWORD		          nNumberOfCharsWritten;
+  HANDLE	          StdOut;
+  LPTSTR            NewLine = _T("\r\n");
+
+  if (g_SilentMode) {
+    StdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (StdOut != NULL) {
+#if TCHAR == WCHAR
+        StringLength = wcslen(ErrorMessage);
+#else
+        StringLength = strlen(ErrorMessage);
+#endif
+      nNumberOfCharsWritten = 0;
+      WriteConsole(
+        StdOut,
+        ErrorMessage,
+        StringLength,
+        &nNumberOfCharsWritten,
+        NULL
+      );
+      nNumberOfCharsWritten = 0;
+      WriteConsole(
+        StdOut,
+        NewLine,
+        sizeof(NewLine) / sizeof(TCHAR),
+        &nNumberOfCharsWritten,
+        NULL
+      );
+    }
+  } else {
+    MessageBox(NULL, ErrorMessage, _T("Fatal Error"), MB_OK | MB_ICONERROR);
+  }
+}
 
 void
 DisplayWin32Error (
@@ -54,7 +95,7 @@ DisplayWin32Error (
       Message
       );
     LocalFree(Message);
-    MessageBox (NULL, Buffer, _T ("Fatal Error"), MB_OK | MB_ICONERROR);
+    DisplayErrorMessage(Buffer);
   } else {
     _sntprintf_s (
       Buffer,
@@ -64,7 +105,7 @@ DisplayWin32Error (
       FunctionName,
       Error
       );
-    MessageBox (NULL, Buffer, _T ("Fatal Error"), MB_OK | MB_ICONERROR);
+    DisplayErrorMessage(Buffer);
   }
 }
 
@@ -388,30 +429,36 @@ RunEdkRepoInstaller (
   LPTSTR            InstallerPath;
   LPWSTR            Parameters;
   DWORD             ExitCode;
+  DWORD		          nNumberOfCharsWritten;
+  HANDLE	          StdOut;
   BOOLEAN           Status;
 
   FilePath = GetModulePath (NULL);
   if (FilePath == NULL) {
-    MessageBox (NULL, _T ("Failed to get path, out of memory"), _T("Fatal Error"), MB_OK | MB_ICONERROR);
+    DisplayErrorMessage (_T ("Failed to get path, out of memory"));
     return FALSE;
   }
   if (!GetDirectoryName (FilePath)) {
     HeapFree (GetProcessHeap (), 0, FilePath);
-    MessageBox (NULL, _T ("Failed to get directory"), _T("Fatal Error"), MB_OK | MB_ICONERROR);
+    DisplayErrorMessage (_T ("Failed to get directory"));
     return FALSE;
   }
   InstallerPath = CombinePaths (FilePath, EdkRepoInstallerFileName);
   HeapFree (GetProcessHeap (), 0, FilePath);
   if (InstallerPath == NULL) {
-    MessageBox (NULL, _T ("Failed to combine paths"), _T("Fatal Error"), MB_OK | MB_ICONERROR);
+    DisplayErrorMessage (_T ("Failed to combine paths"));
     return FALSE;
   }
   if (FileExists (InstallerPath) && IsFile (InstallerPath)) {
-    if (PassiveMode) {
-      Parameters = L"/Passive";
-    } else {
-      Parameters = L"";
-    }
+    if (g_SilentMode) {
+      Parameters = L"/Silent /Passive";
+	  } else {
+        if (PassiveMode) {
+          Parameters = L"/Passive";
+        } else {
+          Parameters = L"";
+        }
+	  }
     Status = RunProgram (InstallerPath, Parameters, &ExitCode);
     HeapFree (GetProcessHeap (), 0, InstallerPath);
     if (!Status || ExitCode != 0)
@@ -420,12 +467,7 @@ RunEdkRepoInstaller (
     }
     return TRUE;
   } else {
-    MessageBox (
-      NULL,
-      _T ("Unable to install EdkRepo. Installer was not found in the package."),
-      _T("Fatal Error"),
-      MB_OK | MB_ICONERROR
-      );
+    DisplayErrorMessage (_T ("Unable to install EdkRepo. Installer was not found in the package."));
     return FALSE;
   }
 }
@@ -442,15 +484,20 @@ _tWinMain (
   LPCWSTR   CommandLine;
   LPWSTR    *Argv;
   BOOLEAN   PassiveMode;
+  BOOLEAN	SilentMode;
   int       MessageBoxId;
   int       Index;
   int       NumArgs;
   bool      bNetfx452Installed;
+  DWORD		nNumberOfCharsWritten;
+  HANDLE	StdOut = NULL;
+  LPTSTR	SilentDotNetInstallError = _T(".NET Framework 4.5.2 must be installed to continue setup. Please install .NET and try again.");
 
   InitCommonControls ();
   CommandLine = GetCommandLineW ();
   Argv = CommandLineToArgvW (CommandLine, &NumArgs);
   PassiveMode = FALSE;
+  SilentMode = FALSE;
   for (Index = 0; Index < NumArgs; Index++) {
     if (wcscmp (Argv[Index], _T ("/Passive")) == 0) {
       PassiveMode = TRUE;
@@ -460,11 +507,34 @@ _tWinMain (
       PassiveMode = TRUE;
       break;
     }
+	  if (wcscmp(Argv[Index], _T("/Silent")) == 0) {
+		  SilentMode = TRUE;
+		  PassiveMode = TRUE;
+		  break;
+	  }
+	  if (wcscmp(Argv[Index], _T("/silent")) == 0) {
+		  SilentMode = TRUE;
+		  PassiveMode = TRUE;
+		  break;
+	  }
   }
+  g_SilentMode = SilentMode;
   LocalFree (Argv);
+  if (SilentMode) {
+	  if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+		  StdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	  }
+  }
   bNetfx452Installed = (IsNetfx452Installed() && CheckNetfxVersionUsingMscoree(g_szNetfx40VersionString));
 
   if (!bNetfx452Installed) {
+    if (SilentMode) {
+      nNumberOfCharsWritten = 0;
+      if (StdOut != NULL) {
+        WriteConsole(StdOut, SilentDotNetInstallError, sizeof(SilentDotNetInstallError) / sizeof(TCHAR), &nNumberOfCharsWritten, NULL);
+      }
+      exit(1);
+    }
     if (!PassiveMode) {
       MessageBoxId = MessageBox (
                         NULL,
