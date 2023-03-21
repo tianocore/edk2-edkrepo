@@ -2,7 +2,7 @@
   VendorCustomizer.cs
 
 @copyright
-  Copyright 2019 Intel Corporation. All rights reserved.<BR>
+  Copyright 2019 - 2023 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -167,6 +167,14 @@ namespace TianoCore.EdkRepoInstaller
                 {
                     gVendorCustomizerObject.WriteToInstallLog = value;
                 }
+            }
+        }
+
+        public bool SilentMode
+        {
+            set
+            {
+                gVendorCustomizerObject.SilentMode = value;
             }
         }
 

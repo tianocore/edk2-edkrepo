@@ -2,7 +2,7 @@
   InstallLogger.cs
 
 @copyright
-  Copyright 2016 - 2019 Intel Corporation. All rights reserved.<BR>
+  Copyright 2016 - 2023 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -25,11 +25,20 @@ namespace TianoCore.EdkRepoInstaller
         private static readonly object LogMutex = new object();
         private static LogHook LogHook = null;
         private static string LogFilePath = null;
+        private static bool SilentMode = false;
+
         public static void SetLogHook(LogHook hook)
         {
             lock (LogMutex)
             {
                 LogHook = hook;
+            }
+        }
+        public static void SetSilentMode(bool silentMode)
+        {
+            lock (LogMutex)
+            {
+                SilentMode = silentMode;
             }
         }
         public static void Log(string LogMessage)
@@ -73,12 +82,19 @@ namespace TianoCore.EdkRepoInstaller
                     }
                     else
                     {
-                        MessageBox.Show(
-                            string.Format("Warning: Writing to log file failed: {0}\n", e.ToString()),
-                            "Installer Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning
-                            );
+                        if (SilentMode)
+                        {
+                            Console.WriteLine(string.Format("Warning: Writing to log file failed: {0}\n", e.ToString()));
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                string.Format("Warning: Writing to log file failed: {0}\n", e.ToString()),
+                                "Installer Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning
+                                );
+                        }
                     }
                 }
 

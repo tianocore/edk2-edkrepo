@@ -2,7 +2,7 @@
   App.xaml.cs
 
 @copyright
-  Copyright 2017 - 2019 Intel Corporation. All rights reserved.<BR>
+  Copyright 2017 - 2023 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -16,6 +16,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 
@@ -26,10 +27,14 @@ namespace TianoCore.EdkRepoInstaller
     /// </summary>
     public partial class App : Application
     {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool AttachConsole(uint dwProcessId);
+
         private void Application_Startup(object sender, StartupEventArgs e)
         {
             bool uninstall = false;
             bool passive = false;
+            bool silent = false;
             foreach (string arg in Environment.GetCommandLineArgs())
             {
                 if ((string.Compare(arg,"/uninstall",true) == 0) ||
@@ -44,11 +49,33 @@ namespace TianoCore.EdkRepoInstaller
                 {
                     passive = true;
                 }
+                if ((string.Compare(arg, "/silent", true) == 0) ||
+                    (string.Compare(arg, "-silent", true) == 0) ||
+                    (string.Compare(arg, "--silent", true) == 0))
+                {
+                    silent = true;
+                    passive = true;
+                }
             }
-            LoadVendorCustomizer(passive);
+            if(silent)
+            {
+                AttachConsole(0xffffffff);
+                InstallLogger.SetSilentMode(true);
+            }
+
+            LoadVendorCustomizer(passive, silent);
+            if (silent && VendorCustomizer.Instance != null)
+            {
+                VendorCustomizer.Instance.SilentMode = true;
+            }
             if (uninstall)
             {
-                if (passive)
+                if (silent)
+                {
+                    SilentInstallHandler silentInstallHandler = new SilentInstallHandler();
+                    silentInstallHandler.PerformUninstall();
+                }
+                else if (passive)
                 {
                     ProgressWindow progressWindow = new ProgressWindow();
                     progressWindow.UninstallMode = true;
@@ -75,17 +102,36 @@ namespace TianoCore.EdkRepoInstaller
                     }
                 }
             }
-            else if (passive)
+            else //Install
             {
+                SilentInstallHandler silentInstallHandler = null;
+                if(silent)
+                {
+                    Console.WriteLine(InstallerStrings.InstallerName);
+                    string publisher = InstallerStrings.UninstallPublisher;
+                    if (publisher == "TianoCore")
+                        publisher = "The TianoCore Contributors";
+                    Console.WriteLine(string.Format("Copyright (c) {0}", publisher));
+                    Console.WriteLine(string.Format("Please wait while we install {0}...", InstallerStrings.ProductName));
+                    Console.WriteLine();
+                    silentInstallHandler = new SilentInstallHandler();
+                    InstallLogger.SetLogHook(silentInstallHandler.UpdateLog);
+                }
                 CheckForVendorCustomizedEdkRepoAlreadyInstalled(passive);
-                ProgressWindow progressWindow = new ProgressWindow();
-                progressWindow.PassiveMode = true;
-                progressWindow.Show();
-            }
-            else
-            {
-                CheckForVendorCustomizedEdkRepoAlreadyInstalled(passive);
-                new MainWindow().Show();
+                if (silent)
+                {
+                    silentInstallHandler.PerformInstall();
+                }
+                else if (passive)
+                {
+                    ProgressWindow progressWindow = new ProgressWindow();
+                    progressWindow.PassiveMode = true;
+                    progressWindow.Show();
+                }
+                else
+                {
+                    new MainWindow().Show();
+                }
             }
         }
 
@@ -93,7 +139,7 @@ namespace TianoCore.EdkRepoInstaller
         // Note: If one creates a custom version of EdkRepo using this mechanism,
         // be sure to make a new ProductCode and add it to InstallerStrings.KnownVendorCustomizerProductCodes
         //
-        private void LoadVendorCustomizer(bool Passive)
+        private void LoadVendorCustomizer(bool Passive, bool Silent)
         {
             string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             Assembly VendorPlugin = null;
@@ -113,7 +159,11 @@ namespace TianoCore.EdkRepoInstaller
                     {
                         VendorPlugin = null;
                         InstallLogger.Log(string.Format("Unable to load vendor customizer: {0}\r\n{1}", file, e.ToString()));
-                        if (!Passive)
+                        if(Silent)
+                        {
+                            Console.WriteLine(string.Format("Unable to load vendor customizer: {0}\r\n{1}", file, e.ToString()));
+                        }
+                        else if (!Passive)
                         {
                             MessageBox.Show(
                                 string.Format("Unable to load vendor customizer: {0}\r\n{1}", file, e.ToString()),
@@ -161,12 +211,19 @@ namespace TianoCore.EdkRepoInstaller
                     InstallLogger.Log(string.Format("Unable to load vendor customizer\r\n{0}", e.ToString()));
                     if (!Passive)
                     {
-                        MessageBox.Show(
-                            string.Format("Unable to load vendor customizer\r\n{0}", e.ToString()),
-                            InstallerStrings.InstallerName,
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error
-                            );
+                        if (Silent)
+                        {
+                            Console.WriteLine(string.Format("Unable to load vendor customizer\r\n{0}", e.ToString()));
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                string.Format("Unable to load vendor customizer\r\n{0}", e.ToString()),
+                                InstallerStrings.InstallerName,
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error
+                                );
+                        }
                     }
                     Application.Current.Shutdown(1);
                 }
@@ -184,10 +241,11 @@ namespace TianoCore.EdkRepoInstaller
                 if (Passive)
                 {
                     InstallLogger.Log(string.Format("{0} is a third party version of {1}. {0} is already installed.", DisplayName, ProductName));
-                    InstallLogger.Log(string.Format("To install this version of {1}, {0} must be uninstalled first.", DisplayName, ProductName));
+                    InstallLogger.Log(string.Format("To install this version of {1}, {0} will be uninstalled first.", DisplayName, ProductName));
                     SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", UninstallString));
                     p.WaitForExit();
                     Thread.Sleep(4000);
+                    InstallLogger.Log(string.Format("{0} uninstalled.", DisplayName));
                 }
                 else
                 {
@@ -200,9 +258,12 @@ namespace TianoCore.EdkRepoInstaller
                         );
                     if (Uninstall == MessageBoxResult.Yes)
                     {
+                        InstallLogger.Log(string.Format("{0} is a third party version of {1}. {0} is already installed.", DisplayName, ProductName));
+                        InstallLogger.Log(string.Format("To install this version of {1}, {0} will be uninstalled first.", DisplayName, ProductName));
                         SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", UninstallString));
                         p.WaitForExit();
                         Thread.Sleep(1000);
+                        InstallLogger.Log(string.Format("{0} uninstalled.", DisplayName));
                     }
                     else
                     {

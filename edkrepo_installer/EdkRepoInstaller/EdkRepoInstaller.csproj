@@ -96,6 +96,7 @@
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="PythonOperations.cs" />
+    <Compile Include="SilentInstallHandler.cs" />
     <Compile Include="SilentProcess.cs" />
     <Compile Include="SimpleJSON.cs" />
     <Compile Include="TianoCoreBranding.xaml.cs">
@@ -173,7 +174,7 @@
     <PostBuildEvent>copy /y "$(SolutionDir)EdkRepoInstallerConfig.xml" "$(TargetDir)"
 </PostBuildEvent>
   </PropertyGroup>
-  <Target Name = "Clean">
+  <Target Name="Clean">
     <Delete Files="$(TargetDir)EdkRepoInstallerConfig.xml" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -2,7 +2,7 @@
   InstallWorker.cs
 
 @copyright
-  Copyright 2017 - 2020 Intel Corporation. All rights reserved.<BR>
+  Copyright 2017 - 2023 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -610,6 +610,10 @@ namespace TianoCore.EdkRepoInstaller
                 InstallLogger.Log("Error: git.exe was not found on the path. This likely means Git For Windows is not installed. Please install it before continuing.");
                 ReportComplete(false, false);
                 return;
+            }
+            if(WindowsHelpers.RunningInWindowsServiceOrContainer())
+            {
+                Environment.SetEnvironmentVariable("GIT_PYTHON_GIT_EXECUTABLE", GitPath);
             }
             SilentProcess.StdoutDataCapture dataCapture = new SilentProcess.StdoutDataCapture();
             SilentProcess process = SilentProcess.StartConsoleProcessSilently(GitPath, "--version", dataCapture.DataReceivedHandler);
