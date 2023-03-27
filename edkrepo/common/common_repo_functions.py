@@ -843,28 +843,8 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
                 repo.remotes.origin.fetch(patchset.fetch_branch, progress=GitProgressHandler())
             except:
                 raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
-            parent_patchsets = list()
-            try:
-                parent_patchsets.append(manifest_obj.get_patchset(patchset.parent_sha, patchset.remote))
-                while True:
-                    # Allow daisy-chaining PatchSet.  Continue until KeyError is caught.
-                    parent_patchsets.append(manifest_obj.get_patchset(parent_patchsets[-1].parent_sha, parent_patchsets[-1].remote))
-                    if parent_patchsets.count(parent_patchsets[-1]) > 1:
-                        # Do not continue to branch creation step if a circular dependency is detected between multiple PatchSet.
-                        raise ValueError(PATCHSET_CIRCULAR_DEPENDENCY_ERROR.format(parent_patchsets[-1]))
-            except KeyError:
-                if parent_patchsets != list():
-                    base_patchset_parent_sha = parent_patchsets[-1].parent_sha
-                    if base_patchset_parent_sha in repo.tags:
-                        # tag names are prioritized over branch names
-                        repo.git.checkout("refs/tags/{}".format(base_patchset_parent_sha), b=name)
-                    else:
-                        repo.git.checkout(base_patchset_parent_sha, b=name)
-                elif patchset.parent_sha in repo.tags:
-                    # tag names are prioritized over branch names
-                    repo.git.checkout("refs/tags/{}".format(patchset.parent_sha), b=name)
-                else:
-                    repo.git.checkout(patchset.parent_sha, b=name)
+            parent_patchsets = _list_patchset_ancestors(manifest_obj, patchset)
+            _checkout_parent(patchset, name, repo, parent_patchsets)
             try:
                 apply_patchset_operations(repo, operations_list, global_manifest_path, remote_list)
                 head_sha = repo.git.execute(['git', 'rev-parse', 'HEAD'])
@@ -912,6 +892,33 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
             f.seek(0)
             json.dump(data, f, indent=4)
         f.close()
+
+def _list_patchset_ancestors(manifest, patchset):
+    parent_patchsets = []
+    try:
+        parent_patchsets.append(manifest.get_patchset(patchset.parent_sha, patchset.remote))
+        while True:
+            # Allow daisy-chaining PatchSet.  Continue until KeyError is caught.
+            parent_patchsets.append(manifest.get_patchset(parent_patchsets[-1].parent_sha, parent_patchsets[-1].remote))
+            if parent_patchsets.count(parent_patchsets[-1]) > 1:
+                # Do not continue to branch creation step if a circular dependency is detected between multiple PatchSet.
+                raise ValueError(PATCHSET_CIRCULAR_DEPENDENCY_ERROR.format(parent_patchsets[-1]))
+    except KeyError:
+        return parent_patchsets
+
+def _checkout_parent(patchset, name, repo, parent_patchsets):
+    if parent_patchsets:
+        base_patchset_parent_sha = parent_patchsets[-1].parent_sha
+        if base_patchset_parent_sha in repo.tags:
+            # tag names are prioritized over branch names
+            repo.git.checkout("refs/tags/{}".format(base_patchset_parent_sha), b=name)
+        else:
+            repo.git.checkout(base_patchset_parent_sha, b=name)
+    elif patchset.parent_sha in repo.tags:
+        # tag names are prioritized over branch names
+        repo.git.checkout("refs/tags/{}".format(patchset.parent_sha), b=name)
+    else:
+        repo.git.checkout(patchset.parent_sha, b=name)
 
 def is_merge_conflict(repo):
     status = repo.git.status(porcelain=True).split()
