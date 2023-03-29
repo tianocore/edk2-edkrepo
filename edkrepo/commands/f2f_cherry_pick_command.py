@@ -177,7 +177,7 @@ def _prep_new_cherry_pick(args, repo, commit_ish, config, cherry_pick_operations
         source_commit = end_commit
     # Determine what needs to be done to complete the cherry pick
     cherry_pick_operations = _init_f2f_cherry_pick_operations(cherry_pick_operations, repo,
-                                                            original_head, original_head, config)
+                                                            source_commit, original_head, config)
     commit_info = CommitInfo(start_commit, end_commit, source_commit, single_commit, original_branch, original_head, append_sha, squash, todo_commits, complete_commits)
     return commit_info, cherry_pick_operations
 
