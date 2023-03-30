@@ -9,6 +9,7 @@
 
 import os
 import json
+from collections import defaultdict
 
 import edkrepo.commands.arguments.cache_args as arguments
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
@@ -128,14 +129,15 @@ class CacheCommand(EdkrepoCommand):
             if args.project:
                 if args.selective:
                     used_refs = _get_used_refs(manifest, cache_obj)
+                    remotes_dict = manifest.get_remotes_dict()
                     for remote in used_refs.keys():
                         for ref in used_refs[remote]:
-                            ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote))
-                            cache_obj.update_cache(url_or_name=remote, sha_or_branch=ref, verbose=True)
+                            ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remotes_dict[remote]))
+                            cache_obj.update_cache(url_or_name=remotes_dict[remote], sha_or_branch=ref, verbose=True)
                 else:
                     for remote in manifest.remotes:
-                        ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote.name))
-                        cache_obj.update_cache(url_or_name=remote.name, verbose=True)
+                        ui_functions.print_info_msg(SINGLE_CACHE_FETCH.format(remote.url))
+                        cache_obj.update_cache(url_or_name=remote.url, verbose=True)
             else:
                 ui_functions.print_info_msg(CACHE_FETCH)
                 cache_obj.update_cache(verbose=True)
@@ -175,30 +177,51 @@ def _get_manifest(project, config, source_manifest_repo=None):
 
 
 def _get_used_refs(manifest, cache_obj):
-    used_refs = {}
+    used_refs = defaultdict(list)
     combo_list = [c.name for c in manifest.combinations]
     for combo in combo_list:
         sources = manifest.get_repo_sources(combo)
         for source in sources:
-            # Order or precedence for cloning SHA(commit) -> Tag -> Branch
+            # Order or precedence for cloning: patchset -> {SHA(commit) -> Tag -> Branch}
             # If more than one is listed fetch the highest priority
-            refs = []
-            if source.commit:
-                already_cached = cache_obj.is_sha_cached(source.remote_name, source.commit)
-                if not already_cached:
-                    refs.append(source.commit)
-            if source.tag:
-                already_cached = cache_obj.is_sha_cached(source.remote_name, source.tag)
-                if not already_cached:
-                    refs.append(source.tag)
-            if source.branch:
-                head_sha = get_latest_sha(None, source.branch, remote_or_url=source.remote_url)
-                if head_sha is None:
-                    refs.append(source.branch)
-                else:
-                    already_cached = cache_obj.is_sha_cached(source.remote_name, head_sha)
+            if source.patch_set:
+                current_used_refs = _get_used_refs_patchset(manifest, source)
+                for remote in current_used_refs:
+                    used_refs[remote].extend(current_used_refs[remote])
+            else:
+                refs = []
+                if source.commit:
+                    already_cached = cache_obj.is_sha_cached(source.remote_url, source.commit)
                     if not already_cached:
+                        refs.append(source.commit)
+                if source.tag:
+                    already_cached = cache_obj.is_sha_cached(source.remote_url, source.tag)
+                    if not already_cached:
+                        refs.append(source.tag)
+                if source.branch:
+                    head_sha = get_latest_sha(None, source.branch, remote_or_url=source.remote_url)
+                    if head_sha is None:
                         refs.append(source.branch)
-            if refs:
-                used_refs[source.remote_name] = refs
+                    else:
+                        already_cached = cache_obj.is_sha_cached(source.remote_url, head_sha)
+                        if not already_cached:
+                            refs.append(source.branch)
+                if refs:
+                    used_refs[source.remote_name] = refs
     return used_refs
+
+def _get_used_refs_patchset(manifest, source):
+    used_refs = defaultdict(list)
+    patchset = manifest.get_patchset(source.patch_set, source.remote_name)
+    patchset_ops = manifest.get_patchset_operations(patchset.name, patchset.remote)
+    for operation in _flatten_list(patchset_ops):
+        if operation.type == 'CherryPick' or operation.type == 'Revert':
+            operation_remote = _get_operation_remote(patchset, operation)
+            used_refs[operation_remote].append(operation.sha)
+    return used_refs
+
+def _get_operation_remote(patchset, operation):
+    return operation.source_remote if operation.source_remote else patchset.remote
+
+def _flatten_list(lst):
+    return [e for sublist in lst for e in sublist]
