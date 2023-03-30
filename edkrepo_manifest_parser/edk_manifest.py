@@ -401,6 +401,9 @@ class ManifestXml(BaseXmlHelper):
     def remotes(self):
         return self._tuple_list(self._remotes.values())
 
+    def get_remotes_dict(self):
+        return {remote.name: remote.url for remote in self.remotes}
+
     @property
     def combinations(self):
         return self._tuple_list([x for x in self._combinations.values() if not x.archived])
