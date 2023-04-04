@@ -873,7 +873,7 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
                 print(CHECKING_OUT_DEFAULT)
                 repo.git.checkout(os.path.basename(repo.git.execute(['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'])))
                 repo.git.execute(['git', 'branch', '-D', '{}'.format(name)])
-                return
+                raise exception
 
     if not REMOTE_IN_REMOTE_LIST:
         raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
@@ -934,6 +934,8 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                 try:
                     repo.git.execute(['git', 'revert', operation.sha, '--no-edit'])
                 except:
+                    if is_merge_conflict(repo):
+                        repo.git.execute(['git', 'revert', '--abort'])
                     raise EdkrepoRevertFailedException(APPLYING_REVERT_FAILED.format(operation.sha))
             else:
                 if operation.source_remote:
@@ -969,4 +971,6 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                     try:
                         repo.git.execute(['git', 'cherry-pick', operation.sha, '-x'])
                     except:
+                        if is_merge_conflict(repo):
+                            repo.git.execute(['git', 'cherry-pick', '--abort'])
                         raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
