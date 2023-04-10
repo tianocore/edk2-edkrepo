@@ -156,3 +156,7 @@ class EdkrepoPatchFailedException(EdkrepoException):
 class EdkrepoLocalBranchExistsException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 137)
+
+class EdkrepoBranchCollidesWithParentShaException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 138)
