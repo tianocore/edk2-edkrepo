@@ -21,7 +21,7 @@ import git
 from git import Repo
 import colorama
 
-from edkrepo.common.edkrepo_exception import EdkrepoBranchExistsException, EdkrepoException, EdkrepoLocalBranchExistsException, EdkrepoRevertFailedException, EdkrepoCherryPickFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoBranchExistsException, EdkrepoException, EdkrepoLocalBranchExistsException, EdkrepoRevertFailedException, EdkrepoCherryPickFailedException, EdkrepoBranchCollidesWithParentShaException
 from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
 from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
@@ -50,7 +50,7 @@ from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, I
 from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
 from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
-from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
+from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED, BRANCH_COLLIDES_WITH_PARENT_SHA
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.git_version import GitVersion
 from project_utils.sparse import BuildInfo, process_sparse_checkout
@@ -908,17 +908,18 @@ def _list_patchset_ancestors(manifest, patchset):
 
 def _checkout_parent(patchset, name, repo, parent_patchsets):
     if parent_patchsets:
-        base_patchset_parent_sha = parent_patchsets[-1].parent_sha
-        if base_patchset_parent_sha in repo.tags:
-            # tag names are prioritized over branch names
-            repo.git.checkout("refs/tags/{}".format(base_patchset_parent_sha), b=name)
-        else:
-            repo.git.checkout(base_patchset_parent_sha, b=name)
-    elif patchset.parent_sha in repo.tags:
-        # tag names are prioritized over branch names
-        repo.git.checkout("refs/tags/{}".format(patchset.parent_sha), b=name)
+        base_parent_sha = parent_patchsets[-1].parent_sha
     else:
-        repo.git.checkout(patchset.parent_sha, b=name)
+        base_parent_sha = patchset.parent_sha
+
+    if base_parent_sha in repo.tags:
+        # tag names are prioritized over branch names
+        repo.git.checkout("refs/tags/{}".format(base_parent_sha), b=name)
+    elif base_parent_sha in repo.heads:
+        # PatchSet should not use a branch name as the base parent_sha.
+        raise EdkrepoBranchCollidesWithParentShaException(BRANCH_COLLIDES_WITH_PARENT_SHA)
+    else:
+        repo.git.checkout(base_parent_sha, b=name)
 
 def is_merge_conflict(repo):
     status = repo.git.status(porcelain=True).split()
