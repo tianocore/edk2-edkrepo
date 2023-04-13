@@ -700,9 +700,10 @@ class ManifestXml(BaseXmlHelper):
             selective_submodules_root.text = '\n    '
             selective_submodules_root.tail = '\n\n  '
             list(selective_submodules_root)[-1].tail = '\n  '
-        patch_sets.text = '\n    '
-        patch_sets.tail = '\n\n  '
-        list(patch_sets)[-1].tail = '\n  '
+        if patch_sets:
+            patch_sets.text = '\n    '
+            patch_sets.tail = '\n\n  '
+            list(patch_sets)[-1].tail = '\n  '
         remote_root.text = '\n    '
         remote_root.tail = '\n\n  '
         list(remote_root)[-1].tail = '\n  '
