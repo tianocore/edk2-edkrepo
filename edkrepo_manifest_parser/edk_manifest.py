@@ -7,16 +7,11 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-# Standard imports
 import xml.etree.ElementTree as ET
 from collections import namedtuple
 import os
 import copy
 import json
-
-# 3rd party imports
-#   None planned at this time
-
 
 #
 # All the namedtuple data structures that consumers of this module will need.
@@ -96,29 +91,23 @@ class BaseXmlHelper():
 
 
     def _build_etree_node(self, current_dict, parent):
-        '''
-        Build ElementTree node as a subelement of parent node.
-        '''
+        '''Build ElementTree node as a subelement of parent node.'''
+
         node_tag = current_dict['name']
 
-        # attribs
         if 'attrib' in current_dict.keys():
             node_attribs = current_dict['attrib']
         else:
             node_attribs = {}
 
-        # construct this subelement
         node = ET.SubElement(parent, node_tag, attrib=node_attribs)
 
-        # text
         if 'text' in current_dict.keys():
             node.text = current_dict['text']
 
-        # tail
         if 'tail' in current_dict.keys():
             node.tail = current_dict['tail']
 
-        # children
         if 'children' in current_dict.keys():
             for child_dict in current_dict['children']:
                 # append child to this node
@@ -141,7 +130,6 @@ class CiIndexXml(BaseXmlHelper):
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
             proj = _Project(element)
-            # Todo: add check for unique
             self._projects[proj.name] = proj
 
     @property
@@ -198,10 +186,10 @@ class ManifestXml(BaseXmlHelper):
         self._combinations = {}               # dict of _Combination objs, with Combination.name as key
         self._combo_sources = {}              # dict of _RepoSource obj lists, with Combination.name as key
         self._dsc_list = []
-        self._sparse_settings = None          # A single instance of platform sparse checkout settings
-        self._sparse_data = []                # List of SparseData objects
+        self._sparse_settings = None          
+        self._sparse_data = []              
         self._commit_templates = {}           # dict of commit message templates with the remote name as the key
-        self._folder_to_folder_mappings = []  # List of FolderToFolderMapping objects
+        self._folder_to_folder_mappings = []  
         self._submodule_alternate_remotes = []
         self._submodule_init_list = []
         self._patch_sets = {}
@@ -504,7 +492,6 @@ class ManifestXml(BaseXmlHelper):
         # Note: It will also strip all the comments from the file
         #
         if self._xml_type == 'Pin':
-            # raise Warning("This method is not supported for Pin xmls")
             return
         if filename is None:
             filename = self._fileref
@@ -551,19 +538,15 @@ class ManifestXml(BaseXmlHelper):
         current_dict = {}
         current_dict['name'] = node.tag
 
-        # attribs
         if node.attrib:
             current_dict['attrib'] = node.attrib
 
-        # text
         if node.text and (not node.text.isspace()):
             current_dict['text'] = node.text
 
-        # tail
         if node.tail:
             current_dict['tail'] = node.tail
 
-        # dfs recurse
         if list(node):
             current_dict['children'] = [self._dfs_traverse_etree(child) for child in node]
 
@@ -619,8 +602,6 @@ class ManifestXml(BaseXmlHelper):
                     None or ((src_tuple.commit is None and src_tuple.branch is None and src_tuple.tag is None) and src_tuple.patch_set is None)):
                 raise ValueError("Invalid input: empty values in source list")
 
-            # the data to create the remote elements could also be retrieved
-            # from __remotes, but this is easier
             elem = ET.SubElement(remote_root, 'Remote', {'name': src_tuple.remote_name})
             elem.text = src_tuple.remote_url
             elem.tail = '\n    '
@@ -714,12 +695,10 @@ class ManifestXml(BaseXmlHelper):
         return pin_tree
 
     def generate_pin_xml(self, description, combo_name, repo_source_list, filename=None):
-        # Filename should be .xml
         pin_tree = self.generate_pin_etree(description, combo_name, repo_source_list)
         pin_tree.write(filename)
 
     def generate_pin_json(self, description, combo_name, repo_source_list, filename=None):
-        # Filename should be .json
         pin_tree = self.generate_pin_etree(description, combo_name, repo_source_list)
         pin_root = pin_tree.getroot()
 
@@ -794,9 +773,7 @@ class ManifestXml(BaseXmlHelper):
 
     @property
     def get_all_patchsets(self):
-        '''
-        Returns a list of all the patchsets defined in the manifest file
-        '''
+        '''Returns a list of all the patchsets defined in the manifest file'''
         patchsets = []
         for patch in self._patch_sets.keys():
             patchsets.append(self._patch_sets[patch])
@@ -1238,7 +1215,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Attempt initial parse as index file
     print('\nAttempting to parse {} as an Index.xml file ...'.format(args.InputFile))
     print(separator_string)
     try:
