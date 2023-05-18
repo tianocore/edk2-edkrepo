@@ -3,7 +3,7 @@
 ## @file
 # install.py
 #
-# Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2023, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -38,7 +38,7 @@ elif os.name == "posix":
 else:
     raise EnvironmentError("Unsupported OS")
 
-tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation, 2020'
+tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation, 2023'
 
 # Data here should be maintained in a configuration file
 cfg_dir = '.edkrepo'
@@ -81,12 +81,37 @@ def get_args():
     parser = ArgumentParser()
     if ostype != MAC:
         parser.add_argument('-l', '--local', action='store_true', default=False, help='Install edkrepo to the user directory instead of system wide')
+        parser.add_argument('-s', '--system', action='store_true', default=False, help='Install edkrepo system wide')
     parser.add_argument('-p', '--py', action='store', default=None, help='Specify the python command to use when installing')
     parser.add_argument('-u', '--user', action='store', default=None, help='Specify user account to install edkrepo support on')
     parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Enables verbose output')
     parser.add_argument('--no-prompt', action='store_true', default=False, help='Do NOT add EdkRepo combo and git branch to the shell prompt')
     parser.add_argument('--prompt', action='store_true', default=False, help='Add EdkRepo combo and git branch to the shell prompt')
     return parser.parse_args()
+
+def check_args(args):
+    check_prompt = False
+    check_local = False
+    if ostype != MAC:
+        if args.local:
+            check_prompt = True
+        if args.system:
+            check_prompt = True
+        if args.prompt:
+            check_local = True
+        if args.no_prompt:
+            check_local = True
+        if args.local and args.system:
+            return 'ERROR: --local and --system are mutually exclusive.'
+        if args.system and not args.user:
+            return 'ERROR: --user must be specified if --system is specified.'
+        if check_prompt and not check_local:
+            return 'ERROR: --prompt or --no-prompt must be specified.'
+        if check_local and not check_prompt:
+            return 'ERROR: --local or --system must be specified.'
+    if args.prompt and args.no_prompt:
+        return 'ERROR: --prompt and --no-prompt are mutually exclusive.'
+    return None
 
 def is_prompt_customization_installed(user_home_dir):
     script_files = [os.path.join(user_home_dir, '.bashrc'), os.path.join(user_home_dir, '.zshrc')]
@@ -101,6 +126,86 @@ def is_prompt_customization_installed(user_home_dir):
             customization_installed = False
             break
     return customization_installed
+
+__install_to_local = None
+def get_install_to_local(args):
+    global __install_to_local
+    if ostype == MAC:
+        raise EnvironmentError()    #This never gets used on Mac, only local install is supported on that platform
+    if __install_to_local is not None:
+        return __install_to_local
+    if args.local:
+        __install_to_local = True
+        return False
+    elif args.system:
+        __install_to_local = False
+        return True
+
+    #If there is an existing installation of EdkRepo, install using the same mode
+    edkrepo_path = shutil.which('edkrepo')
+    if edkrepo_path is not None:
+        if os.path.commonprefix([edkrepo_path, '/home']) == '/home':
+            __install_to_local = True
+            return True
+        else:
+            __install_to_local = False
+            return False
+
+    #Note: These imports are here because we don't want to execute these imports on Mac
+    from select import select
+    import termios
+    import tty
+    def get_key(timeout=-1):
+        key = None
+        old_settings = termios.tcgetattr(sys.stdin.fileno())
+        try:
+            tty.setraw(sys.stdin.fileno())
+            if timeout != -1:
+                rlist, _, _ = select([sys.stdin], [], [], timeout)
+                if rlist:
+                    key = sys.stdin.read(1)
+            else:
+                key = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, old_settings)
+        return key
+
+    #Ask the user interactively to see if they want a local or system install
+    try:
+        print('\n\u2554' + ('\u2550' * 22) + '\u2557')
+    except UnicodeEncodeError:
+        print('\n+' + ('-' * 22) + '+')
+    try:
+        print('\u2551 Installation Options \u2551')
+    except UnicodeEncodeError:
+        print('| Installation Options |')
+    try:
+        print('\u255a' + ('\u2550' * 22) + '\u255d')
+    except UnicodeEncodeError:
+        print('+' + ('-' * 22) + '+')
+    print('\nSelect installation mode:\n')
+    print('    1. Local Installation \033[01;36m(Recommended)\033[00m - EdkRepo is installed inside your home')
+    print('                                          directory. Root access is not required')
+    print('                                          and no system wide changes are made.')
+    print('')
+    print('    2. System Installation              - EdkRepo is installed at the system')
+    print('                                          level. Root access required, but saves')
+    print('                                          disk space on multi-user systems.')
+    print('')
+    while True:
+        print('Which installation mode (1 or 2)? ')
+        key = get_key()
+        if key:
+            if key == '1':
+                print('1')
+                __install_to_local = True
+                return True
+            if key == '2':
+                print('2')
+                __install_to_local = False
+                return False
+            else:
+                print('Invalid Input')
 
 __add_prompt_customization = None
 def get_add_prompt_customization(args, username, user_home_dir):
@@ -129,7 +234,8 @@ def get_add_prompt_customization(args, username, user_home_dir):
                 return False
         except:
             pass
-    #Show the user an advertisement to see if they want the prompt customization
+
+    #Note: These imports are here because we don't want to execute these imports on Mac
     from select import select
     import termios
     import tty
@@ -147,15 +253,51 @@ def get_add_prompt_customization(args, username, user_home_dir):
         finally:
             termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, old_settings)
         return key
+
+    #Ask the user interactively to see if they want the prompt customization
+    try:
+        print('\n\u2554' + ('\u2550' * 19) + '\u2557')
+    except UnicodeEncodeError:
+        print('\n+' + ('-' * 19) + '+')
+    try:
+        print('\u2551 Shell Integration \u2551')
+    except UnicodeEncodeError:
+        print('| Shell Integration |')
+    try:
+        print('\u255a' + ('\u2550' * 19) + '\u255d')
+    except UnicodeEncodeError:
+        print('+' + ('-' * 19) + '+')
     print('\nEdkRepo can show the checked out \033[32mcombo\033[00m and \033[36mbranch\033[00m as part of the command prompt')
     print('For example, instead of:\n')
-    print('\033[01;32muser@machine\033[00m:\033[01;34mEdk2\033[00m$ ')
+    try:
+        print('\u250c' + ('\u2500' * 38) + '\u2510')
+    except UnicodeEncodeError:
+        print('+' + ('-' * 38) + '+')
+    try:
+        print('\u2502 \033[01;32muser@machine\033[00m:\033[01;34msrc\033[00m $                   \u2502')
+    except UnicodeEncodeError:
+        print('| \033[01;32muser@machine\033[00m:\033[01;34msrc\033[00m $                   |')
+    try:
+        print('\u2514' + ('\u2500' * 38) + '\u2518')
+    except UnicodeEncodeError:
+        print('+' + ('-' * 38) + '+')
     print('\nThe command prompt would look like:\n')
-    print('\033[01;32muser@machine\033[00m:\033[01;34mEdk2\033[00m \033[32m[Edk2Master]\033[36m (master)\033[00m$ ')
+    try:
+        print('\u250c' + ('\u2500' * 38) + '\u2510')
+    except UnicodeEncodeError:
+        print('+' + ('-' * 38) + '+')
+    try:
+        print('\u2502 \033[01;32muser@machine\033[00m:\033[01;34msrc\033[00m \033[32m[Edk2Main]\033[36m (main)\033[00m $ \u2502')
+    except UnicodeEncodeError:
+        print('| \033[01;32muser@machine\033[00m:\033[01;34msrc\033[00m \033[32m[Edk2Main]\033[36m (main)\033[00m $ |')
+    try:
+        print('\u2514' + ('\u2500' * 38) + '\u2518')
+    except UnicodeEncodeError:
+        print('+' + ('-' * 38) + '+')
     print('')
     while True:
-        print('Would you like the combo and branch shown on the command prompt? [y/N] ')
-        key = get_key(120)
+        print('Would you like the combo and branch shown on the command prompt? [y/n] ')
+        key = get_key()
         if key:
             if key == 'y' or key == 'Y':
                 print('Y')
@@ -165,10 +307,8 @@ def get_add_prompt_customization(args, username, user_home_dir):
                 print('N')
                 __add_prompt_customization = False
                 return False
-        else:
-            print('No response after 2min... assuming no.')
-            __add_prompt_customization = False
-            return False
+            else:
+                print('Invalid Input')
 
 def get_installed_packages(python_command):
     pip_cmd = [def_python, '-m', 'pip', 'list', '--legacy']
@@ -281,11 +421,19 @@ def set_execute_permissions():
                     stat_data = os.stat(py_file)
                     os.chmod(py_file, stat_data.st_mode | stat.S_IEXEC)
 
+raspberry_pi_bashrc_workaround = r'''
+# Workaround for ~/.bashrc running before ~/.profile on Raspbian
+if [ -d "$HOME/.local/bin" ]; then
+  export PATH="$PATH:$HOME/.local/bin"
+fi
+'''
+
 bash_prompt_customization = r'''
 # Add EdkRepo & git to the prompt
 ps1len="${#PS1}"
 let "pos3 = ps1len - 3"
 let "pos2 = ps1len - 2"
+let "pos16 = ps1len - 16"
 if [ "${PS1:pos3}" == "\\$ " ]; then
   newps1="${PS1:0:pos3}"
   prompt_suffix="\\$ "
@@ -295,6 +443,9 @@ elif [ "${PS1:pos3}" == " $ " ]; then
 elif [ "${PS1:pos2}" == "$ " ]; then
   newps1="${PS1:0:pos2}"
   prompt_suffix="$ "
+elif [ "${PS1:pos16}" == " \\$\[\033[00m\] " ]; then
+  newps1="${PS1:0:pos16}"
+  prompt_suffix=" \[\033[01;34m\]$\[\033[00m\] "
 else
   newps1="$PS1"
   prompt_suffix=""
@@ -410,6 +561,40 @@ eval "PROMPT='$new_prompt\${vcs_info_msg_0_}\$prompt_suffix'"
 
 '''
 
+def get_command_completion_script_path(default_cfg_dir, user_home_dir, install_to_local):
+    bash_completion_path = None
+    if ostype != MAC:
+        if shutil.which('pkg-config') is not None:
+            try:
+                res = default_run(['pkg-config', '--variable=completionsdir', 'bash-completion'])
+                candidate_path = res.stdout.strip()
+                if os.path.isdir(candidate_path):
+                    bash_completion_path = candidate_path
+            except:
+                pass
+        #pkg-config is broken on Ubuntu and derivatives; these heuristics make those OSes work.
+        if bash_completion_path is None:
+            if os.path.isfile(os.path.join('/', 'usr', 'share', 'bash-completion', 'bash_completion')):
+                candidate_path = os.path.join('/', 'usr', 'share', 'bash-completion', 'completions')
+                if os.path.isdir(candidate_path):
+                    bash_completion_path = candidate_path
+
+        #On local installs use the home directory
+        if install_to_local and bash_completion_path is not None:
+            bash_completion_path = os.path.join(user_home_dir, '.local', 'share', 'bash-completion', 'completions')
+            if not os.path.isdir(bash_completion_path):
+                os.makedirs(bash_completion_path)
+
+        #If bash-completion is available, use it
+        if bash_completion_path is not None:
+            return (os.path.join(bash_completion_path, 'edkrepo'), False)
+
+    #Provide a fallback for systems that do not have bash-completion
+    if install_to_local or ostype == MAC:
+        return (os.path.join(default_cfg_dir, 'edkrepo_completions.sh'), True)
+    else:
+        return (os.path.join('/', 'etc', 'profile.d', 'edkrepo_completions.sh'), True)
+
 def add_command_to_startup_script(script_file, regex, command, username):
     script = ''
     if os.path.isfile(script_file):
@@ -442,46 +627,61 @@ def add_command_comment_to_startup_script(script_file, regex, command, comment, 
         shutil.chown(script_file, user=username)
         os.chmod(script_file, 0o644)
 
-def add_command_completions_to_shell(command_completion_script, args, username, user_home_dir):
-    # Add "source ~/.bashrc" to ~/.bash_profile if it does not have it already
-    bash_profile_file = os.path.join(user_home_dir, '.bash_profile')
-    bash_profile = ''
-    if os.path.isfile(bash_profile_file):
-        with open(bash_profile_file, 'r') as f:
-            bash_profile = f.read().strip()
-    profile_source_regex = re.compile(r"source\s+~/\.bashrc")
-    profile_source_regex2 = re.compile(r".\s+~/\.bashrc")
-    data = profile_source_regex.search(bash_profile)
-    if not data:
-        data = profile_source_regex2.search(bash_profile)
+def add_command_completions_to_shell(command_completion_script, args, username, user_home_dir, source_command_completion):
+    if ostype == MAC:
+        # Add "source ~/.bashrc" to ~/.bash_profile if it does not have it already
+        bash_profile_file = os.path.join(user_home_dir, '.bash_profile')
+        bash_profile = ''
+        if os.path.isfile(bash_profile_file):
+            with open(bash_profile_file, 'r') as f:
+                bash_profile = f.read().strip()
+        profile_source_regex = re.compile(r"source\s+~/\.bashrc")
+        profile_source_regex2 = re.compile(r".\s+~/\.bashrc")
+        data = profile_source_regex.search(bash_profile)
         if not data:
-            if bash_profile == '':
-                bash_profile = 'source ~/.bashrc\n'
-            else:
-                bash_profile = '{}\nsource ~/.bashrc\n'.format(bash_profile)
-            with open(bash_profile_file, 'w') as f:
-                f.write(bash_profile)
-            shutil.chown(bash_profile_file, user=username)
-            os.chmod(bash_profile_file, 0o644)
+            data = profile_source_regex2.search(bash_profile)
+            if not data:
+                if bash_profile == '':
+                    bash_profile = 'source ~/.bashrc\n'
+                else:
+                    bash_profile = '{}\nsource ~/.bashrc\n'.format(bash_profile)
+                with open(bash_profile_file, 'w') as f:
+                    f.write(bash_profile)
+                shutil.chown(bash_profile_file, user=username)
+                os.chmod(bash_profile_file, 0o644)
 
     # Add edkrepo command completion to ~/.bashrc if it does not have it already
     regex = r"\[\[\s+-r\s+\"\S*edkrepo_completions.sh\"\s+\]\]\s+&&\s+.\s+\"\S*edkrepo_completions.sh\""
     new_source_line = '[[ -r "{0}" ]] && . "{0}"'.format(command_completion_script)
     comment = '\n# Add EdkRepo command completions'
     bash_rc_file = os.path.join(user_home_dir, '.bashrc')
-    add_command_comment_to_startup_script(bash_rc_file, regex, new_source_line, comment, username)
+    if source_command_completion:
+        add_command_comment_to_startup_script(bash_rc_file, regex, new_source_line, comment, username)
     if get_add_prompt_customization(args, username, user_home_dir):
+        # Workaround for ~/.bashrc running before ~/.profile on Raspbian
+        # Note: 32-bit Raspberry Pi OS == Raspbian
+        #       64-bit Raspberry Pi OS == Debian
+        # This is only broken on Raspbian/32-bit Raspberry Pi OS
+        if shutil.which('lsb_release') is not None:
+            res = default_run(['lsb_release', '-i'])
+            distributor = res.stdout.strip()
+            if distributor == "Distributor ID:	Raspbian":
+                add_command_to_startup_script(bash_rc_file, prompt_regex, raspberry_pi_bashrc_workaround, username)
         add_command_to_startup_script(bash_rc_file, prompt_regex, bash_prompt_customization, username)
-    zsh_rc_file = os.path.join(user_home_dir, '.zshrc')
-    add_command_to_startup_script(zsh_rc_file, zsh_autoload_compinit_regex, zsh_autoload_compinit, username)
-    add_command_to_startup_script(zsh_rc_file, zsh_autoload_bashcompinit_regex, zsh_autoload_bashcompinit, username)
-    add_command_to_startup_script(zsh_rc_file, zsh_autoload_colors_regex, zsh_autoload_colors, username)
-    add_command_to_startup_script(zsh_rc_file, zsh_colors_regex, zsh_colors, username)
-    add_command_to_startup_script(zsh_rc_file, zsh_compinit_regex, zsh_compinit, username)
-    add_command_to_startup_script(zsh_rc_file, zsh_bashcompinit_regex, zsh_bashcompinit, username)
-    add_command_comment_to_startup_script(zsh_rc_file, regex, new_source_line, comment, username)
-    if get_add_prompt_customization(args, username, user_home_dir):
-        add_command_to_startup_script(zsh_rc_file, prompt_regex, zsh_prompt_customization, username)
+
+    # Add edkrepo command completion to ~/.zshrc if it does not have it already and zsh is installed
+    if shutil.which('zsh') is not None or ostype == MAC:
+        zsh_rc_file = os.path.join(user_home_dir, '.zshrc')
+        add_command_to_startup_script(zsh_rc_file, zsh_autoload_compinit_regex, zsh_autoload_compinit, username)
+        add_command_to_startup_script(zsh_rc_file, zsh_autoload_bashcompinit_regex, zsh_autoload_bashcompinit, username)
+        add_command_to_startup_script(zsh_rc_file, zsh_autoload_colors_regex, zsh_autoload_colors, username)
+        add_command_to_startup_script(zsh_rc_file, zsh_colors_regex, zsh_colors, username)
+        add_command_to_startup_script(zsh_rc_file, zsh_compinit_regex, zsh_compinit, username)
+        add_command_to_startup_script(zsh_rc_file, zsh_bashcompinit_regex, zsh_bashcompinit, username)
+        if source_command_completion:
+            add_command_comment_to_startup_script(zsh_rc_file, regex, new_source_line, comment, username)
+        if get_add_prompt_customization(args, username, user_home_dir):
+            add_command_to_startup_script(zsh_rc_file, prompt_regex, zsh_prompt_customization, username)
 
 def do_install():
     global def_python
@@ -496,11 +696,10 @@ def do_install():
     # Enable logging output
     log = init_logger(args.verbose)
 
-    # Initialize information based on command line input
-    username = args.user
-    install_to_local = False
-    if ostype != MAC and args.local:
-        install_to_local = True
+    arg_check_error = check_args(args)
+    if arg_check_error is not None:
+        log.error(arg_check_error)
+        return 1
 
     try:
         cfg = configparser.ConfigParser(allow_no_value=True)
@@ -520,6 +719,15 @@ def do_install():
 
     # Display sign on
     log.log(logging.PRINT, tool_sign_on.format(cfg['version']['installer_version']))
+
+    # Initialize information based on command line input
+    username = args.user
+    install_to_local = False
+    if ostype != MAC:
+        install_to_local = get_install_to_local(args)
+    if ostype != MAC and not install_to_local and not args.user:
+        log.error('ERROR: --user must be specified for system installs.')
+        return 1
 
     # Set install flags to default states
     found_deps_issue = False
@@ -547,15 +755,16 @@ def do_install():
     except:
         log.info('- Unable to determine users home directory')
         return 1
-    if ostype == MAC:
+    if install_to_local or ostype == MAC:
         try:
             user_is_root = is_current_user_root()
         except:
             log.info('- Failed to determine user ID')
             return 1
-        if user_is_root:
+        if user_is_root and (args.user != 'root' or ostype == MAC):
             log.info('- Installer must NOT be run as root')
             return 1
+    if ostype == MAC:
         if os.path.commonprefix([user_home_dir, sys.executable]) != user_home_dir:
             install_to_local = True
     default_cfg_dir = os.path.join(user_home_dir, cfg_dir)
@@ -573,13 +782,13 @@ def do_install():
 
     log.info('\nVerify Dependencies:')
     if not os.path.isdir(os.path.dirname(user_home_dir)):
-        log.debug('- Unable to locate users home directory')
+        log.info('- Unable to locate users home directory')
         found_deps_issue = True
     else:
         log.debug('+ Found users home directory')
 
     if _check_version(python_version, cfg['version']['py_install']) < 0:
-        log.debug('- Installing for python {} (requires {})'.format(python_version, cfg['version']['py_install']))
+        log.info('- Installing for python {} (requires {})'.format(python_version, cfg['version']['py_install']))
         found_deps_issue = True
     else:
         log.debug('+ Installing for python {}'.format(python_version))
@@ -592,7 +801,7 @@ def do_install():
             log.debug('- Failed to run required tool {}'.format(tool))
         tool_version = res.stdout.strip().split()[-1]
         if _check_version(tool_version, cfg['req_tools'][tool]) < 0:
-            log.debug('- {} {} detected (requires {})'.format(tool, tool_version, cfg['req_tools'][tool]))
+            log.info('- {} {} detected (requires {})'.format(tool, tool_version, cfg['req_tools'][tool]))
             found_deps_issue = True
         else:
             log.debug('+ {} {} detected'.format(tool, tool_version))
@@ -600,7 +809,7 @@ def do_install():
     # Verify required python modules are installed
     for module in cfg['req_py_modules']:
         if importlib.util.find_spec(module) is None:
-            log.debug('- Python module {} not found'.format(module))
+            log.info('- Python module {} not found'.format(module))
             found_deps_issue = True
         else:
             log.debug('+ Python module {} detected'.format(module))
@@ -734,12 +943,18 @@ def do_install():
         except:
             log.info('- Failed to generate pyenv shim')
 
+    #There is a possibility that ~/.local/bin is not in the PATH if ~/.local/bin
+    #did not exist when the current shell was started
+    if shutil.which('edkrepo') is None and install_to_local and ostype != MAC:
+        os.environ['PATH'] = os.environ['PATH'] + os.pathsep + os.path.join(user_home_dir, '.local', 'bin')
+        if shutil.which('edkrepo') is not None:
+            log.info('- Note: You may need to reboot to use EdkRepo')
+            log.info('        If you don\'t want to reboot right now, run "export PATH=$PATH:~/.local/bin"')
+
     #Install the command completion script
     if shutil.which('edkrepo') is not None:
-        if install_to_local or ostype == MAC:
-            command_completion_script = os.path.join(default_cfg_dir, 'edkrepo_completions.sh')
-        else:
-            command_completion_script = os.path.join('/', 'etc', 'profile.d', 'edkrepo_completions.sh')
+        (command_completion_script, source_command_completion) = \
+            get_command_completion_script_path(default_cfg_dir, user_home_dir, install_to_local)
         try:
             user_is_root = False
             try:
@@ -759,12 +974,19 @@ def do_install():
             if install_to_local or ostype == MAC:
                 shutil.chown(command_completion_script, user=username)
                 os.chmod(command_completion_script, 0o644)
-            add_command_completions_to_shell(command_completion_script, args, username, user_home_dir)
+            add_command_completions_to_shell(command_completion_script, args, username, user_home_dir, source_command_completion)
             log.info('+ Configured edkrepo command completion')
+            if get_add_prompt_customization(args, username, user_home_dir) or source_command_completion:
+                if ostype == MAC:
+                    log.info('+ Note: You may need to restart Terminal to fully activate shell integration')
+                else:
+                    log.info('+ Note: You may need to reboot to fully activate shell integration')
         except:
             log.info('- Failed to configure edkrepo command completion')
             if args.verbose:
                 traceback.print_exc()
+    else:
+        log.info('- Failed to configure edkrepo command completion')
 
     log.log(logging.PRINT, '\nInstallation complete\n')
 
