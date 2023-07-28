@@ -128,9 +128,8 @@ class SyncCommand(EdkrepoCommand):
             try:
                 self.__update_local_manifest(args, config, initial_manifest, workspace_path, global_manifest_directory)
             except EdkrepoException as e:
-                if args.verbose:
-                    print(e)
-                print(humble.SYNC_MANIFEST_UPDATE_FAILED)
+                ui_functions.print_error_msg(e, header=True)
+                ui_functions.print_error_msg(humble.SYNC_MANIFEST_UPDATE_FAILED, header=True)
         manifest = get_workspace_manifest()
         if args.update_local_manifest:
             try:
