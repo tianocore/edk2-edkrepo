@@ -3,19 +3,18 @@
 ## @file
 # list_repos_command.py
 #
-# Copyright (c) 2019 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2019 - 2023, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import collections
+from itertools import zip_longest
 import json
 import os
 import sys
 
-#from git import Repo
 from colorama import Fore, Style
 
-# Our modules
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.list_repos_args as arguments
 import edkrepo.commands.humble.list_repos_humble as humble
@@ -171,10 +170,12 @@ class ListReposCommand(EdkrepoCommand):
             if args.repos and repo_name not in args.repos:
                 continue
             repo = self.repo_names[repo_name][0]
-            repo_data = { 'name': repo_name, 'url': repo, 'branches': [] }
+            repo_data = { 'name': repo_name, 'url': repo, 'branches': [], 'commits': [], 'tags': [] }
 
             #Determine the list of branches that used by any branch combination in any manifest
             branches = set()
+            commits = set()
+            tags = set()
             for project_name in manifests:
                 combo_list = [c.name for c in manifests[project_name].combinations]
                 if args.archived:
@@ -183,7 +184,12 @@ class ListReposCommand(EdkrepoCommand):
                     sources = manifests[project_name].get_repo_sources(combo)
                     for source in sources:
                         if self.get_repo_url(source.remote_url) == repo:
-                            branches.add(source.branch)
+                            if source.branch:
+                                branches.add(source.branch)
+                            elif source.tag:
+                                tags.add(source.tag)
+                            elif source.commit:
+                                commits.add(source.commit)
 
             #Sort the branch names so they will be displayed alphabetically
             #with the exception of branches named "main" or "master".
@@ -194,6 +200,9 @@ class ListReposCommand(EdkrepoCommand):
             # 3. If both "main" and "master" exist, then "main" will be shown
             #    first and "master" will be shown second.
             branches = sorted(branches, key=str.casefold)
+            tags = sorted(tags, key=str.casefold)
+            commits = sorted(commits, key=str.casefold)
+
             if 'master' in branches:
                 branches.remove('master')
                 branches.insert(0, 'master')
@@ -202,38 +211,106 @@ class ListReposCommand(EdkrepoCommand):
                 branches.insert(0, 'main')
 
             #For each interesting branch in the current git repository...
-            for branch in branches:
-                branch_data = { 'name': branch, 'projects': [] }
+            for ref_type in zip_longest(branches, commits, tags):
+                add_branch = False
+                add_commit = False
+                add_tag = False
+                add_combo = False
+
+                if ref_type[0]:
+                    branch_data = { 'name': ref_type[0], 'projects': [] }
+                else: 
+                    branch_data = None
+                if ref_type[1]:
+                    commit_data = { 'name': ref_type[1], 'projects': [] }
+                else:
+                    commit_data = None
+                if ref_type[2]:
+                    tag_data = { 'name': ref_type[2], 'projects': [] }
+                else:
+                    tag_data = None
 
                 #Determine the branch combinations that use that branch
                 for project_name in manifests:
-                    combos = []
+                    branch_combos = []
+                    commit_combos = []
+                    tag_combos = []
                     combo_list = [c.name for c in manifests[project_name].combinations]
                     if args.archived:
                         combo_list.extend([c.name for c in manifests[project_name].archived_combinations])
                     for combo in combo_list:
                         sources = manifests[project_name].get_repo_sources(combo)
                         for source in sources:
-                            if self.get_repo_url(source.remote_url) == repo and source.branch == branch:
-                                combos.append(combo)
+                            if self.get_repo_url(source.remote_url) == repo:
+                                # Track if multiple source types are used so only the one preferred by EdkRepo
+                                # will be displayed as the default
+                                # order of precedence for clone / checkout (1)commit (2) tag (3) branch
+                                default_ref_type = ''
+                                if source.commit:
+                                    default_ref_type = 'commit'
+                                elif source.tag and not source.commit:
+                                    default_ref_type = 'tag'
+                                elif source.branch and (not source.commit and not source.tag):
+                                    default_ref_type = 'branch'
+                                if ref_type[0]:
+                                    if ref_type[0] == source.branch:
+                                        branch_combos.append(combo)
+                                        add_branch = True
+                                if ref_type[1]:
+                                    if ref_type[1] == source.commit:
+                                        commit_combos.append(combo)
+                                        add_commit = True
+                                if ref_type[2]:
+                                    if ref_type[2] == source.tag:
+                                        tag_combos.append(combo)
+                                        add_tag = True
                                 break
-                    if len(combos) > 0:
+                    if len(branch_combos) > 0 or len(commit_combos) > 0 or len(tag_combos) > 0:
                         #Sort the branch combinations so they will be displayed alphabetically
                         #with the exception that the default branch combination for the manifest
                         #file will be displayed first
-                        combos = sorted(combos, key=str.casefold)
                         default_combo = manifests[project_name].general_config.default_combo
-                        if default_combo in combos:
-                            combos.remove(default_combo)
-                            combos.insert(0, default_combo)
+                        if len(branch_combos) > 0:
+                          branch_combos = sorted(branch_combos, key=str.casefold)
+                          if default_combo in branch_combos:
+                              branch_combos.remove(default_combo)
+                              branch_combos.insert(0, default_combo)
+                        if len(commit_combos) > 0:
+                            commit_combos = sorted(commit_combos, key=str.casefold)
+                            if default_combo in commit_combos:
+                                commit_combos.remove(default_combo)
+                                commit_combos.insert(0, default_combo)
+                        if len(tag_combos) > 0:
+                            tag_combos = sorted(tag_combos, key=str.casefold)
+                            if default_combo in tag_combos:
+                                tag_combos.remove(default_combo)
+                                tag_combos.insert(0, default_combo)
 
-                        project_data = { 'name': project_name, 'branch_combinations': [] }
-                        for combo in combos:
+                        project_data = { 'name': project_name, 'branch_combinations': [], 'commit_combinations': [], 'tag_combinations':[], 'default_ref_type': default_ref_type }
+                        for combo in branch_combos:
                             project_data['branch_combinations'].append(
                                 { 'name': combo,
                                 'project_default_combination': default_combo == combo })
-                        branch_data['projects'].append(project_data)
-                repo_data['branches'].append(branch_data)
+                        for combo in commit_combos:
+                            project_data['commit_combinations'].append(
+                                { 'name': combo,
+                                'project_default_combination': default_combo == combo })
+                        for combo in tag_combos:
+                            project_data['tag_combinations'].append(
+                                { 'name': combo,
+                                'project_default_combination': default_combo == combo })
+                        if add_branch:
+                            branch_data['projects'].append(project_data)
+                        if add_commit:
+                            commit_data['projects'].append(project_data)
+                        if add_tag:
+                            tag_data['projects'].append(project_data)
+                if add_branch:
+                    repo_data['branches'].append(branch_data)
+                if add_commit:
+                    repo_data['commits'].append(commit_data)
+                if add_tag:
+                    repo_data['tags'].append(tag_data)
             repos_list.append(repo_data)
 
         if json_output:
@@ -246,11 +323,17 @@ class ListReposCommand(EdkrepoCommand):
                 for branch_data in repo_data['branches']:
                     for project_data in branch_data['projects']:
                         project_names.add(project_data['name'])
+                for commit_data in repo_data['commits']:
+                    for project_data in commit_data['projects']:
+                        project_names.add(project_data['name'])
+                for tag_data in repo_data['tags']:
+                    project_names.add(project_data['name'])
             project_justify = len(max(project_names, key=len))
             print(humble.REPOSITORIES)
             for repo_data in repos_list:
                 print(humble.REPO_NAME_AND_URL.format(repo_data['name'], repo_data['url']))
-                print(humble.BRANCHES)
+                if len(repo_data['branches']) > 0:
+                    print(humble.BRANCHES)
                 for branch_data in repo_data['branches']:
                     print(humble.BRANCH_FORMAT_STRING.format(branch_data['name']))
                     for project_data in branch_data['projects']:
@@ -264,10 +347,48 @@ class ListReposCommand(EdkrepoCommand):
                                 project_name_print = '{} '.format((' ' * len(project_data['name'])).ljust(project_justify))
                             #Print the branch combination name, if this is the default branch combination,
                             #then print it in green color with *'s around it
-                            if combo_data['project_default_combination']:
+                            if combo_data['project_default_combination'] and project_data['default_ref_type'] == 'branch':
                                 print(humble.DEFAULT_COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
                             else:
                                 print(humble.COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
+                if len(repo_data['commits']) > 0:
+                  print('Commits:')
+                  for commit_data in repo_data['commits']:
+                      print(humble.BRANCH_FORMAT_STRING.format(commit_data['name']))
+                      for project_data in commit_data['projects']:
+                          first_combo = True
+                          for combo_data in project_data['commit_combinations']:
+                              #Print the project name
+                              if first_combo:
+                                  project_name_print = humble.PROJECT_NAME_FORMAT_STRING.format(project_data['name'].ljust(project_justify))
+                                  first_combo = False
+                              else:
+                                  project_name_print = '{} '.format((' ' * len(project_data['name'])).ljust(project_justify))
+                              #Print the branch combination name, if this is the default branch combination,
+                              #then print it in green color with *'s around it
+                              if combo_data['project_default_combination'] and project_data['default_ref_type'] == 'commit':
+                                  print(humble.DEFAULT_COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
+                              else:
+                                  print(humble.COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
+                if len(repo_data['tags']) > 0:
+                  print('Tags:')
+                  for tag_data in repo_data['tags']:
+                      print(humble.BRANCH_FORMAT_STRING.format(tag_data['name']))
+                      for project_data in tag_data['projects']:
+                          first_combo = True
+                          for combo_data in project_data['tag_combinations']:
+                              #Print the project name
+                              if first_combo:
+                                  project_name_print = humble.PROJECT_NAME_FORMAT_STRING.format(project_data['name'].ljust(project_justify))
+                                  first_combo = False
+                              else:
+                                  project_name_print = '{} '.format((' ' * len(project_data['name'])).ljust(project_justify))
+                              #Print the branch combination name, if this is the default branch combination,
+                              #then print it in green color with *'s around it
+                              if combo_data['project_default_combination'] and project_data['default_ref_type'] == 'tag':
+                                  print(humble.DEFAULT_COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
+                              else:
+                                  print(humble.COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
 
     def get_repo_url(self, repo_url):
         if repo_url[-4:].lower() == '.git':
@@ -356,7 +477,7 @@ class ListReposCommand(EdkrepoCommand):
                     #If there is a name collision, then which repo has the most
                     #Usage of the name owns the name
                     if best_name_frequency > self.repo_names[best_name][1]:
-                        old_repo_url = self.repo_names[name][0]
+                        old_repo_url = self.repo_names[best_name][0]
                         del self.repo_names[best_name]
                         found_unique_name = True
                         self.repo_names[best_name] = (repo_url, best_name_frequency)
