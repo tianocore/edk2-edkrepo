@@ -54,5 +54,9 @@ class ComboCommand(EdkrepoCommand):
                 for source in sources:
                     if source.branch:
                         ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.branch), header=False)
+                    elif source.commit:
+                        ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.commit), header=False)
+                    elif source.tag:
+                        ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.tag), header=False)
                     elif source.patch_set:
                         ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.patch_set), header=False)
