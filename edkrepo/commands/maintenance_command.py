@@ -45,6 +45,7 @@ class MaintenanceCommande(EdkrepoCommand):
 
         # Remove unneeded instead of entries from git global config
         ui_functions.print_info_msg(humble.CLEAN_INSTEAD_OFS, header = False)
+        clean_git_globalconfig()
         print()
 
         # If in a valid workspace run the following for each repo:
