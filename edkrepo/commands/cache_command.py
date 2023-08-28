@@ -97,7 +97,8 @@ class CacheCommand(EdkrepoCommand):
         # State is enabled so make sure cache directory exists
         cache_obj = get_repo_cache_obj(config)
 
-        pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        if not args.selective and os.path.exists(args.project):
+            pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
         # Check to see if a manifest was provided and add any missing remotes
         manifest = None
