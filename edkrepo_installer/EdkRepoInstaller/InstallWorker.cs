@@ -634,6 +634,13 @@ namespace TianoCore.EdkRepoInstaller
             SilentProcess lfsProcess = SilentProcess.StartConsoleProcessSilently(GitPath, "lfs install", lfsCapture.DataReceivedHandler);
             lfsProcess.WaitForExit();
             //
+            // Run git config --global core.longpaths true
+            //
+            InstallLogger.Log("Running git config --global core.longpaths true");
+            SilentProcess.StdoutDataCapture coreLongpathsCapture = new SilentProcess.StdoutDataCapture();
+            SilentProcess coreLongpathsProcess = SilentProcess.StartConsoleProcessSilently(GitPath, "config --global core.longpaths true", coreLongpathsCapture.DataReceivedHandler);
+            coreLongpathsProcess.WaitForExit();
+            //
             // Step 4 - Determine list of exclusive packages
             //
             List<Tuple<string, PythonVersion>> ExclusivePackages = new List<Tuple<string, PythonVersion>>();
