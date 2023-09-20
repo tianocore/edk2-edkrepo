@@ -229,7 +229,7 @@ class RepoCache(object):
             for remote in repo.remotes:
                 if verbose:
                     print(CACHE_FETCH_REMOTE.format(dir_name, remote.url))
-                if sha_or_branch is not None and remote.name == dir_name:
+                if sha_or_branch is not None and ((remote.name == dir_name) or (remote.url == url_or_name)):
                     print('Fetching ref {}'.format(sha_or_branch))
                     remote.fetch(refspec=sha_or_branch, progress=GitProgressHandler())
                     try:
