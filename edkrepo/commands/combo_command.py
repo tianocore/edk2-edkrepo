@@ -52,11 +52,11 @@ class ComboCommand(EdkrepoCommand):
                 sources = manifest.get_repo_sources(combo)
                 length = len(max([source.root for source in sources], key=len))
                 for source in sources:
-                    if source.branch:
-                        ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.branch), header=False)
-                    elif source.commit:
+                    if source.commit:
                         ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.commit), header=False)
-                    elif source.tag:
+                    elif source.tag and not source.commit:
                         ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.tag), header=False)
+                    elif source.branch and not (source.commit or source.tag) :
+                        ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.branch), header=False)
                     elif source.patch_set:
                         ui_functions.print_info_msg("    {} : {}".format(source.root.ljust(length), source.patch_set), header=False)

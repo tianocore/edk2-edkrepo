@@ -186,9 +186,9 @@ class ListReposCommand(EdkrepoCommand):
                         if self.get_repo_url(source.remote_url) == repo:
                             if source.branch:
                                 branches.add(source.branch)
-                            elif source.tag:
+                            if source.tag:
                                 tags.add(source.tag)
-                            elif source.commit:
+                            if source.commit:
                                 commits.add(source.commit)
 
             #Sort the branch names so they will be displayed alphabetically
