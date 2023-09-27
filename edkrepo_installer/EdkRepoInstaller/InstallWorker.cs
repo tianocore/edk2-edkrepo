@@ -163,7 +163,7 @@ namespace TianoCore.EdkRepoInstaller
         public string ComputeSha256(byte[] data)
         {
             StringBuilder hashstring = new StringBuilder();
-            SHA256Managed hasher = new SHA256Managed();
+            SHA256CryptoServiceProvider hasher = new SHA256CryptoServiceProvider();
             byte[] hash = hasher.ComputeHash(data);
             foreach (byte b in hash)
             {
