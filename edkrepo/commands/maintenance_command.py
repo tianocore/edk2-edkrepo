@@ -34,6 +34,10 @@ class MaintenanceCommande(EdkrepoCommand):
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
         args = []
         metadata['arguments'] = args
+        args.append({'name' : 'no-gc',
+                     'positional' : False,
+                     'required' : False,
+                     'help-text' : arguments.NO_GC})
         return metadata
 
     def run_command(self, args, config):
@@ -50,24 +54,25 @@ class MaintenanceCommande(EdkrepoCommand):
 
         # If in a valid workspace run the following for each repo:
         # git reflog --expire, git gc, git remote prune origin
-        try:
-            workspace_path = get_workspace_path()
-        except EdkrepoWorkspaceInvalidException:
-            workspace_path = None
-            ui_functions.print_error_msg(humble.NO_WOKKSPACE, header = False)
-            print()
-
-        if workspace_path:
-            manifest = get_workspace_manifest()
-            repos_to_maintain = manifest.get_repo_sources(manifest.general_config.current_combo)
-            for repo_to_maintain in repos_to_maintain:
-                local_repo_path = os.path.join(workspace_path, repo_to_maintain.root)
-                repo = Repo(local_repo_path)
-                ui_functions.print_info_msg(humble.REPO_MAINTENANCE.format(repo_to_maintain.root), header = False)
-                ui_functions.print_info_msg(humble.REFLOG_EXPIRE, header = False)
-                repo.git.reflog('expire', '--expire=now', '--all')
-                ui_functions.print_info_msg(humble.GC_AGGRESSIVE, header = False)
-                repo.git.gc('--aggressive', '--prune=now')
-                ui_functions.print_info_msg(humble.REMOTE_PRUNE, header = False)
-                repo.git.remote('prune', 'origin')
+        if not args.no_gc:
+            try:
+                workspace_path = get_workspace_path()
+            except EdkrepoWorkspaceInvalidException:
+                workspace_path = None
+                ui_functions.print_error_msg(humble.NO_WOKKSPACE, header = False)
                 print()
+
+            if workspace_path:
+                manifest = get_workspace_manifest()
+                repos_to_maintain = manifest.get_repo_sources(manifest.general_config.current_combo)
+                for repo_to_maintain in repos_to_maintain:
+                    local_repo_path = os.path.join(workspace_path, repo_to_maintain.root)
+                    repo = Repo(local_repo_path)
+                    ui_functions.print_info_msg(humble.REPO_MAINTENANCE.format(repo_to_maintain.root), header = False)
+                    ui_functions.print_info_msg(humble.REFLOG_EXPIRE, header = False)
+                    repo.git.reflog('expire', '--expire=now', '--all')
+                    ui_functions.print_info_msg(humble.GC_AGGRESSIVE, header = False)
+                    repo.git.gc('--aggressive', '--prune=now')
+                    ui_functions.print_info_msg(humble.REMOTE_PRUNE, header = False)
+                    repo.git.remote('prune', 'origin')
+                    print()
