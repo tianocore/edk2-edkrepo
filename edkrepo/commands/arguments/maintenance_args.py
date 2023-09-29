@@ -8,5 +8,6 @@
 #
 
 COMMAND_DESCRIPTION = 'Performs workspace wide maintenance operations'
+NO_GC = 'Skips garbage collection operations. Performs all other workspace maintenance operations.'
 
 
