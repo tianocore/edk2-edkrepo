@@ -136,10 +136,10 @@ def get_install_to_local(args):
         return __install_to_local
     if args.local:
         __install_to_local = True
-        return False
+        return True
     elif args.system:
         __install_to_local = False
-        return True
+        return False
 
     #If there is an existing installation of EdkRepo, install using the same mode
     edkrepo_path = shutil.which('edkrepo')
