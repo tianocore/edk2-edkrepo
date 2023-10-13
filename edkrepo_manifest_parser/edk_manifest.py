@@ -592,6 +592,10 @@ class ManifestXml(BaseXmlHelper):
         if subroot_m is not None:
             pin_root.append(subroot_m)
 
+        subroot_sparse = self._tree.find('SparseCheckout')
+        if subroot_sparse is not None:
+            pin_root.append(subroot_sparse)
+
         hook_root = ET.SubElement(pin_root, 'ClientGitHookList')
 
         submodule_alt_url_root = None
