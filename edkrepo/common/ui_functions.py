@@ -51,6 +51,14 @@ def display_git_output(output_data, verbose=False):
     if verbose and output_data[2]:
         print_info_msg(output_data[2])
 
+
+def display_current_project(manifest, verbose=False):
+    print_info_msg('{}Current Project: {}{}'.format(Style.BRIGHT, manifest.project_info.codename, Style.RESET_ALL), header=False)
+    if verbose and manifest.project_info.description is not None:
+        print_info_msg('{}Description:     {}{}'.format(Style.BRIGHT, manifest.project_info.description, Style.RESET_ALL), header=None)
+    print()
+
+
 def print_info_msg(info_msg, header=True):
     """
     Displays informational message with (default) or without header.
