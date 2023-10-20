@@ -10,6 +10,8 @@
 import os
 
 from git import Repo
+from colorama import Fore
+from colorama import Style
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.status_args as arguments
@@ -32,10 +34,17 @@ class StatusCommand(EdkrepoCommand):
     def run_command(self, args, config):
         workspace_path = get_workspace_path()
         initial_manifest = get_workspace_manifest()
+        ui_functions.display_current_project(initial_manifest, verbose=args.verbose)
         current_combo = initial_manifest.general_config.current_combo
         current_sources = initial_manifest.get_repo_sources(current_combo)
-        ui_functions.print_info_msg(humble.STATUS_CURRENT_COMBO.format(current_combo), header = False)
+        ui_functions.print_info_msg(humble.STATUS_CURRENT_COMBO.format(initial_manifest.current_combo), header=False)
+        print()
         for current_repo in current_sources:
             local_repo_path = os.path.join(workspace_path, current_repo.root)
             repo = Repo(local_repo_path)
-            ui_functions.print_info_msg("{}: {}\n".format(current_repo.root, repo.git.status()), header = False)
+            if not args.verbose:
+                ui_functions.print_info_msg(humble.REPO_HEADER.format(current_repo.root), header=False)
+            else:
+                ui_functions.print_info_msg(humble.REPO_HEADER_VERBOSE.format(current_repo.root, current_repo.remote_url), header=False)
+            ui_functions.print_info_msg(repo.git.execute(['git', '-c', 'color.ui=always','status']), header=False)
+            print()
