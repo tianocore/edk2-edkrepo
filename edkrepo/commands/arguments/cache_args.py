@@ -18,5 +18,5 @@ COMMAND_UPDATE_HELP = 'Update the repo cache for all cached projects. Will enabl
 COMMAND_INFO_HELP = 'Display the current cache information.'
 COMMAND_FORMAT_HELP = 'Change the format that the cache information is displayed in.'
 COMMAND_PROJECT_HELP = 'Project or manifest/pin file to add to the cache.'
-COMMAND_PATH_HELP = 'Path where cache will be created'
+COMMAND_PATH_HELP = 'Path where cache will be created or "default" to restore the default path.'
 SELECTIVE_HELP = 'Only update the cache with the objects referenced by Project or the current workspace manifest'
