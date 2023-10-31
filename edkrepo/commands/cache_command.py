@@ -23,6 +23,7 @@ from edkrepo.common.common_repo_functions import get_latest_sha
 from edkrepo.common.edkrepo_exception import EdkrepoCacheException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
+from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_equal
 import edkrepo.common.ui_functions as ui_functions
 from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
@@ -77,16 +78,18 @@ class CacheCommand(EdkrepoCommand):
 
     def run_command(self, args, config):
         if not args.info:
-        # Process enable disable requests
+            # Process enable disable requests
             if args.disable:
                 config['user_cfg_file'].set_caching_state(False)
             elif args.enable or args.update:
                 config['user_cfg_file'].set_caching_state(True)
             # Write the cache location to the user_cfg
-            if not args.path:
-                config['user_cfg_file'].set_cache_path(cache_path=None, default=True)
-            elif args.path:
-                config['user_cfg_file'].set_cache_path(cache_path=os.path.normpath(os.path.normcase(args.path)), default=False)
+            if args.path:
+                if case_insensitive_equal(args.path, 'default'):
+                    config['user_cfg_file'].set_cache_path(cache_path=None, default=True)
+                else:
+                    config['user_cfg_file'].set_cache_path(cache_path=os.path.normpath(os.path.normcase(args.path)),
+                                                           default=False)
 
         # Get the current state now that we have processed enable/disable
         cache_state = config['user_cfg_file'].caching_state
