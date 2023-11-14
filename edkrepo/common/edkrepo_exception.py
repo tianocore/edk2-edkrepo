@@ -79,7 +79,7 @@ class EdkrepoFoundMultipleException(EdkrepoException):
         super().__init__(message, 117)
 
 class EdkrepoWorkspaceCorruptException(EdkrepoException):
-    def __ini__(self, message):
+    def __init__(self, message):
         super().__init__(message, 118)
 
 class EdkrepoWarningException(EdkrepoException):
