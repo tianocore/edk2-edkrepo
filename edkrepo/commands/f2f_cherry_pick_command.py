@@ -491,7 +491,7 @@ def _perform_cherry_pick(commit, repo, verbose):
     if not isinstance(stdout, str):
         stdout = stdout.decode("utf-8")
     if p.returncode != 0:
-        if stdout.find('after resolving the conflicts') != -1:
+        if 'after resolving the conflicts'.casefold() in stdout.casefold():
             merge_conflict = True
             stdout = stdout.replace("hint: and commit the result with 'git commit'",'')
             sys.stdout.write(stdout)
