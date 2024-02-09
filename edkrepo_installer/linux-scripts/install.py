@@ -798,7 +798,9 @@ def do_install():
         try:
             res = default_run([tool, '--version'])
         except:
-            log.debug('- Failed to run required tool {}'.format(tool))
+            log.info('- Failed to run required tool "{}"'.format(tool))
+            found_deps_issue = True
+            continue
         tool_version = res.stdout.strip().split()[-1]
         if _check_version(tool_version, cfg['req_tools'][tool]) < 0:
             log.info('- {} {} detected (requires {})'.format(tool, tool_version, cfg['req_tools'][tool]))
