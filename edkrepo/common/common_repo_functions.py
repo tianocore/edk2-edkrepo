@@ -80,6 +80,26 @@ REVERT = "Revert"
 PATCHSET_CIRCULAR_DEPENDENCY_ERROR = "The PatchSet {} has a circular dependency with another PatchSet"
 
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
+    try:
+        if 'source_manifest_repo' in vars(args).keys():
+            src_manifest_repo = find_source_manifest_repo(
+                manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
+        else:
+            src_manifest_repo = find_source_manifest_repo(
+                manifest, config['cfg_file'], config['user_cfg_file'], None, False)
+    except EdkrepoManifestNotFoundException:
+        src_manifest_repo = None
+    if src_manifest_repo:
+        cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        if src_manifest_repo in cfg:
+            global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+        elif src_manifest_repo in user_cfg:
+            global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+        else:
+            global_manifest_directory = None
+    else:
+        global_manifest_directory = None
+
     for repo_to_clone in repos_to_clone:
         local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
         local_repo_url = repo_to_clone.remote_url
@@ -124,23 +144,7 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         else:
             raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
 
-        try:
-            if 'source_manifest_repo' in vars(args).keys():
-                src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
-            else:
-                src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], None, False)
-        except EdkrepoManifestNotFoundException:
-            src_manifest_repo = None
-        if src_manifest_repo:
-            cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
-            if src_manifest_repo in cfg:
-                global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
-            elif src_manifest_repo in user_cfg:
-                global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
-            else:
-                global_manifest_directory = None
-        else:
-            global_manifest_directory = None
+
         if global_manifest_directory:
             # Install git hooks if there is a manifest repo associated with the manifest being cloned
             install_hooks(project_client_side_hooks, local_repo_path, repo_to_clone, config, global_manifest_directory)
