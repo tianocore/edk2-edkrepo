@@ -18,5 +18,5 @@ PROJECT_MANIFEST_HELP = ('Either a project name as listed by "edkrepo manifest" 
                          'If a relative path is provided clone will first search relative to the current working directory'
                          ' and then search relative to the global manifest repository.')
 COMBINATION_HELP = 'The name of the combination to checkout. If not specified the projects default combination is used.'
-SPARSE_HELP = 'Enables sparse checkout if supported by the project manifest file.'
+NO_NOTES_HELP = 'Skip fetching notes from the remote repository'
 NO_SPARSE_HELP = 'Disables sparse checkout if the project manifest file enables it by default.'

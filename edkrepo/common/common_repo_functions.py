@@ -98,7 +98,8 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
                                    progress=GitProgressHandler(),
                                    no_checkout=True)
         # Fetch notes
-        repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
+        if not args.no_notes:
+            repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
 
         # Handle patchset/branch/commit/tag checkout if needed. While checking out, patchset has the highest priority.
         # If patchset is not present then, if a combination of these are specified the

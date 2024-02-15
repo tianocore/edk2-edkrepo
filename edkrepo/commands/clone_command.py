@@ -68,6 +68,10 @@ class CloneCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.NO_SPARSE_HELP})
+        args.append({'name': 'no-notes',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.NO_NOTES_HELP})
         args.append(SubmoduleSkipArgument)
         args.append(SourceManifestRepoArgument)
         return metadata
