@@ -21,6 +21,7 @@ import git
 from git import Repo
 import colorama
 
+import edkrepo.common.clone_utilities as clone_utils
 from edkrepo.common.edkrepo_exception import EdkrepoBranchExistsException, EdkrepoException, EdkrepoLocalBranchExistsException, EdkrepoRevertFailedException, EdkrepoCherryPickFailedException, EdkrepoBranchCollidesWithParentShaException
 from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
@@ -101,54 +102,12 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         global_manifest_directory = None
 
     for repo_to_clone in repos_to_clone:
-        local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
-        local_repo_url = repo_to_clone.remote_url
-        cache_path = None
-        if cache_obj is not None:
-            cache_path = cache_obj.get_cache_path(local_repo_url)
-        ui_functions.print_info_msg("Cloning from: " + str(local_repo_url), header = False)
-        if cache_path is not None:
-            ui_functions.print_info_msg('+ Using cache at {}'.format(cache_path))
-            repo = Repo.clone_from(local_repo_url, local_repo_path,
-                                   progress=GitProgressHandler(),
-                                   reference_if_able=cache_path,
-                                   no_checkout=True)
-        else:
-            repo = Repo.clone_from(local_repo_url, local_repo_path,
-                                   progress=GitProgressHandler(),
-                                   no_checkout=True)
-        # Fetch notes
-        repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
-
-        # Handle patchset/branch/commit/tag checkout if needed. While checking out, patchset has the highest priority.
-        # If patchset is not present then, if a combination of these are specified the
-        # order of importance is 1)commit 2)tag 3)branch with only the higest priority being checked out
-        if repo_to_clone.patch_set:
-            patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
-            create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
-        elif repo_to_clone.commit:
-            if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
-                ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
-            repo.git.checkout(repo_to_clone.commit)
-        elif repo_to_clone.tag and repo_to_clone.commit is None:
-            if args.verbose and repo_to_clone.branch:
-                ui_functions.print_info_msg(TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
-            repo.git.checkout(repo_to_clone.tag)
-        elif repo_to_clone.branch and (repo_to_clone.commit is None and repo_to_clone.tag is None):
-            if repo_to_clone.branch not in repo.remotes['origin'].refs:
-                raise EdkrepoManifestInvalidException('The specified remote branch does not exist')
-            branch_name = repo_to_clone.branch
-            local_branch = repo.create_head(branch_name, repo.remotes['origin'].refs[branch_name])
-            repo.heads[local_branch.name].set_tracking_branch(repo.remotes['origin'].refs[branch_name])
-            repo.heads[local_branch.name].checkout()
-        else:
-            raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
-
-
+        clone_utils.clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj)
+        
         if global_manifest_directory:
+            repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
             # Install git hooks if there is a manifest repo associated with the manifest being cloned
-            install_hooks(project_client_side_hooks, local_repo_path, repo_to_clone, config, global_manifest_directory)
-
+            install_hooks(project_client_side_hooks, os.path.join(workspace_dir, repo_to_clone.root), repo_to_clone, config, global_manifest_directory)
             # Add the commit template if it exists.
             update_repo_commit_template(workspace_dir, repo, repo_to_clone, global_manifest_directory)
 
