@@ -19,4 +19,8 @@ PROJECT_MANIFEST_HELP = ('Either a project name as listed by "edkrepo manifest" 
                          ' and then search relative to the global manifest repository.')
 COMBINATION_HELP = 'The name of the combination to checkout. If not specified the projects default combination is used.'
 SPARSE_HELP = 'Enables sparse checkout if supported by the project manifest file.'
-NO_SPARSE_HELP = 'Disables sparse checkout if the project manifest file enables it by default.'
+NO_SPARSE_HELP = 'Disables sparse checkout if the project manifest file enables it by default.'
+TREELESS_HELP = ('Creates a partial "treeless" clone; all reachable commits will be downloaded with additional blobs and trees being '
+                 'downloaded on demand by future Git operations as needed.\n'
+                 'Treeless clones result in significantly faster initial clone times and minimize the amount of content downloaded.\n'
+                 'Workspaces created with this option are best used for one time workspaces that will be discarded.')
