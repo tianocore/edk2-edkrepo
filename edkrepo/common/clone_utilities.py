@@ -35,6 +35,12 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
 
     if repo_to_clone.branch:
         clone_cmd_args['target_branch'] = '-b {}'.format(repo_to_clone.branch)
+    elif args:
+        try:
+            if args.treeless:
+                clone_cmd_args['treeless'] = '--filter=tree:0'
+        except KeyError:
+            pass
 
     if clone_cmd_args:
         clone_arg_string = ' '.join([clone_cmd_args[arg] for arg in clone_cmd_args.keys()])
