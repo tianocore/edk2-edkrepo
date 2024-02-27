@@ -24,3 +24,7 @@ TREELESS_HELP = ('Creates a partial "treeless" clone; all reachable commits will
                  'downloaded on demand by future Git operations as needed.\n'
                  'Treeless clones result in significantly faster initial clone times and minimize the amount of content downloaded.\n'
                  'Workspaces created with this option are best used for one time workspaces that will be discarded.')
+BLOBLESS_HELP = ('Creates a partial "blobless" clone; all reachable commits and trees will be downloaded with additional blobs being '
+                 'downloaded on demand by future Git operations as needed.\n'
+                 'Blobless clones result in significantly faster initial clone times and minimize the amount of content downloaded.\n'
+                 'Workspaces created with this option are best used for persistent development environments')

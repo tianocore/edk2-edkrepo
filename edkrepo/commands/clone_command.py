@@ -72,6 +72,10 @@ class CloneCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.TREELESS_HELP})
+        args.append({'name': 'blobless',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.BLOBLESS_HELP})
         args.append(SubmoduleSkipArgument)
         args.append(SourceManifestRepoArgument)
         return metadata
