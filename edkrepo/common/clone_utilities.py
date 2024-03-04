@@ -47,6 +47,11 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
                 clone_cmd_args['blobless'] = '--filter=blob:none'
         except KeyError:
             pass
+        try:
+            if args.single_branch:
+                clone_cmd_args['single-branch'] = '--single-branch'
+        except KeyError:
+            pass
 
     if clone_cmd_args:
         clone_arg_string = ' '.join([clone_cmd_args[arg] for arg in clone_cmd_args.keys()])

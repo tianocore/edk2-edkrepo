@@ -76,6 +76,10 @@ class CloneCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.BLOBLESS_HELP})
+        args.append(({'name': 'single-branch',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.SINGLE_BRANCH_HELP}))
         args.append(SubmoduleSkipArgument)
         args.append(SourceManifestRepoArgument)
         return metadata

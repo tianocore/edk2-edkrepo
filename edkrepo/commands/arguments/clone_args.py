@@ -28,3 +28,5 @@ BLOBLESS_HELP = ('Creates a partial "blobless" clone; all reachable commits and 
                  'downloaded on demand by future Git operations as needed.\n'
                  'Blobless clones result in significantly faster initial clone times and minimize the amount of content downloaded.\n'
                  'Workspaces created with this option are best used for persistent development environments')
+SINGLE_BRANCH_HELP = ('Clone only the history leading to the tip of a single branch for each repository in the workspace.\n'
+                      'The branch is determined by the default combination or by the Combination parameter.')
