@@ -80,6 +80,10 @@ class CloneCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.SINGLE_BRANCH_HELP}))
+        args.append(({'name': 'no-tags',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.NO_TAGS_HELP}))
         args.append(SubmoduleSkipArgument)
         args.append(SourceManifestRepoArgument)
         return metadata

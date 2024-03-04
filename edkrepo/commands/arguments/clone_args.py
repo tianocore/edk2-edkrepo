@@ -30,3 +30,5 @@ BLOBLESS_HELP = ('Creates a partial "blobless" clone; all reachable commits and 
                  'Workspaces created with this option are best used for persistent development environments')
 SINGLE_BRANCH_HELP = ('Clone only the history leading to the tip of a single branch for each repository in the workspace.\n'
                       'The branch is determined by the default combination or by the Combination parameter.')
+NO_TAGS_HELP = ('Skips download of tags and updates config settings to ensure that future pull and fetch operations do not follow tags.\n'
+                'Future explicit tag fetches will continue to work as expected.')
