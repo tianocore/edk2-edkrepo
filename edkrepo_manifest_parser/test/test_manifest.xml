@@ -1,0 +1,56 @@
+<Manifest>
+    <ProjectInfo>
+        <CodeName>Edk2TestProject</CodeName>
+        <ShortName>EDKII</ShortName>
+        <Description>Test Project</Description>
+        <Org>TianoCore</Org>
+        <DevLead>kevin.sun@intel.com</DevLead>
+        <DevLead>ashley.e.desimone@intel.com</DevLead>
+        <LeadReviewers>
+            <Reviewer>nathaniel.l.desimone@intel.com</Reviewer>
+            <Reviewer>erik.c.bjorge@intel.com</Reviewer>
+        </LeadReviewers>
+    </ProjectInfo>
+    <GeneralConfig>
+        <PinPath>test/pins</PinPath>
+        <DefaultCombo combination="main" />
+        <CurrentClonedCombo combination="main" />
+        <SourceManifestRepository>https://github.com/tianocore/edk2-edkrepo-manifest</SourceManifestRepository>
+    </GeneralConfig>
+    <SparseCheckout>
+        <SparseSettings useDsc="false" sparseByDefault="true" />
+        <SparseData remote="Edk2Repo">
+            <AlwaysInclude>*.*</AlwaysInclude>
+            <AlwaysExclude>UnitTestFrameworkPkg</AlwaysExclude>
+        </SparseData>
+    </SparseCheckout>
+    <RemoteList>
+        <Remote name="Edk2Repo" owner="tianocore">https://github.com/tianocore/edk2.git</Remote>
+        <Remote name="Edk2Platforms" owner="tianocore">https://github.com/tianocore/edk2-platforms.git</Remote>
+    </RemoteList>
+    <ClientGitHookList>
+        <ClientGitHook destination=".git/hooks" destination_file="hooks/pre-push" remote="Edk2Repo" source="hooks/hook-wrapper" />
+        <ClientGitHook destination=".git/hooks" destination_file="hooks/pre-commit" remote="Edk2Repo" source="hooks/hook-wrapper" />
+    </ClientGitHookList>
+    <CommitTemplates>
+        <Template remoteName="Edk2Repo">Templates/template.txt</Template>
+    </CommitTemplates>
+    <SubmoduleAlternateRemotes>
+        <SubmoduleAlternateRemote originalUrl="https://git.cryptomilk.org/projects/cmocka.git" remote="Edk2Repo">https://github.com/tianocore/edk2-cmocka.git</SubmoduleAlternateRemote>
+    </SubmoduleAlternateRemotes>
+    <CombinationList>
+        <Combination name="main" description="Main Combo">
+            <Source localRoot="Edk2" remote="Edk2Repo" branch="master" sparseCheckout="true" />
+            <Source localRoot="Edk2Platforms" remote="Edk2Platforms" branch="master" sparseCheckout="false" />
+        </Combination>
+    </CombinationList>
+    <FolderToFolderMappingList>
+        <FolderToFolderMapping project1="SRC" project2="DST" remote="remote">
+            <Folder project1="SourceFspPkg" project2="DestFspPkg" />
+            <File project1="SourceFspPkg/SourceFspPkg.dsc" project2="DestFspPkg/DestFspPkg.dsc" />
+        </FolderToFolderMapping>
+    </FolderToFolderMappingList>
+    <DscList>
+        <Dsc>Edk2/IntelFsp2Pkg/IntelFsp2Pkg.dsc</Dsc>
+    </DscList>
+</Manifest>
