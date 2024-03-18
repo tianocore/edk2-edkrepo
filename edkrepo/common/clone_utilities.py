@@ -40,22 +40,22 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
         try:
             if args.treeless:
                 clone_cmd_args['treeless'] = '--filter=tree:0'
-        except KeyError:
+        except AttributeError:
             pass
         try:
             if args.blobless:
                 clone_cmd_args['blobless'] = '--filter=blob:none'
-        except KeyError:
+        except AttributeError:
             pass
         try:
             if args.single_branch:
                 clone_cmd_args['single-branch'] = '--single-branch'
-        except KeyError:
+        except AttributeError:
             pass
         try:
             if args.no_tags:
                 clone_cmd_args['no-tags'] = '--no-tags'
-        except KeyError:
+        except AttributeError:
             pass
 
     if clone_cmd_args:
