@@ -28,7 +28,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, Edkr
 from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
 from edkrepo.common.progress_handler import GitProgressHandler
 from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, BRANCH_EXISTS, CHECKING_OUT_DEFAULT, CHECKING_OUT_PATCHSET, LOCAL_BRANCH_EXISTS
 from edkrepo.common.humble import FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST, COLLISION_DETECTED
@@ -52,6 +52,7 @@ from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBU
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
 from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED, BRANCH_COLLIDES_WITH_PARENT_SHA
+from edkrepo.common.humble import MISSING_BRANCH_COMMIT, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED, TAG_AND_BRANCH_SPECIFIED
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.git_version import GitVersion
 from project_utils.sparse import BuildInfo, process_sparse_checkout
@@ -80,6 +81,44 @@ PATCH = "Patch"
 REVERT = "Revert"
 PATCHSET_CIRCULAR_DEPENDENCY_ERROR = "The PatchSet {} has a circular dependency with another PatchSet"
 
+def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args=None, cache_obj=None):
+    '''Clones a single repository and checks it out onto the ref defined in the project manifest file.
+    
+    Arguments:
+    manifest - the EdkManifest object representing the full project
+    repo_to_clone - a repo_source tuple describing the repository to be cloned
+    workspace_dir - the workspace directory into which the repository will be cloned
+    global_manifest_path - the path to the global manifest dir
+    args - all command line arguments
+    cache_obj - An EdkRepo cache object
+    '''
+    if repo_to_clone.patch_set:
+        patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
+    elif not repo_to_clone.branch and not repo_to_clone.tag and not repo_to_clone.commit:
+        raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+
+    if cache_obj:
+        cache_path = cache_obj.get_cache_path(repo_to_clone.remote_url)
+        ui_functions.print_info_msg('Cloning {} Repository from local cache: {}'.format(repo_to_clone.root, cache_path), header=False)
+    else:
+        cache_path = None
+        ui_functions.print_info_msg('Cloning {} Repository from: {}'.format(repo_to_clone.root, str(repo_to_clone.remote_url)), header=False)
+
+    clone_cmd = clone_utils.generate_clone_cmd(repo_to_clone, workspace_dir, args, cache_path)
+    clone_cmd_output = subprocess.run(clone_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+    repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
+
+    if repo_to_clone.patch_set:
+        create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
+    elif repo_to_clone.commit:
+        if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
+                ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
+        repo.git.checkout(repo_to_clone.commit)
+    elif repo_to_clone.tag and repo_to_clone.commit is None:
+            if args.verbose and repo_to_clone.branch:
+                ui_functions.print_info_msg(TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
+            repo.git.checkout(repo_to_clone.tag)
+
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
     try:
         if 'source_manifest_repo' in vars(args).keys():
@@ -102,7 +141,7 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
         global_manifest_directory = None
 
     for repo_to_clone in repos_to_clone:
-        clone_utils.clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj)
+        clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj)
         
         if global_manifest_directory:
             repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))

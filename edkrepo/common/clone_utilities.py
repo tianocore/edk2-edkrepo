@@ -13,7 +13,6 @@ import subprocess
 import git
 from git import Repo
 
-import edkrepo.common.common_repo_functions as edkrepo_common
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.humble as humble
 import edkrepo.common.ui_functions as ui_functions
@@ -71,42 +70,3 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
             return ' '.join([base_clone_cmd, clone_arg_string])
         else:
             return ' '.join([base_clone_cmd_cache, clone_arg_string])
-
-def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args=None, cache_obj=None):
-    '''Clones a single repository and checks it out onto the ref defined in the project manifest file.
-    
-    Arguments:
-    manifest - the EdkManifest object representing the full project
-    repo_to_clone - a repo_source tuple describing the repository to be cloned
-    workspace_dir - the workspace directory into which the repository will be cloned
-    global_manifest_path - the path to the global manifest dir
-    args - all command line arguments
-    cache_obj - An EdkRepo cache object
-    '''
-    if repo_to_clone.patch_set:
-        patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
-    elif not repo_to_clone.branch and not repo_to_clone.tag and not repo_to_clone.commit:
-        raise edkrepo_exception.EdkrepoManifestInvalidException(humble.MISSING_BRANCH_COMMIT)
-
-    if cache_obj:
-        cache_path = cache_obj.get_cache_path(repo_to_clone.remote_url)
-        ui_functions.print_info_msg('Cloning {} Repository from local cache: {}'.format(repo_to_clone.root, cache_path), header=False)
-    else:
-        cache_path = None
-        ui_functions.print_info_msg('Cloning {} Repository from: {}'.format(repo_to_clone.root, str(repo_to_clone.remote_url)), header=False)
-
-    clone_cmd = generate_clone_cmd(repo_to_clone, workspace_dir, args, cache_path)
-    clone_cmd_output = subprocess.run(clone_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
-    repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
-
-    if repo_to_clone.patch_set:
-        edkrepo_common.create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
-    elif repo_to_clone.commit:
-        if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
-                ui_functions.print_info_msg(humble.MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
-        repo.git.checkout(repo_to_clone.commit)
-    elif repo_to_clone.tag and repo_to_clone.commit is None:
-            if args.verbose and repo_to_clone.branch:
-                ui_functions.print_info_msg(humble.TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
-            repo.git.checkout(repo_to_clone.tag)
-
