@@ -582,6 +582,10 @@ class ManifestXml(BaseXmlHelper):
         project_root.find('Description').text = description
 
         subroot_m = self._tree.find('GeneralConfig')
+        if combo_name not in self.__combinations:
+            raise KeyError('The combo {} was not found in the source manifest file.'.format(combo_name))
+        current_cloned_combo = subroot_m.find('CurrentClonedCombo')
+        current_cloned_combo.attrib['combination'] = combo_name
         pin_root.append(subroot_m)
         config_root = pin_root.find('GeneralConfig')
         for elem in list(config_root):
@@ -609,7 +613,7 @@ class ManifestXml(BaseXmlHelper):
         remote_root = ET.SubElement(pin_root, 'RemoteList')
         source_root = ET.SubElement(pin_root, 'Combination')
         source_root.attrib['name'] = self._combinations[combo_name].name
-        
+
         for patch_set in self._tree.iter("PatchSet"):
             patch_sets.append(patch_set)
         # Add tags for each RepoSource tuple in the list provided
