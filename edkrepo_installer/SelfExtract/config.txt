@@ -1,4 +1,4 @@
 ;!@Install@!UTF-8!
 Title="EdkRepo Installer"
-RunProgram="SetupLauncher.exe"
+RunProgram="EdkRepoInstaller.exe"
 ;!@InstallEnd@!
