@@ -16,6 +16,9 @@ set FIND_VS_WHERE=0
 if not defined TOOL_CHAIN_TAG (
   set FIND_VS_WHERE=1
 ) else (
+  if /I "%TOOL_CHAIN_TAG%"=="VS2022" (
+    set FIND_VS_WHERE=1
+  )
   if /I "%TOOL_CHAIN_TAG%"=="VS2019" (
     set FIND_VS_WHERE=1
   )
@@ -67,7 +70,7 @@ if %CHECK_VS2022% NEQ 0 (
     echo.
     echo Prebuild:  Set the VS2022 environment.
     echo.
-    if not defined VS160COMNTOOLS (
+    if not defined VS170COMNTOOLS (
       call "%INSTALL_PATH%\VC\Auxiliary\Build\vcvars32.bat"
     )
     set TOOL_CHAIN_TAG=VS2022
