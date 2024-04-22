@@ -3,7 +3,7 @@
 ## @file
 # install.py
 #
-# Copyright (c) 2018 - 2023, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2024, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -38,7 +38,7 @@ elif os.name == "posix":
 else:
     raise EnvironmentError("Unsupported OS")
 
-tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation, 2023'
+tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation, 2024'
 
 # Data here should be maintained in a configuration file
 cfg_dir = '.edkrepo'
@@ -65,6 +65,16 @@ zsh_bashcompinit = 'bashcompinit'
 
 def default_run(cmd):
     return subprocess.run(cmd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
+
+def run_with_externally_managed_check(cmd):
+    res = subprocess.run(cmd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if res.returncode:
+        if ostype != MAC and res.stdout.find('externally-managed-environment') != -1:
+            cmd.append('--break-system-packages')
+            return default_run(cmd)
+        else:
+            raise subprocess.CalledProcessError(res.returncode, res.args, output=res.stdout, stderr=res.stderr)
+    return res
 
 def init_logger(verbose):
     logging.PRINT = 100
@@ -894,6 +904,8 @@ def do_install():
         if not os.path.isdir(whl_src_dir):
             log.info('- Missing wheel file directory')
             return 1
+
+        #Uninstall wheels with the UninstallAllOtherCopies attribute set
         updating_edkrepo = False
         for whl_name in wheels_to_install:
             uninstall_whl = wheels_to_install[whl_name]['uninstall']
@@ -901,7 +913,7 @@ def do_install():
             if uninstall_whl:
                 updating_edkrepo = True
                 try:
-                    res = default_run([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
+                    run_with_externally_managed_check([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
                 except:
                     log.info('- Failed to uninstall {}'.format(whl_name))
                     return 1
@@ -913,11 +925,13 @@ def do_install():
             for whl_name in ['smmap2', 'gitdb2', 'edkrepo-internal']:
                 if whl_name in installed_packages:
                     try:
-                        res = default_run([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
+                        run_with_externally_managed_check([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
                     except:
                         log.info('- Failed to uninstall {}'.format(whl_name))
                         return 1
                     log.info('+ Uninstalled {}'.format(whl_name))
+
+        #Install new wheels
         for whl_name in wheels_to_install:
             whl = wheels_to_install[whl_name]['wheel']
             install_whl = wheels_to_install[whl_name]['install']
@@ -927,7 +941,7 @@ def do_install():
                     install_cmd.append('--user')
                 install_cmd.append(os.path.join(whl_src_dir, whl))
                 try:
-                    default_run(install_cmd)
+                    run_with_externally_managed_check(install_cmd)
                 except:
                     log.info('- Failed to install {}'.format(whl_name))
                     return 1
