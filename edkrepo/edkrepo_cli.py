@@ -11,7 +11,7 @@ import argparse
 from operator import itemgetter
 import sys
 import traceback
-import pkg_resources
+from importlib.metadata import version
 import time
 import json
 import os
@@ -35,8 +35,8 @@ def generate_command_line(command):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='subparser_name')
     try:
-        version = pkg_resources.get_distribution("edkrepo").version
-        parser.add_argument("--version", action="version", version="%(prog)s {0}".format(version))
+        edkrepo_version = version("edkrepo")
+        parser.add_argument("--version", action="version", version="%(prog)s {0}".format(edkrepo_version))
     except:
         #To prevent errors if edkrepo is being run without being installed
         parser.add_argument("--version", action="version", version="%(prog)s 0.0.0")
