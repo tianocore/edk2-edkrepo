@@ -13,7 +13,6 @@ import importlib.util
 import inspect
 import json
 import os
-import pkg_resources
 import site
 import subprocess
 import sys
