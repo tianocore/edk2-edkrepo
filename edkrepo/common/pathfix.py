@@ -181,7 +181,11 @@ def expanduser(path):
     if sys.platform != 'win32':
         return os.path.expanduser(path)
 
-    path = os.fspath(path)
+    try:
+        path = os.fspath(path)
+    except AttributeError:
+        return os.path.expanduser(path)
+
     if isinstance(path, bytes):
         tilde = b'~'
     else:

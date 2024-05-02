@@ -11,7 +11,10 @@ import argparse
 from operator import itemgetter
 import sys
 import traceback
-from importlib.metadata import version
+try:
+    from importlib.metadata import version
+except ImportError:
+    import pkg_resources
 import time
 import json
 import os
@@ -35,11 +38,17 @@ def generate_command_line(command):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='subparser_name')
     try:
-        edkrepo_version = version("edkrepo")
-        parser.add_argument("--version", action="version", version="%(prog)s {0}".format(edkrepo_version))
+        current_version = version("edkrepo")
+    except NameError:
+        try:
+            current_version = pkg_resources.get_distribution("edkrepo").version
+        except:
+            #To prevent errors if edkrepo is being run without being installed (Python 3.7 and earlier)
+            current_version = "0.0.0"
     except:
-        #To prevent errors if edkrepo is being run without being installed
-        parser.add_argument("--version", action="version", version="%(prog)s 0.0.0")
+        #To prevent errors if edkrepo is being run without being installed (Python 3.8 and later)
+        current_version = "0.0.0"
+    parser.add_argument("--version", action="version", version="%(prog)s {0}".format(current_version))
     #command_names = command.command_list()
     for command_name in command.command_list():
         subparser_name = 'parser_' + command_name
