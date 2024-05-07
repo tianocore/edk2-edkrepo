@@ -45,6 +45,7 @@ class ComboCommand(EdkrepoCommand):
             all_combos.extend(manifest.archived_combinations)
         if manifest.general_config.current_combo not in combo_list:
             combo_list.append(manifest.general_config.current_combo)
+            all_combos.extend(c for c in manifest.archived_combinations if c.name == manifest.general_config.current_combo)
         for combo in sorted(combo_list):
             if args.verbose:
                 description = [c.description for c in all_combos if c.name == combo]
