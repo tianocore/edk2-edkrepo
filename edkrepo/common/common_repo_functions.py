@@ -941,13 +941,27 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                 else:
                     raise EdkrepoPatchNotFoundException(PATCHFILE_DOES_NOT_EXIST.format(operation.file))
             elif operation.type == REVERT:
+                revert_command = ['git', 'revert', operation.sha, '--no-edit']
+                if operation.merge_strategy == "ort_ignore-all-space":
+                    revert_command.extend(['--strategy', 'ort', '--strategy-option', 'ignore-all-space'])
+                elif operation.merge_strategy == "ort_theirs":
+                    revert_command.extend(['--strategy', 'ort', '--strategy-option', 'theirs'])
+                elif operation.merge_strategy == "ort_ours":
+                    revert_command.extend(['--strategy', 'ort', '--strategy-option', 'ours'])
                 try:
-                    repo.git.execute(['git', 'revert', operation.sha, '--no-edit'])
+                    repo.git.execute(revert_command)
                 except:
                     if is_merge_conflict(repo):
                         repo.git.execute(['git', 'revert', '--abort'])
                     raise EdkrepoRevertFailedException(APPLYING_REVERT_FAILED.format(operation.sha))
             else:
+                cherrypick_command = ['git', 'cherry-pick', operation.sha, '-x']
+                if operation.merge_strategy == "ort_ignore-all-space":
+                    cherrypick_command.extend(['--strategy', 'ort', '--strategy-option', 'ignore-all-space'])
+                elif operation.merge_strategy == "ort_theirs":
+                    cherrypick_command.extend(['--strategy', 'ort', '--strategy-option', 'theirs'])
+                elif operation.merge_strategy == "ort_ours":
+                    cherrypick_command.extend(['--strategy', 'ort', '--strategy-option', 'ours'])
                 if operation.source_remote:
                     REMOTE_FOUND = False
                     for remote in remote_list:
@@ -962,7 +976,7 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                             except:
                                 raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                             try:
-                                repo.git.execute(['git', 'cherry-pick', operation.sha, '-x'])
+                                repo.git.execute(cherrypick_command)
                             except:
                                 if is_merge_conflict(repo):
                                     repo.git.execute(['git', 'cherry-pick', '--abort'])
@@ -979,7 +993,7 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                     except:
                         raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                     try:
-                        repo.git.execute(['git', 'cherry-pick', operation.sha, '-x'])
+                        repo.git.execute(cherrypick_command)
                     except:
                         if is_merge_conflict(repo):
                             repo.git.execute(['git', 'cherry-pick', '--abort'])
