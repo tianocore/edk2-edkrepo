@@ -29,7 +29,7 @@ Combination = namedtuple('Combination', ['name', 'description', 'venv_enable'])
 RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
                                        'enable_submodule', 'tag', 'venv_cfg', 'patch_set'])
 PatchSet = namedtuple('PatchSet', ['remote', 'name', 'parent_sha', 'fetch_branch'])
-PatchOperation = namedtuple('PatchOperation',['type', 'file', 'sha', 'source_remote', 'source_branch'])
+PatchOperation = namedtuple('PatchOperation',['type', 'file', 'sha', 'source_remote', 'source_branch', 'merge_strategy'])
 SparseSettings = namedtuple('SparseSettings', ['sparse_by_default'])
 SparseData = namedtuple('SparseData', ['combination', 'remote_name', 'always_include', 'always_exclude'])
 
@@ -906,10 +906,14 @@ class _PatchSetOperations():
             self.source_branch = element.attrib['sourceBranch']
         except KeyError as k:
             self.source_branch = None
+        try:
+            self.merge_strategy = element.attrib['mergeStrategy']
+        except KeyError as k:
+            self.merge_strategy = None
 
     @property
     def tuple(self):
-        return PatchOperation(self.type, self.file, self.sha, self.source_remote, self.source_branch)
+        return PatchOperation(self.type, self.file, self.sha, self.source_remote, self.source_branch, self.merge_strategy)
 
 class _ProjectInfo():
     def __init__(self, element):
