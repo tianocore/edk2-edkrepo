@@ -31,19 +31,28 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
     base_clone_cmd_cache = 'git clone {} {} --reference-if-able {} --progress'.format(repo_to_clone.remote_url, local_repo_path, cache_path)
     clone_arg_string = None
     clone_cmd_args = {}
+    active_filters = []
 
     if repo_to_clone.branch:
         clone_cmd_args['target_branch'] = '-b {}'.format(repo_to_clone.branch)
-    
+
     if args:
         try:
             if args.treeless:
                 clone_cmd_args['treeless'] = '--filter=tree:0'
+                active_filters.append('treeless')
         except AttributeError:
             pass
         try:
             if args.blobless:
                 clone_cmd_args['blobless'] = '--filter=blob:none'
+                active_filters.append('blobless')
+        except AttributeError:
+            pass
+        try:
+            if args.full:
+                clone_cmd_args['full'] = ''
+                active_filters.append('full')
         except AttributeError:
             pass
         try:
@@ -56,6 +65,25 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
                 clone_cmd_args['no-tags'] = '--no-tags'
         except AttributeError:
             pass
+
+    try:
+        if repo_to_clone.treeless:
+            clone_cmd_args['treeless_manifest_setting'] = '--filter=tree:0'
+    except AttributeError:
+        pass
+    try:
+        if repo_to_clone.blobless:
+            clone_cmd_args['blobless_manifest_setting'] = '--filter=blob:none'
+    except AttributeError:
+        pass
+
+    if len(active_filters) > 1:
+        raise edkrepo_exception.EdkrepoInvalidConfigOptionException(humble.CONFLICTING_PARTIAL_CLONE)
+    elif len(active_filters) == 1:
+        clone_cmd_args['treeless_manifest_setting'] = ''
+        clone_cmd_args['blobless_manifest_setting'] = ''
+    elif 'treeless_manifest_setting' in clone_cmd_args and 'blobless_manifest_setting' in clone_cmd_args:
+        raise edkrepo_exception.EdkrepoInvalidConfigOptionException(humble.CONFLICTING_PARTIAL_CLONE)
 
     if clone_cmd_args:
         clone_arg_string = ' '.join([clone_cmd_args[arg] for arg in clone_cmd_args.keys()])

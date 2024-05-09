@@ -27,7 +27,7 @@ RemoteRepo = namedtuple('RemoteRepo', ['name', 'url'])
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
 Combination = namedtuple('Combination', ['name', 'description', 'venv_enable'])
 RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
-                                       'enable_submodule', 'tag', 'venv_cfg', 'patch_set'])
+                                       'enable_submodule', 'tag', 'venv_cfg', 'patch_set', 'blobless', 'treeless'])
 PatchSet = namedtuple('PatchSet', ['remote', 'name', 'parent_sha', 'fetch_branch'])
 PatchOperation = namedtuple('PatchOperation',['type', 'file', 'sha', 'source_remote', 'source_branch'])
 SparseSettings = namedtuple('SparseSettings', ['sparse_by_default'])
@@ -1074,6 +1074,14 @@ class _RepoSource():
             self.venv_cfg = (element.attrib['venv_cfg'])
         except:
             self.venv_cfg = None
+        try:
+            self.blobless = (element.attrib['blobless'].lower() == 'true')
+        except Exception:
+            self.blobless = False
+        try:
+            self.treeless = (element.attrib['treeless'].lower() == 'true')
+        except Exception:
+            self.treeless = False
 
         if self.branch is None and self.commit is None and self.tag is None and self.patch_set is None:
             raise KeyError(ATTRIBUTE_MISSING_ERROR)
@@ -1084,7 +1092,7 @@ class _RepoSource():
     @property
     def tuple(self):
         return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
-                          self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set)
+                          self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set, self.blobless, self.treeless)
 
 
 class _SparseSettings():

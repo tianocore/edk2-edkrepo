@@ -37,6 +37,9 @@ CLONE_INVALID_PROJECT_ARG = 'The PROJECT NAME OR MANIFEST argument must refer to
 CLONE_INVALID_COMBO_ARG = UNSUPPORTED_COMBO + CLONE_EXIT
 CLONE_INVALID_LOCAL_ROOTS = 'The selected combination is invalid; it contains duplicate local roots.' + CLONE_EXIT
 
+#error messages for clone_utilities.py
+CONFLICTING_PARTIAL_CLONE = 'Multiple partial clone arguments were provided.'
+
 # General sparse checkout messages
 SPARSE_CHECKOUT = 'Performing sparse checkout...'
 SPARSE_RESET = 'Resetting sparse checkout state...'
