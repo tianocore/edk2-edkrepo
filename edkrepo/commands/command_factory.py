@@ -54,8 +54,14 @@ def get_commands():
     cmd_search_dirs = []
 
     for cmd_pkg in cmd_pkg_list:
-        mod = importlib.import_module(cmd_pkg)
-        cmd_search_dirs.append((cmd_pkg, os.path.dirname(mod.__file__)))
+        try:
+            mod = importlib.import_module(cmd_pkg)
+            cmd_search_dirs.append((cmd_pkg, os.path.dirname(mod.__file__)))
+        except ImportError:
+            pass
+    if cmd_search_dirs == []:
+        # None of the command-packages were located.
+        raise ImportError (cmd_pkg_list)
     for cmd_dir in cmd_search_dirs:
         for module in os.listdir(cmd_dir[1]):
             if module == '__init__.py' or os.path.splitext(module)[1] != '.py':
