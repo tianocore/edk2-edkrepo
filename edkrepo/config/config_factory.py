@@ -26,6 +26,7 @@ from edkrepo.common.pathfix import expanduser
 
 def get_edkrepo_global_data_directory():
     global_data_dir = None
+    local_data_dir = None
     if sys.platform == "win32":
         shell32 = oledll.shell32
         SHGetFolderPath = shell32.SHGetFolderPathW
@@ -36,11 +37,14 @@ def get_edkrepo_global_data_directory():
         common_appdata = create_unicode_buffer(MAX_PATH)
         SHGetFolderPath(None, CSIDL_COMMON_APPDATA, None, SHGFP_TYPE_CURRENT, common_appdata)
         global_data_dir = os.path.join(common_appdata.value, "edkrepo")
+        local_data_dir = os.path.join(os.path.dirname(sys.argv[0]), "edkrepo_dev_local_data")
     elif sys.platform == "darwin" or sys.platform.startswith("linux") or os.name == "posix":
         global_data_dir = expanduser("~/.edkrepo")
     if not os.path.isdir(global_data_dir):
         if not os.path.exists(os.path.dirname(global_data_dir)):
             raise EdkrepoGlobalDataDirectoryNotFoundException(humble.GLOBAL_DATA_DIR_NOT_FOUND.format(os.path.dirname(global_data_dir)))
+        if sys.platform == "win32" and os.path.isdir(local_data_dir):
+            return local_data_dir
         os.mkdir(global_data_dir)
     return global_data_dir
 
