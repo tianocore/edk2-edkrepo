@@ -70,7 +70,8 @@ class RepoCache(object):
         if verbose:
             print(CACHE_FETCH_REMOTE.format(remote_name, url))
         repo.remotes[remote_name].fetch(progress=GitProgressHandler())
-        repo.git.execute(['git', 'lfs', 'fetch', '--all'])
+        if self._lfs_enabled(repo):
+            repo.git.execute(['git', 'lfs', 'fetch', '--all'])
 
     def open(self, verbose=False):
         """
@@ -232,17 +233,19 @@ class RepoCache(object):
                 if sha_or_branch is not None and ((remote.name == dir_name) or (remote.url == url_or_name)):
                     print('Fetching ref {}'.format(sha_or_branch))
                     remote.fetch(refspec=sha_or_branch, progress=GitProgressHandler())
-                    try:
-                        repo.git.execute(['git', 'lfs', 'fetch', '{}'.format(remote.name), '{}'.format(sha_or_branch), '--recent'])
-                    except GitCommandError:
-                        print('No recent LFS object found in {}:{}'.format(remote.name, sha_or_branch))
-                        pass
+                    if self._lfs_enabled(repo):
+                        try:
+                            repo.git.execute(['git', 'lfs', 'fetch', '{}'.format(remote.name), '{}'.format(sha_or_branch), '--recent'])
+                        except GitCommandError:
+                            print('No recent LFS object found in {}:{}'.format(remote.name, sha_or_branch))
+                            pass
                 else:
                     remote.fetch(progress=GitProgressHandler())
-                    try:
-                        repo.git.execute(['git', 'lfs', 'fetch', '--recent'])
-                    except GitCommandError:
-                        print('No recent LFS object found in {}'.format(remote.name))
+                    if self._lfs_enabled(repo):
+                        try:
+                            repo.git.execute(['git', 'lfs', 'fetch', '--recent'])
+                        except GitCommandError:
+                            print('No recent LFS object found in {}'.format(remote.name))
 
     def is_sha_cached(self, url_or_name, sha, verbose=False):
         repo = self._get_repo(self._create_name(url_or_name))
@@ -257,3 +260,13 @@ class RepoCache(object):
 
     def clean_cache(self, verbose=False):
         raise NotImplementedError
+
+    def _lfs_enabled(self, repo):
+        try:
+            lfs_out = repo.git.execute(['git', 'lfs', 'ls-files', '-n'])
+            if lfs_out:
+                return True
+            else:
+                return False
+        except GitCommandError as e:
+            raise EdkrepoGitException(e)
