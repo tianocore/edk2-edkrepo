@@ -15,6 +15,8 @@ import sys
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.composite_command import CompositeCommand
 from edkrepo.config.config_factory import GlobalConfig
+import edkrepo.common.ui_functions as ui_functions
+import edkrepo.commands.humble.command_factory_humble as humble
 
 def _is_command(CommandClass):
     if CommandClass == EdkrepoCommand:
@@ -55,8 +57,14 @@ def get_commands():
     cmd_search_dirs = []
 
     for cmd_pkg in cmd_pkg_list:
-        mod = importlib.import_module(cmd_pkg)
-        cmd_search_dirs.append((cmd_pkg, os.path.dirname(mod.__file__)))
+        try:
+            mod = importlib.import_module(cmd_pkg)
+            cmd_search_dirs.append((cmd_pkg, os.path.dirname(mod.__file__)))
+        except ImportError:
+            ui_functions.print_info_msg(humble.COMMAND_PACKAGE_NOT_FOUND.format(cmd_pkg), header=False)
+    if cmd_search_dirs == []:
+        ui_functions.print_info_msg(humble.COMMAND_PACKAGES_NOT_FOUND, header=False)
+        raise ImportError (cmd_pkg_list)
     for cmd_dir in cmd_search_dirs:
         for module in os.listdir(cmd_dir[1]):
             if module == '__init__.py' or os.path.splitext(module)[1] != '.py':
