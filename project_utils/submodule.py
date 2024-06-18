@@ -73,6 +73,14 @@ def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=No
     """
     # Now perform the update of the submodules.  For a fully recursive submodule init
     # this code will update and initialize at the same time.
+    repo_filter = repo.git.execute(['git', 'config', 'remote.origin.partialclonefilter'])
+    if repo_filter == "tree:0":
+        submodule_filter = '--filter=tree:0'
+    elif repo_filter == "blob:none":
+        submodule_filter = '--filter=blob:none'
+    else:
+        submodule_filter = None
+
     if submodules is None:
         cmd = ['git', 'submodule', 'sync']
         if recursive:
@@ -84,6 +92,8 @@ def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=No
             cmd.append('--recursive')
         if cache_path is not None:
             cmd.extend(['--reference', cache_path])
+        if submodule_filter != None:
+            cmd.append(submodule_filter)
         output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
         ui_functions.display_git_output(output_data, verbose)
     else:
@@ -104,6 +114,8 @@ def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=No
             if cache_path is not None:
                 cmd.extend(['--reference', cache_path])
             cmd.extend(['--', sub.path])
+            if submodule_filter != None:
+                cmd.append(submodule_filter)
             output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
             ui_functions.display_git_output(output_data, verbose)
     return
