@@ -22,10 +22,10 @@ def clean_git_globalconfig():
     prefix_required = find_git_version() >= GitVersion('2.34.0')
     with git.GitConfigParser(global_gitconfig_path, read_only=False) as git_globalconfig:
         if prefix_required:
-            includeif_regex = re.compile('^includeIf "gitdir:%\(prefix\)(/.+)/"$')
+            includeif_regex = re.compile('^includeIf "gitdir:%\\(prefix\\)(/.+)/"$')
             includeif_regex_old = re.compile('^includeIf "gitdir:(/.+)/"$')
         else:
-            includeif_regex_old = re.compile('^includeIf "gitdir:%\(prefix\)(/.+)/"$')
+            includeif_regex_old = re.compile('^includeIf "gitdir:%\\(prefix\\)(/.+)/"$')
             includeif_regex = re.compile('^includeIf "gitdir:(/.+)/"$')
         for section in git_globalconfig.sections():
             data = includeif_regex.match(section)
