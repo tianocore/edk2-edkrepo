@@ -310,7 +310,7 @@ def maintain_submodules(workspace, manifest, combo_name, verbose=False, cache_pa
         if len(repo_subs) == 0:
             _update(repo, None, verbose, cache_path=cache_path)
         else:
-            _update(repo, repo_subs, verbose, cache_path=cache_path)
+            _update(repo, repo_subs, verbose, recursive=True, cache_path=cache_path)
 
 
 if __name__ == '__main__':
