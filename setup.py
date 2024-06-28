@@ -9,7 +9,7 @@
 from setuptools import setup
 
 setup(name='edkrepo',
-      version='3.2.2',
+      version='3.2.3',
       description='The edkrepo tools',
       packages=['edkrepo', 'edkrepo.commands', 'edkrepo.commands.arguments', 'edkrepo.commands.humble',
                 'edkrepo.git_automation', 'edkrepo.common', 'edkrepo.common.workspace_maintenance',
