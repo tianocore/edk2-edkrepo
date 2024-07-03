@@ -975,10 +975,13 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                                 repo.git.execute(['git', 'fetch', operation.source_remote, operation.source_branch])
                             except:
                                 try:
-                                    repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
+                                    repo.git.execute(['git', 'fetch', operation.source_remote, operation.source_branch, '--refetch'])
                                 except:
-                                    pass
-                                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                                    try:
+                                        repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
+                                    except:
+                                        pass
+                                    raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                             try:
                                 repo.git.execute(cherrypick_command)
                             except:
