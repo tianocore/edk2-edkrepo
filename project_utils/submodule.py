@@ -73,7 +73,10 @@ def _update(repo, submodules=None, verbose=False, recursive=False, cache_path=No
     """
     # Now perform the update of the submodules.  For a fully recursive submodule init
     # this code will update and initialize at the same time.
-    repo_filter = repo.git.execute(['git', 'config', 'remote.origin.partialclonefilter'])
+    try:
+        repo_filter = repo.git.execute(['git', 'config', 'remote.origin.partialclonefilter'])
+    except:
+        repo_filter = None
     if repo_filter == "tree:0":
         submodule_filter = '--filter=tree:0'
     elif repo_filter == "blob:none":
