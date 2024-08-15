@@ -247,18 +247,27 @@ namespace TianoCore.EdkRepoInstaller
         {
             RegistryKey Hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
             RegistryKey EnvironmentRegistryKey = Hklm.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Environment");
-            if(!EnvironmentRegistryKey.GetValueNames().Contains("Path"))
+            string PathValueName = null;
+            foreach (string ValueName in EnvironmentRegistryKey.GetValueNames())
+            {
+                if (string.Compare(ValueName, "Path", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    PathValueName = ValueName;
+                    break;
+                }
+            }
+            if (PathValueName == null)
             {
                 return false;
             }
-            string PathVariable = EnvironmentRegistryKey.GetValue("Path") as string;
+            string PathVariable = EnvironmentRegistryKey.GetValue(PathValueName) as string;
             if (PathVariable != null)
             {
                 List<string> Paths = new List<string>(PathVariable.Split(';'));
                 string WinDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
                 foreach (string path in Paths)
                 {
-                    string FullPath = string.Empty;
+                    string FullPath;
                     try
                     {
                         FullPath = Environment.ExpandEnvironmentVariables(Path.Combine(path.Replace("\"", "")));
@@ -285,21 +294,30 @@ namespace TianoCore.EdkRepoInstaller
                 RegistryKey Hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
                 RegistryKey EnvironmentRegistryKey = Hklm.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Environment", RegistryKeyPermissionCheck.ReadWriteSubTree);
                 string PathVariable = string.Empty;
-                if (EnvironmentRegistryKey.GetValueNames().Contains("Path"))
+                string PathValueName = "Path";
+                foreach (string ValueName in EnvironmentRegistryKey.GetValueNames())
                 {
-                    PathVariable = EnvironmentRegistryKey.GetValue("Path") as string;
-                    if (PathVariable == null)
+                    if (string.Compare(ValueName, "Path", StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        PathVariable = string.Empty;
+                        PathValueName = ValueName;
+                        PathVariable = EnvironmentRegistryKey.GetValue(PathValueName) as string;
+                        if (PathVariable == null)
+                        {
+                            PathVariable = string.Empty;
+                        }
+                        break;
                     }
                 }
                 string WinDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-
+                if (string.Compare(Environment.ExpandEnvironmentVariables("%SystemRoot%"), WinDir, StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    WinDir = "%SystemRoot%";
+                }
                 List<string> Paths = new List<string>(PathVariable.Split(';'));
                 Paths.Add(WinDir);
                 PathVariable = string.Join(";", Paths.Where(p => !string.IsNullOrWhiteSpace(p.Replace("\"", ""))));
 
-                EnvironmentRegistryKey.SetValue("Path", PathVariable);
+                EnvironmentRegistryKey.SetValue(PathValueName, PathVariable);
                 WindowsHelpers.SendEnvironmentVariableChangedMessage();
                 InstallLogger.Log("WARNING: The Windows directory is not in %PATH%, it has been added.");
             }
