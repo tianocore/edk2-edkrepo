@@ -26,6 +26,7 @@ from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.reset_args as arguments
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.common.ui_functions as ui_functions
+
 class ResetCommand(EdkrepoCommand):
     def __init__(self):
         super().__init__()

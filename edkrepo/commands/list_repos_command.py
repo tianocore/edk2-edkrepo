@@ -13,8 +13,6 @@ import json
 import os
 import sys
 
-from colorama import Fore, Style
-
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.list_repos_args as arguments
 import edkrepo.commands.humble.list_repos_humble as humble

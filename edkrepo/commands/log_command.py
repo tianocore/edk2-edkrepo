@@ -10,7 +10,6 @@
 import os
 import subprocess
 import sys
-
 from datetime import datetime
 
 from colorama import Fore
