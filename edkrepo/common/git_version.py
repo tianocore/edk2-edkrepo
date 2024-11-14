@@ -8,6 +8,7 @@
 #
 
 import re
+
 from edkrepo.common.edkrepo_exception import EdkrepoGitException
 
 class GitVersion():
