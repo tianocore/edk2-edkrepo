@@ -10,7 +10,6 @@
 import os
 import sys
 
-import git
 from git import Repo
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand

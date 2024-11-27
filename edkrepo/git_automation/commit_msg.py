@@ -9,6 +9,7 @@
 
 import sys
 import os
+
 def main():
     if 'COMMIT_MESSAGE_NO_EDIT' in os.environ:
         return

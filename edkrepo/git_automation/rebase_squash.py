@@ -9,6 +9,7 @@
 
 import sys
 import re
+
 def main():
     with open(sys.argv[1], 'r', errors="surrogateescape") as f:
         lines = f.readlines()

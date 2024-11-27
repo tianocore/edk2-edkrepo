@@ -29,7 +29,6 @@ from edkrepo.common.squash import get_git_repo_root, split_commit_range, get_sta
 from edkrepo.common.squash import commit_list_to_message, squash_commits
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_equal
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
-
 import edkrepo.commands.arguments.f2f_cherry_pick_args as arguments
 import edkrepo.commands.humble.f2f_cherry_pick_humble as humble
 import edkrepo.common.ui_functions as ui_functions
