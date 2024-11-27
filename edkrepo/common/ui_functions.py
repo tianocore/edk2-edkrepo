@@ -13,7 +13,6 @@ import string
 
 import git
 import colorama
-
 from colorama import Fore
 from colorama import Style
 from colorama import init

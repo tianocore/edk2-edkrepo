@@ -11,7 +11,6 @@ import os
 
 from git import Repo
 
-
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.clean_args as arguments
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
