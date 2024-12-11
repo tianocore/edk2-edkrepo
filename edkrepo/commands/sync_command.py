@@ -514,7 +514,7 @@ class SyncCommand(EdkrepoCommand):
         try:
             local_manifest_dir = os.path.join(workspace_path, "repo")
             prefix_required = find_git_version() >= GitVersion('2.34.0')
-            includeif_regex = re.compile('^includeIf "gitdir:{}(/.+)/"$'.format('%\(prefix\)' if prefix_required else ''))
+            includeif_regex = re.compile('^includeIf "gitdir:{}(/.+)/"$'.format('%\\(prefix\\)' if prefix_required else ''))
             rewrite_everything = False
             #Generate list of .gitconfig files that should be present in the workspace
             included_configs = []
