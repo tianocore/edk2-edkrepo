@@ -41,11 +41,14 @@ class ValidateManifest:
                 return ("CODENAME", True, None)
 
     def validate_case_insensitive_single_match(self, project, project_list, ci_index_filename):
-        matches = [x for x in project_list if self.case_insensitive_equal(project, x)]
+        matches = self.list_entries(self, project, project_list)
         if len(matches) == 0 or len(matches) > 1:
             return ("DUPLICATE", False, INDEX_DUPLICATE_NAMES.format(project, ci_index_filename))
         else:
             return ("DUPLICATE", True, None)
+    
+    def list_entries(self, project, project_list):
+        return [x for x in project_list if self.case_insensitive_equal(project, x)]
 
     def case_insensitive_equal(self, str1, str2):
         return unicodedata.normalize("NFKD", str1.casefold()) == unicodedata.normalize("NFKD", str2.casefold())

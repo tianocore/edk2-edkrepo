@@ -1001,7 +1001,6 @@ class _RepoHook():
             self.remote_url = remotes[element.attrib['remote']].url
         except Exception:
             self.remote_url = None
-            print(NO_ASSOCIATED_REMOTE.format(self.source, self.dest_path))
         try:
             self.dest_file = element.attrib['destination_file']
         except Exception:
