@@ -582,7 +582,7 @@ class ManifestXml(BaseXmlHelper):
         project_root.find('Description').text = description
 
         subroot_m = self._tree.find('GeneralConfig')
-        if combo_name not in self.__combinations:
+        if combo_name not in self._combinations:
             raise KeyError('The combo {} was not found in the source manifest file.'.format(combo_name))
         current_cloned_combo = subroot_m.find('CurrentClonedCombo')
         current_cloned_combo.attrib['combination'] = combo_name
