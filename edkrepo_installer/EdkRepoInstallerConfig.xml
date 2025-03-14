@@ -7,7 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 -->
 <EdkRepoInstaller>
-  <Python MinVersion="3.13.2">
+  <Python MinVersion="3.10.16">
     <Wheel Name="smmap" Path="smmap-4.0.0-py2.py3-none-any.whl" UninstallAllOtherCopies="false" Version="4.0.0" />
     <Wheel Name="gitdb" Path="gitdb-4.0.7-py3-none-any.whl" UninstallAllOtherCopies="false" Version="4.0.7" />
     <Wheel Name="GitPython" Path="GitPython-3.1.14-py3-none-any.whl" UninstallAllOtherCopies="false" Version="3.1.14" />
