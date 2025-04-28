@@ -292,18 +292,6 @@ class ManifestXml(BaseXmlHelper):
                 # add the combo obj to the combinations and combo_sources dicts
                 self._add_combo_source(element, combo)
 
-        if self._xml_type == 'Pin':
-            # done with Pin parsing at this point, so exit init
-            # remaining tag types are unique to manifest xml (for now...)
-            return
-
-        #
-        # parse <DscList> tags
-        #
-        for subroot in self._tree.iter(tag='DscList'):
-            for element in subroot.iter(tag='Dsc'):
-                self._dsc_list.append(element.text)
-
         #
         # Process <SparseCheckout> tag
         #
@@ -315,6 +303,18 @@ class ManifestXml(BaseXmlHelper):
                 raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, subroot.tag))
             for sparse_data in subroot.iter(tag='SparseData'):
                 self._sparse_data.append(_SparseData(sparse_data))
+
+        if self._xml_type == 'Pin':
+            # done with Pin parsing at this point, so exit init
+            # remaining tag types are unique to manifest xml (for now...)
+            return
+
+        #
+        # parse <DscList> tags
+        #
+        for subroot in self._tree.iter(tag='DscList'):
+            for element in subroot.iter(tag='Dsc'):
+                self._dsc_list.append(element.text)
 
         #
         # Process any commit log templates that may exist (optional)
