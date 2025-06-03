@@ -1,0 +1,15 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="uri:settings" CurrentProfile="(Default)">
+  <!--
+  @file
+    Settings.settings
+
+  @copyright
+    Copyright 2025 Intel Corporation. All rights reserved.<BR>
+    SPDX-License-Identifier: BSD-2-Clause-Patent
+  -->
+  <Profiles>
+    <Profile Name="(Default)" />
+  </Profiles>
+  <Settings />
+</SettingsFile>

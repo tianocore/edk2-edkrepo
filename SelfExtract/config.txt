@@ -1,0 +1,4 @@
+;!@Install@!UTF-8!
+Title="EDK II Mingw-w64 Clang Installer"
+RunProgram="EdkMingwInstaller.exe"
+;!@InstallEnd@!
