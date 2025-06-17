@@ -219,7 +219,7 @@ namespace TianoCore.EdkMingwInstaller
             return fileCount;
         }
 
-        public void CopyDirectory(string source, string destination, int CurrentCount, Action<int> ReportProgress, Func<bool> CancelPending)
+        public void CopyDirectory(string source, string destination, ref int CurrentCount, Action<int> ReportProgress, Func<bool> CancelPending)
         {
             byte[] buffer = new byte[0x100000]; //1 MB
             int bytesRead = 0;
@@ -287,7 +287,7 @@ namespace TianoCore.EdkMingwInstaller
                     }
                 }
                 string destinationDir = Path.Combine(destination, SubDir.Name);
-                CopyDirectory(SubDir.FullName, destinationDir, CurrentCount, ReportProgress, CancelPending);
+                CopyDirectory(SubDir.FullName, destinationDir, ref CurrentCount, ReportProgress, CancelPending);
             }
         }
 
@@ -442,10 +442,11 @@ namespace TianoCore.EdkMingwInstaller
             //
             int CompletionPercent = 0;
             int LastCompletionPercent = 0;
+            int CurrentCount = 0;
             InstallLogger.Log(string.Format("Copying files..."));
             int FileCount = GetFileCount(sourcePath);
             CreateInstallDirectory(installPath);
-            CopyDirectory(sourcePath, installPath, 0, delegate(int CurrentFileCount)
+            CopyDirectory(sourcePath, installPath, ref CurrentCount, delegate(int CurrentFileCount)
             {
                 CompletionPercent = (CurrentFileCount * 100) / FileCount;
                 if (CompletionPercent > LastCompletionPercent)
