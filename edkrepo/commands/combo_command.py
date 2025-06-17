@@ -48,8 +48,11 @@ class ComboCommand(EdkrepoCommand):
             all_combos.extend(c for c in manifest.archived_combinations if c.name == manifest.general_config.current_combo)
         for combo in sorted(combo_list):
             if args.verbose:
-                description = [c.description for c in all_combos if c.name == combo]
-                description = description[0]
+                if 'pin:' in combo.lower():
+                    description = None
+                else:
+                    description = [c.description for c in all_combos if c.name == combo]
+                    description = description[0]
                 if description is None:
                     description = humble.NO_DESCRIPTION
             if combo == manifest.general_config.current_combo:
