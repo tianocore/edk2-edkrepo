@@ -170,7 +170,7 @@ REM
 REM Step 4 - Build C++/C# installer code
 REM
 pushd ..
-MSBuild edk2mingw-installer.sln /m /t:Rebuild /p:Configuration=Release /p:Platform="Mixed Platforms"
+MSBuild edk2mingw-installer.sln /m /t:Rebuild /p:Configuration=Release /p:Platform="Any CPU"
 if errorlevel 1 (
   popd
   set SCRIPT_ERROR=1

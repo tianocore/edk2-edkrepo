@@ -202,8 +202,28 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
-        public void CopyDirectory(string source, string destination)
+        public int GetFileCount(string sourceDirectory)
         {
+            int fileCount = 0;
+            DirectoryInfo sourceDir = new DirectoryInfo(sourceDirectory);
+            if (!sourceDir.Exists)
+            {
+                throw new DirectoryNotFoundException(string.Format("{0} Not Found", sourceDir.FullName));
+            }
+            fileCount += sourceDir.EnumerateFiles().Count();
+
+            foreach (DirectoryInfo SubDir in sourceDir.EnumerateDirectories())
+            {
+                fileCount += GetFileCount(Path.Combine(sourceDirectory, SubDir.Name));
+            }
+            return fileCount;
+        }
+
+        public void CopyDirectory(string source, string destination, int CurrentCount, Action<int> ReportProgress, Func<bool> CancelPending)
+        {
+            byte[] buffer = new byte[0x100000]; //1 MB
+            int bytesRead = 0;
+
             DirectoryInfo sourceDir = new DirectoryInfo(source);
             if (!sourceDir.Exists)
             {
@@ -216,12 +236,58 @@ namespace TianoCore.EdkMingwInstaller
             foreach (FileInfo file in sourceDir.EnumerateFiles())
             {
                 string destinationFile = Path.Combine(destination, file.Name);
-                file.CopyTo(destinationFile);
+                string sourceFile = Path.Combine(source, file.Name);
+
+                // Copy file contents
+                using (FileStream src = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    using (BufferedStream srcBuffer = new BufferedStream(src))
+                    {
+                        using (FileStream dest = new FileStream(destinationFile, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                        {
+                            using (BufferedStream destBuffer = new BufferedStream(dest))
+                            {
+                                bytesRead = 1;
+                                while (bytesRead > 0)
+                                {
+                                    bytesRead = srcBuffer.Read(buffer, 0, buffer.Length);
+                                    if (bytesRead > 0)
+                                    {
+                                        destBuffer.Write(buffer, 0, bytesRead);
+                                    }
+                                }
+                                destBuffer.Flush();
+                                dest.Flush();
+                            }
+                        }
+                    }
+                }
+                if(ReportProgress != null)
+                {
+                    CurrentCount++;
+                    ReportProgress(CurrentCount);
+                }
+                if (CancelPending != null)
+                {
+                    bool cancel = CancelPending();
+                    if (cancel)
+                    {
+                        break;
+                    }
+                }
             }
             foreach(DirectoryInfo SubDir in sourceDir.EnumerateDirectories())
             {
+                if (CancelPending != null)
+                {
+                    bool cancel = CancelPending();
+                    if (cancel)
+                    {
+                        break;
+                    }
+                }
                 string destinationDir = Path.Combine(destination, SubDir.Name);
-                CopyDirectory(SubDir.FullName, destinationDir);
+                CopyDirectory(SubDir.FullName, destinationDir, CurrentCount, ReportProgress, CancelPending);
             }
         }
 
@@ -289,7 +355,6 @@ namespace TianoCore.EdkMingwInstaller
                 ReportComplete(false, false);
                 return;
             }
-            AllowCancel(false);
             if (CancelPending())
             {
                 ReportComplete(true, true);
@@ -316,6 +381,11 @@ namespace TianoCore.EdkMingwInstaller
                 if (uninstallKey != null)
                 {
                     InstallLogger.Log(string.Format("Uninstalling current version of {0}", InstallerStrings.ProductName));
+                    if (CancelPending())
+                    {
+                        ReportComplete(true, true);
+                        return;
+                    }
                     string uninstallString = string.Format("{0} /Silent", uninstallKey.GetValue("UninstallString"));
                     SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", uninstallString));
                     p.WaitForExit();
@@ -327,7 +397,12 @@ namespace TianoCore.EdkMingwInstaller
             //
             // Step 3 - Check if the installation path exists, if it does ask the user if it is OK to delete it
             //
-            if(Directory.Exists(installPath))
+            if (CancelPending())
+            {
+                ReportComplete(true, true);
+                return;
+            }
+            if (Directory.Exists(installPath))
             {
                 if (!SilentMode)
                 {
@@ -347,6 +422,11 @@ namespace TianoCore.EdkMingwInstaller
             //
             // Step 4 - Invoke the Pre-Copy Event
             //
+            if (CancelPending())
+            {
+                ReportComplete(true, true);
+                return;
+            }
             if (VendorCustomizer.Instance != null)
             {
                 VendorCustomizer.Instance?.PreCopyEvent(ReportFailure);
@@ -360,9 +440,26 @@ namespace TianoCore.EdkMingwInstaller
             //
             // Step 5 - Copy the files
             //
+            int CompletionPercent = 0;
+            int LastCompletionPercent = 0;
             InstallLogger.Log(string.Format("Copying files..."));
+            int FileCount = GetFileCount(sourcePath);
             CreateInstallDirectory(installPath);
-            CopyDirectory(sourcePath, installPath);
+            CopyDirectory(sourcePath, installPath, 0, delegate(int CurrentFileCount)
+            {
+                CompletionPercent = (CurrentFileCount * 100) / FileCount;
+                if (CompletionPercent > LastCompletionPercent)
+                {
+                    ReportProgress(CompletionPercent);
+                    LastCompletionPercent = CompletionPercent;
+                }
+            }, CancelPending);
+            AllowCancel(false);
+            if (CancelPending())
+            {
+                ReportComplete(true, true);
+                return;
+            }
 
             //
             // Step 7 - Invoke the Finish-Install Event
