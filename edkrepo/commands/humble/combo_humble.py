@@ -19,4 +19,5 @@ ARCHIVED_COMBO = "{}{}- {{}}{}".format(Fore.YELLOW, Style.BRIGHT, Style.RESET_AL
 COMBO = "  {}{{}}{}".format(Style.BRIGHT, Style.RESET_ALL)
 COMBO_DESCRIPTION = "    {}Description: {{}}{}".format(Style.BRIGHT, Style.RESET_ALL)
 NO_DESCRIPTION = "{}no description included in combo definition{}".format(Fore.RED, Style.RESET_ALL)
+PIN_DESCRIPTION = "{}Currently checked out to a Pin file. The current references are listed below.{}".format(Fore.RED, Style.RESET_ALL)
 REPO_DETAILS = "    {}{}{{}}{} : {}{}{{}}{}".format(Style.BRIGHT, Fore.CYAN, Style.RESET_ALL, Style.BRIGHT, Fore.BLUE, Style.RESET_ALL)

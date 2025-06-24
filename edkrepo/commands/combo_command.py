@@ -6,14 +6,16 @@
 # Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
+import os
 from colorama import Fore
 from colorama import Style
+from git import Repo
 
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.combo_args as arguments
 import edkrepo.commands.humble.combo_humble as humble
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 
 
 class ComboCommand(EdkrepoCommand):
@@ -49,7 +51,7 @@ class ComboCommand(EdkrepoCommand):
         for combo in sorted(combo_list):
             if args.verbose:
                 if 'pin:' in combo.lower():
-                    description = None
+                    description = humble.PIN_DESCRIPTION
                 else:
                     description = [c.description for c in all_combos if c.name == combo]
                     description = description[0]
@@ -65,13 +67,20 @@ class ComboCommand(EdkrepoCommand):
                 ui_functions.print_info_msg(humble.COMBO_DESCRIPTION.format(description), header=False)
                 sources = manifest.get_repo_sources(combo)
                 length = len(max([source.root for source in sources], key=len))
-                for source in sources:
-                    if source.commit:
-                        ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.commit), header=False)
-                    elif source.tag and not source.commit:
-                        ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.tag), header=False)
-                    elif source.branch and not (source.commit or source.tag) :
-                        ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.branch), header=False)
-                    elif source.patch_set:
-                        ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.patch_set), header=False)
+                if 'pin' in combo.lower():
+                    workspace_path = get_workspace_path()
+                    for source in sources:
+                        local_repo_path = os.path.join(workspace_path, source.root)
+                        repo = Repo(local_repo_path)
+                        ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), repo.git.execute(['git', '-c', 'color.ui=always','status'])).splitlines()[0], header=False)
+                else:
+                    for source in sources:
+                        if source.commit:
+                            ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.commit), header=False)
+                        elif source.tag and not source.commit:
+                            ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.tag), header=False)
+                        elif source.branch and not (source.commit or source.tag) :
+                            ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.branch), header=False)
+                        elif source.patch_set:
+                            ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.patch_set), header=False)
 
