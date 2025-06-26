@@ -326,3 +326,19 @@ def get_manifest_repo_path(manifest_repo, config):
         return config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
     else:
         raise EdkrepoManifestRepoNotFoundException(humble.MANIFEST_REPO_NOT_FOUND.format(manifest_repo))
+
+def get_manifest_repo_info_from_config(manifest_repo, config):
+    '''Returns the manifest repo URL, branch and local path for the provided
+    manifest repo. Raises an EdkRepoManifestRepoNotFound exception otherwise.
+    '''
+    cfg_manifest_repos, user_cfg_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+    if manifest_repo in cfg_manifest_repos:
+        return (config['cfg_file'].get_manifest_repo_url(manifest_repo),
+                config['cfg_file'].get_manifest_repo_branch(manifest_repo),
+                config['cfg_file'].get_manifest_repo_local_path(manifest_repo))
+    elif manifest_repo in user_cfg_manifest_repos:
+        return (config['user_cfg_file'].get_manifest_repo_url(manifest_repo),
+                config['user_cfg_file'].get_manifest_repo_branch(manifest_repo),
+                config['user_cfg_file'].get_manifest_repo_local_path(manifest_repo))
+    else:
+        raise EdkrepoManifestRepoNotFoundException(humble.MANIFEST_REPO_NOT_FOUND.format(manifest_repo))
