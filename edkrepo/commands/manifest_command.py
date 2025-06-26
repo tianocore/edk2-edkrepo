@@ -12,6 +12,7 @@ import os
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.manifest_args as arguments
 import edkrepo.commands.humble.manifest_humble as humble
+import edkrepo.commands.humble.common_humble as common_humble
 from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoManifestNotFoundException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
@@ -71,11 +72,11 @@ class ManifestCommand(EdkrepoCommand):
 
         for repo in man_repos.keys():
             print()
-            print(humble.MANIFEST_REPO.format(repo))
+            print(common_humble.MANIFEST_REPO.format(repo))
             if args.verbose:
-                print(humble.MANIFEST_REPO_PATH.format(man_repos[repo][0]))
-                print(humble.MANIFEST_REPO_URL.format(man_repos[repo][2]))
-                print(humble.MANIFEST_REPO_BRANCH.format(man_repos[repo][3]))
+                print(common_humble.MANIFEST_REPO_PATH.format(man_repos[repo][0]))
+                print(common_humble.MANIFEST_REPO_URL.format(man_repos[repo][2]))
+                print(common_humble.MANIFEST_REPO_BRANCH.format(man_repos[repo][3]))
             print()
 
             ci_index_xml = CiIndexXml(man_repos[repo][1])

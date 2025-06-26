@@ -14,6 +14,8 @@ from git import Repo
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.combo_args as arguments
 import edkrepo.commands.humble.combo_humble as humble
+import edkrepo.commands.humble.common_humble as common_humble
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path, get_manifest_repo_info_from_config
 import edkrepo.common.ui_functions as ui_functions
 from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 
@@ -48,7 +50,19 @@ class ComboCommand(EdkrepoCommand):
         if manifest.general_config.current_combo not in combo_list:
             combo_list.append(manifest.general_config.current_combo)
             all_combos.extend(c for c in manifest.archived_combinations if c.name == manifest.general_config.current_combo)
+
+        if args.verbose:
+            man_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'])
+            print()
+            print(common_humble.MANIFEST_REPO.format(man_repo))
+            print(common_humble.MANIFEST_REPO_PATH.format(get_manifest_repo_path(man_repo, config)))
+            url, branch, _ = get_manifest_repo_info_from_config(man_repo, config)
+            print(common_humble.MANIFEST_REPO_URL.format(url))
+            print(common_humble.MANIFEST_REPO_BRANCH.format(branch))
+            print()
+
         for combo in sorted(combo_list):
+
             if args.verbose:
                 if 'pin:' in combo.lower():
                     description = humble.PIN_DESCRIPTION
