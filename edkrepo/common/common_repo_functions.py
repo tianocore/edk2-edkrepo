@@ -974,12 +974,23 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                             try:
                                 repo.git.execute(['git', 'fetch', operation.source_remote, operation.source_branch])
                             except:
-                                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                                try:
+                                    repo.git.execute(['git', 'fetch', operation.source_remote, operation.source_branch, '--refetch'])
+                                except:
+                                    try:
+                                        repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
+                                    except:
+                                        pass
+                                    raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                             try:
                                 repo.git.execute(cherrypick_command)
                             except:
                                 if is_merge_conflict(repo):
                                     repo.git.execute(['git', 'cherry-pick', '--abort'])
+                                try:
+                                    repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
+                                except:
+                                    pass
                                 raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
                             try:
                                 repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
