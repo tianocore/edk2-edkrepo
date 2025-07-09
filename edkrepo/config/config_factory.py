@@ -208,9 +208,6 @@ class GlobalConfig(BaseConfig):
         always_exclude = self.sparsecheckout_always_exclude.split('|')
         return (always_include, always_exclude)
 
-    @property
-    def scm_geo_list(self):
-        return self.scm_geos.split(',')
 
     @property
     def f2f_cp_ignored_folders(self):
@@ -224,7 +221,6 @@ class GlobalUserConfig(BaseConfig):
     def __init__(self):
         self.filename = os.path.join(get_edkrepo_global_data_directory(), "edkrepo_user.cfg")
         self.prop_list = [
-            CfgProp('scm', 'mirror_geo', 'geo', 'none', False),
             CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False),
             CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False),
             CfgProp('caching', 'cache-path', 'cache_path_text', 'default', False)]
