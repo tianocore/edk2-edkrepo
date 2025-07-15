@@ -1,0 +1,4 @@
+edkrepo_dev_local_data/*/
+edkrepo_dev_local_data/*.*
+__pycache__/
+
