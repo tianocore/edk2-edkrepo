@@ -219,11 +219,38 @@ namespace TianoCore.EdkMingwInstaller
             return fileCount;
         }
 
-        public void CopyDirectory(string source, string destination, ref int CurrentCount, Action<int> ReportProgress, Func<bool> CancelPending)
+        public void CopyFile(string SourceFile, string DestinationFile)
         {
             byte[] buffer = new byte[0x100000]; //1 MB
             int bytesRead = 0;
 
+            using (FileStream src = new FileStream(SourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                using (BufferedStream srcBuffer = new BufferedStream(src))
+                {
+                    using (FileStream dest = new FileStream(DestinationFile, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                    {
+                        using (BufferedStream destBuffer = new BufferedStream(dest))
+                        {
+                            bytesRead = 1;
+                            while (bytesRead > 0)
+                            {
+                                bytesRead = srcBuffer.Read(buffer, 0, buffer.Length);
+                                if (bytesRead > 0)
+                                {
+                                    destBuffer.Write(buffer, 0, bytesRead);
+                                }
+                            }
+                            destBuffer.Flush();
+                            dest.Flush();
+                        }
+                    }
+                }
+            }
+        }
+
+        public void CopyDirectory(string source, string destination, ref int CurrentCount, Action<int> ReportProgress, Func<bool> CancelPending)
+        {
             DirectoryInfo sourceDir = new DirectoryInfo(source);
             if (!sourceDir.Exists)
             {
@@ -239,29 +266,8 @@ namespace TianoCore.EdkMingwInstaller
                 string sourceFile = Path.Combine(source, file.Name);
 
                 // Copy file contents
-                using (FileStream src = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    using (BufferedStream srcBuffer = new BufferedStream(src))
-                    {
-                        using (FileStream dest = new FileStream(destinationFile, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
-                        {
-                            using (BufferedStream destBuffer = new BufferedStream(dest))
-                            {
-                                bytesRead = 1;
-                                while (bytesRead > 0)
-                                {
-                                    bytesRead = srcBuffer.Read(buffer, 0, buffer.Length);
-                                    if (bytesRead > 0)
-                                    {
-                                        destBuffer.Write(buffer, 0, bytesRead);
-                                    }
-                                }
-                                destBuffer.Flush();
-                                dest.Flush();
-                            }
-                        }
-                    }
-                }
+                CopyFile(sourceFile, destinationFile);
+
                 if(ReportProgress != null)
                 {
                     CurrentCount++;
@@ -494,14 +500,14 @@ namespace TianoCore.EdkMingwInstaller
             {
                 File.Delete(UninstallerPath);
             }
-            File.Copy(WindowsHelpers.GetApplicationPath(), UninstallerPath);
+            CopyFile(WindowsHelpers.GetApplicationPath(), UninstallerPath);
             if (VendorCustomizer.Instance != null)
             {
                 if (File.Exists(VendorPluginPath))
                 {
                     File.Delete(VendorPluginPath);
                 }
-                File.Copy(VendorCustomizer.VendorPluginPath, VendorPluginPath);
+                CopyFile(VendorCustomizer.VendorPluginPath, VendorPluginPath);
             }
             RegistryKey edkMingwUninstallKey = winUninstallRegistryKey.OpenSubKey(InstallerStrings.ProductCode, true);
             if (edkMingwUninstallKey == null)
