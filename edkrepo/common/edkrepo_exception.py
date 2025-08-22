@@ -110,53 +110,50 @@ class EdkrepoInvalidConfigOptionException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 125)
 
-class EdkrepoManifestRepoNotFoundException(EdkrepoException):
-    def __init__(self, message):
-        super().__initi__(message, 126)
 class EdkrepoRevertFailedException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 127)
+        super().__init__(message, 126)
 
 class EdkrepoCherryPickFailedException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 128)
+        super().__init__(message, 127)
 
 class EdkrepoBranchExistsException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 129)
+        super().__init__(message, 128)
 
 class EdkrepoFetchBranchNotFoundException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 130)
+        super().__init__(message, 129)
 
 class EdkrepoRemoteNotFoundException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 131)
+        super().__init__(message, 130)
 
 class EdkrepoPatchNotFoundException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 132)
+        super().__init__(message, 131)
 
 class EdkrepoRemoteAddException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 133)
+        super().__init__(message, 132)
 
 class EdkrepoRemoteRemoveException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 134)
+        super().__init__(message, 133)
 
 class EdkrepoManifestRepoNotFoundException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 135)
+        super().__init__(message, 134)
 
 class EdkrepoPatchFailedException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 136)
+        super().__init__(message, 135)
 
 class EdkrepoLocalBranchExistsException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 137)
+        super().__init__(message, 136)
 
 class EdkrepoBranchCollidesWithParentShaException(EdkrepoException):
     def __init__(self, message):
-        super().__init__(message, 138)
+        super().__init__(message, 137)
