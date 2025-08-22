@@ -28,7 +28,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, Edkr
 from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoNotFoundException
 from edkrepo.common.progress_handler import GitProgressHandler
 from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, BRANCH_EXISTS, CHECKING_OUT_DEFAULT, CHECKING_OUT_PATCHSET, LOCAL_BRANCH_EXISTS
 from edkrepo.common.humble import FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST, COLLISION_DETECTED
@@ -46,13 +46,14 @@ from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
 from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
 from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
 from edkrepo.common.humble import TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import MIRROR_BEHIND_PRIMARY_REPO, HOOK_NOT_FOUND_ERROR
+from edkrepo.common.humble import HOOK_NOT_FOUND_ERROR
 from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
 from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
 from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
 from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED, BRANCH_COLLIDES_WITH_PARENT_SHA
 from edkrepo.common.humble import MISSING_BRANCH_COMMIT, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED, TAG_AND_BRANCH_SPECIFIED
+from edkrepo.common.humble import CLONE_FAIL
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.git_version import GitVersion
 from project_utils.sparse import BuildInfo, process_sparse_checkout
@@ -83,7 +84,7 @@ PATCHSET_CIRCULAR_DEPENDENCY_ERROR = "The PatchSet {} has a circular dependency 
 
 def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args=None, cache_obj=None):
     '''Clones a single repository and checks it out onto the ref defined in the project manifest file.
-    
+
     Arguments:
     manifest - the EdkManifest object representing the full project
     repo_to_clone - a repo_source tuple describing the repository to be cloned
@@ -106,6 +107,8 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
 
     clone_cmd = clone_utils.generate_clone_cmd(repo_to_clone, workspace_dir, args, cache_path)
     clone_cmd_output = subprocess.run(clone_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+    if not os.path.isdir(os.path.join(workspace_dir, repo_to_clone.root)):
+        raise EdkrepoNotFoundException(CLONE_FAIL.format(repo_to_clone.root, clone_cmd_output))
     repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
 
     if repo_to_clone.patch_set:
@@ -142,7 +145,6 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
 
     for repo_to_clone in repos_to_clone:
         clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj)
-        
         if global_manifest_directory:
             repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
             # Install git hooks if there is a manifest repo associated with the manifest being cloned
