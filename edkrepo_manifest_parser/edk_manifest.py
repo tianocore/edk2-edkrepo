@@ -27,7 +27,8 @@ RemoteRepo = namedtuple('RemoteRepo', ['name', 'url'])
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
 Combination = namedtuple('Combination', ['name', 'description', 'venv_enable'])
 RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
-                                       'enable_submodule', 'tag', 'venv_cfg', 'patch_set', 'blobless', 'treeless'])
+                                       'enable_submodule', 'tag', 'venv_cfg', 'patch_set', 'blobless', 'treeless',
+                                       'nested_repo'])
 PatchSet = namedtuple('PatchSet', ['remote', 'name', 'parent_sha', 'fetch_branch'])
 PatchOperation = namedtuple('PatchOperation',['type', 'file', 'sha', 'source_remote', 'source_branch', 'merge_strategy'])
 SparseSettings = namedtuple('SparseSettings', ['sparse_by_default'])
@@ -62,6 +63,8 @@ NO_PATCHSET_IN_COMBO = "The Combination: {} does not have any Patchsets."
 NO_PATCHSET_EXISTS = "The Patchset: {} does not exist"
 INVALID_PATCHSET_NAME_ERROR = "The Patchset cannot be named: {}. Please rename the Patchset"
 PATCHSET_PARENT_CIRCULAR_DEPENDENCY = "The PatchSet parent failed to be determined through recursion.  Check manifest for circular dependencies in daisy-chained PatchSet"
+NO_PARENT_REPO_ERROR = "No parent repository found for the nested repository at '{0}'."
+INVALID_REPO_PATH_ERROR = "The provided repo_local_root '{0}' is not a valid path with multiple sections."
 
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
@@ -416,11 +419,28 @@ class ManifestXml(BaseXmlHelper):
         if combo_name in self._combo_sources:
             return self._tuple_list(self._combo_sources[combo_name])
         elif combo_name.startswith('Pin:'):
-            # If currently checked out onto a pin file reture the sources in the
+            # If currently checked out onto a pin file return the sources in the
             # default combo
             return self._tuple_list(self._combo_sources[self.general_config.default_combo])
         else:
             raise ValueError(COMBO_INVALIDINPUT_ERROR.format(combo_name))
+
+    def get_parent_of_nested_repo(self, repo_sources_to_search, repo_local_root):
+        if len(os.path.normpath(repo_local_root).split(os.sep)) <= 1:
+            raise ValueError(INVALID_REPO_PATH_ERROR.format(repo_local_root))
+
+        current_path = os.path.normpath(repo_local_root)
+
+        while True:
+            parent_local_root = os.path.dirname(current_path)
+            for source in repo_sources_to_search:
+                if source.root == parent_local_root:
+                    return source
+            if parent_local_root == current_path:  # Reached the root directory
+                break
+            current_path = parent_local_root
+
+        raise ValueError(NO_PARENT_REPO_ERROR.format(repo_local_root))
 
     @property
     def repo_hooks(self):
@@ -1091,11 +1111,17 @@ class _RepoSource():
 
         if self.patch_set is not None and (self.branch is not None or self.commit is not None or self.tag is not None):
             raise ValueError(INVALID_COMBO_DEFINITION_ERROR)
+        
+        if len(os.path.normpath(self.root).split(os.path.sep)) > 1:
+            self.nested_repo = True
+        else:
+            self.nested_repo = False
 
     @property
     def tuple(self):
         return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
-                          self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set, self.blobless, self.treeless)
+                          self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set, self.blobless, self.treeless,
+                          self.nested_repo)
 
 
 class _SparseSettings():
