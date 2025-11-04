@@ -67,6 +67,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoHookNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
 from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
+import edkrepo.common.workspace_maintenance.git_exclude_maintenance as git_exclude_maintenance
 import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser import edk_manifest
 from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
@@ -123,28 +124,14 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
             repo.git.checkout(repo_to_clone.tag)
 
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
-    try:
-        if 'source_manifest_repo' in vars(args).keys():
-            src_manifest_repo = find_source_manifest_repo(
-                manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
-        else:
-            src_manifest_repo = find_source_manifest_repo(
-                manifest, config['cfg_file'], config['user_cfg_file'], None, False)
-    except EdkrepoManifestNotFoundException:
-        src_manifest_repo = None
-    if src_manifest_repo:
-        cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
-        if src_manifest_repo in cfg:
-            global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
-        elif src_manifest_repo in user_cfg:
-            global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
-        else:
-            global_manifest_directory = None
-    else:
-        global_manifest_directory = None
-
-    for repo_to_clone in repos_to_clone:
+    global_manifest_directory = clone_utils.calculate_source_manifest_repo_directory(args, config, manifest)
+    clone_order = clone_utils.generate_clone_order(manifest, repos_to_clone)
+    for repo_to_clone in clone_order:
         clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj)
+        if repo_to_clone.nested_repo:
+            parent_path = os.path.join(workspace_dir, manifest.get_parent_of_nested_repo(clone_order, repo_to_clone.root).root)
+            nested_path = os.path.join(workspace_dir, repo_to_clone.root)
+            git_exclude_maintenance.write_git_exclude(parent_path, git_exclude_maintenance.generate_exclude_pattern(parent_path, nested_path))
         if global_manifest_directory:
             repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
             # Install git hooks if there is a manifest repo associated with the manifest being cloned
