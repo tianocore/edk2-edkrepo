@@ -16,6 +16,7 @@ from git import Repo
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.humble as humble
 import edkrepo.common.ui_functions as ui_functions
+import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manifest_repos_maintenance
 
 def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None):
     '''Generates and returns a string representing a git clone command which can be passed to subprocess for execution.
@@ -98,3 +99,60 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
             return ' '.join([base_clone_cmd, clone_arg_string])
         else:
             return ' '.join([base_clone_cmd_cache, clone_arg_string])
+
+def generate_clone_order(manifest, repo_sources):
+    '''Generates and returns a list of repo_source tuples representing the order in which repositories should be cloned.
+
+    Arguments:
+    repo_sources - a list of repo_source tuples representing all repositories to be cloned.
+    manifest - the ManifestXml object representing the workspace to be created.
+    '''
+    nested_repos_present = any(repo.nested_repo for repo in repo_sources)
+    if not nested_repos_present:
+        return repo_sources
+
+    ordered_repos = [repo for repo in repo_sources if not repo.nested_repo]
+    remaining_repos = [repo for repo in repo_sources if repo.nested_repo]
+
+    # Keep looping until no more repos can be added
+    while remaining_repos:
+        print('remaining_repos:{}'.format([repo.root for repo in remaining_repos]))
+        added_in_this_iteration = [] # Reset to empty list each iteration
+        added_in_this_iteration = [repo for repo in remaining_repos if manifest.get_parent_of_nested_repo(repo_sources, repo.root) in ordered_repos]
+        ordered_repos.extend(added_in_this_iteration)
+        remaining_repos = [repo for repo in remaining_repos if repo not in added_in_this_iteration]
+        if not added_in_this_iteration:
+            break
+
+    return ordered_repos
+
+def calculate_source_manifest_repo_directory(args, config, manifest):
+    '''Calculates and returns the absolute path to the source manifest repository directory.
+
+    Arguments:
+    args - all command line arguments, required when the user passes the --source-manifest-repo flag.
+    config - the dictionary representing both the cfg_file and the user_cfg_file contents.
+    manifest - the ManifestXml object representing the workspace to be created.
+    '''
+    try:
+        if 'source_manifest_repo' in vars(args).keys():
+            src_manifest_repo = manifest_repos_maintenance.find_source_manifest_repo(
+                manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
+        else:
+            src_manifest_repo = manifest_repos_maintenance.find_source_manifest_repo(
+                manifest, config['cfg_file'], config['user_cfg_file'], None, False)
+    except edkrepo_exception.EdkrepoManifestNotFoundException:
+        src_manifest_repo = None
+    if src_manifest_repo:
+        cfg, user_cfg, conflicts = manifest_repos_maintenance.list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        if src_manifest_repo in cfg:
+            global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+        elif src_manifest_repo in user_cfg:
+            global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+        else:
+            global_manifest_directory = None
+    else:
+        global_manifest_directory = None
+
+    return global_manifest_directory
+
