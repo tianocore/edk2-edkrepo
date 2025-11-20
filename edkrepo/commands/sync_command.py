@@ -94,15 +94,18 @@ class SyncCommand(EdkrepoCommand):
             pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
         source_global_manifest_repo = find_source_manifest_repo(initial_manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
 
-        global_manifest_directory = get_manifest_repo_path(source_global_manifest_repo, config)
+        if source_global_manifest_repo is not None:
+            global_manifest_directory = get_manifest_repo_path(source_global_manifest_repo, config)
 
-        cfg_manifest_repos, user_cfg_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
-        if source_global_manifest_repo in cfg_manifest_repos:
-            verify_single_manifest(config['cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
-        elif source_global_manifest_repo in user_cfg_manifest_repos:
-            verify_single_manifest(config['user_cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
+            cfg_manifest_repos, user_cfg_manifest_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+            if source_global_manifest_repo in cfg_manifest_repos:
+                verify_single_manifest(config['cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
+            elif source_global_manifest_repo in user_cfg_manifest_repos:
+                verify_single_manifest(config['user_cfg_file'], source_global_manifest_repo, get_workspace_manifest_file(), args.verbose)
+            else:
+                global_manifest_directory = None
         else:
-            global_manifest_directory = None
+                global_manifest_directory = None
 
         if global_manifest_directory is not None:
             update_editor_config(config, global_manifest_directory)
