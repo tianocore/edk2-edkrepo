@@ -312,7 +312,8 @@ def sparse_checkout(workspace_dir, repo_list, manifest):
 
 
 def check_dirty_repos(manifest, workspace_path):
-    repos = manifest.get_repo_sources(manifest.general_config.current_combo)
+    combo = manifest.general_config.current_combo or manifest.general_config.default_combo
+    repos = manifest.get_repo_sources(combo)
     for repo_to_check in repos:
         local_repo_path = os.path.join(workspace_path, repo_to_check.root)
         repo = Repo(local_repo_path)
