@@ -597,12 +597,15 @@ namespace TianoCore.EdkRepoInstaller
             Environment.SetEnvironmentVariable("PYTHONPATH", null);
             Environment.SetEnvironmentVariable("PIP_INDEX_URL", null);
             Environment.SetEnvironmentVariable("PIP_TARGET", null);
+            Environment.SetEnvironmentVariable("PYLAUNCHER_ALLOW_INSTALL", null);
+            Environment.SetEnvironmentVariable("PYLAUNCHER_ALWAYS_INSTALL", null);
             if (VendorCustomizer.Instance != null)
             {
                 VendorCustomizer.Instance.WriteToInstallLog = new Action<string>(InstallLogger.Log);
             }
             EdkRepoConfig config = XmlConfigParser.ParseEdkRepoInstallerConfig();
-            List<PythonVersion> PythonVersions = PythonOperations.GetInstalledPythonVersions();
+            InstallLogger.Log("Detecting Installed Python Interpreters...");
+            List <PythonVersion> PythonVersions = PythonOperations.GetInstalledPythonVersions();
 
             //
             // Step 2 - Determine the set of Python Wheels to be installed.
