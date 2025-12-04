@@ -1,0 +1,5 @@
+# CODEOWNERS file for edk2-edkrepo repository
+# These owners will be the default owners for everything in the repo
+# They will be automatically requested for review when someone opens a pull request
+
+* @ashedesimone @nate-desimone @kevinsun49
