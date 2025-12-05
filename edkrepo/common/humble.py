@@ -3,7 +3,7 @@
 ## @file
 # humble.py
 #
-# Copyright (c) 2017 - 2023, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -149,3 +149,5 @@ CHECKING_OUT_DEFAULT = "Failed to apply one of the patchset operations. Checking
 LOCAL_BRANCH_EXISTS = "The branch {} already exists. Please resolve the branch name conflict before checking out again."
 COLLISION_DETECTED = "A branch with the same name detected. Renaming the old {} branch and creating a new one from the manifest."
 BRANCH_COLLIDES_WITH_PARENT_SHA = "Patchset should not use branch name as base parent_sha"
+
+NETRC_NOT_FOUND = 'Path to netrc not found. Please ensure you have configured your netrc file properly according to your OS guide.'
