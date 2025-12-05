@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -23,7 +23,7 @@ import json
 #
 ProjectInfo = namedtuple('ProjectInfo', ['codename', 'description', 'dev_leads', 'reviewers', 'org', 'short_name'])
 GeneralConfig = namedtuple('GeneralConfig', ['default_combo', 'current_combo', 'pin_path', 'source_manifest_repo'])
-RemoteRepo = namedtuple('RemoteRepo', ['name', 'url'])
+RemoteRepo = namedtuple('RemoteRepo', ['name', 'url', 'owner', 'review_type', 'pr_strategy'])
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
 Combination = namedtuple('Combination', ['name', 'description', 'venv_enable'])
 RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
@@ -404,6 +404,10 @@ class ManifestXml(BaseXmlHelper):
     def remotes(self):
         return self._tuple_list(self._remotes.values())
 
+    def get_remote(self, remote_name):
+        if remote_name in self._remotes:
+            return self._remotes[remote_name]
+    
     def get_remotes_dict(self):
         return {remote.name: remote.url for remote in self.remotes}
 
@@ -1004,10 +1008,22 @@ class _RemoteRepo():
             self.url = element.text
         except KeyError as k:
             raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        try:
+            self.owner = element.attrib['owner']
+        except:
+            self.owner = None
+        try:
+            self.review_type = element.attrib['reviewType']
+        except:
+            self.review_type = None
+        try:
+            self.pr_strategy = element.attrib['prStrategy']
+        except:
+            self.pr_strategy = None
 
     @property
     def tuple(self):
-        return RemoteRepo(self.name, self.url)
+        return RemoteRepo(self.name, self.url, self.owner, self.review_type, self.pr_strategy)
 
 
 class _RepoHook():
