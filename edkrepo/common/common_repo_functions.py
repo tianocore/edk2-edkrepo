@@ -3,7 +3,7 @@
 ## @file
 # common_repo_functions.py
 #
-# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -53,7 +53,7 @@ from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, V
 from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED, BRANCH_COLLIDES_WITH_PARENT_SHA
 from edkrepo.common.humble import MISSING_BRANCH_COMMIT, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED, TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import CLONE_FAIL
+from edkrepo.common.humble import CLONE_FAIL, NETRC_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.git_version import GitVersion
 from project_utils.sparse import BuildInfo, process_sparse_checkout
@@ -993,3 +993,46 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                         if is_merge_conflict(repo):
                             repo.git.execute(['git', 'cherry-pick', '--abort'])
                         raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
+
+
+def get_git_config_email():
+    git_email_output = subprocess.run('git config user.email', stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+    return git_email_output.stdout
+
+
+def get_netrc_path():
+    netrc_path = None
+    home_dir = expanduser('~')
+    if os.path.isfile(os.path.join(home_dir, '.netrc')):
+        netrc_path = os.path.join(home_dir, '.netrc')
+    elif os.path.isfile(os.path.join(home_dir, '_netrc')):
+        netrc_path = os.path.join(home_dir, '_netrc')
+    if not netrc_path:
+        raise EdkrepoWarningException(NETRC_NOT_FOUND)
+    return netrc_path
+
+def get_touched_files(repo, rev1, rev2):
+    touched = set()
+    commit = repo.commit(rev1)
+    for node in commit.diff(rev2):
+        if node.a_path:
+            touched.add(node.a_path)
+        if node.b_path:
+            touched.add(node.b_path)
+    return touched
+
+def get_commits_ahead(repo, rev1, rev2):
+    return repo.iter_commits(
+        "{}..{}".format(
+            rev1,
+            rev2))
+
+def get_proxy_str():
+    proxy_out = subprocess.run('git config --global --get-urlmatch http https://github.com',
+                                        stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+    proxy_dict = dict(line.split(' ', 1) for line in proxy_out.stdout.split('\n')[:-1])
+    try:
+        proxy_str = proxy_dict['http.proxy']
+    except KeyError:
+        raise EdkrepoProxyNotSetException(PROXY_STR_NOT_FOUND)
+    return proxy_str
