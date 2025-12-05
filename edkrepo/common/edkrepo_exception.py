@@ -3,7 +3,7 @@
 ## @file
 # edkrepo_exception.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017- 2025, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -157,3 +157,14 @@ class EdkrepoLocalBranchExistsException(EdkrepoException):
 class EdkrepoBranchCollidesWithParentShaException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 137)
+
+class EdkrepoGithubApiFailException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 138)
+
+class EdkRepoGitEmailNotFoundException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 139)
+
+
+
