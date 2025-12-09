@@ -3,15 +3,15 @@
   EdkRepoInstallerConfig.xml
 
 @copyright
-  Copyright 2017 - 2021 Intel Corporation. All rights reserved.<BR>
+  Copyright 2017 - 2025 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 -->
 <EdkRepoInstaller>
   <Python MinVersion="3.10.16">
-    <Wheel Name="smmap" Path="smmap-4.0.0-py2.py3-none-any.whl" UninstallAllOtherCopies="false" Version="4.0.0" />
-    <Wheel Name="gitdb" Path="gitdb-4.0.7-py3-none-any.whl" UninstallAllOtherCopies="false" Version="4.0.7" />
-    <Wheel Name="GitPython" Path="GitPython-3.1.14-py3-none-any.whl" UninstallAllOtherCopies="false" Version="3.1.14" />
-    <Wheel Name="colorama" Path="colorama-0.4.4-py2.py3-none-any.whl" UninstallAllOtherCopies="false" Version="0.4.4" />
+    <Wheel Name="smmap" Path="smmap-5.0.2-py3-none-any.whl" UninstallAllOtherCopies="false" Version="5.0.2" />
+    <Wheel Name="gitdb" Path="gitdb-4.0.12-py3-none-any.whl" UninstallAllOtherCopies="false" Version="4.0.12" />
+    <Wheel Name="GitPython" Path="gitpython-3.1.45-py3-none-any.whl" UninstallAllOtherCopies="false" Version="3.1.45" />
+    <Wheel Name="colorama" Path="colorama-0.4.6-py2.py3-none-any.whl" UninstallAllOtherCopies="false" Version="0.4.6" />
     <Wheel Name="edkrepo" Path="edkrepo-0.1.0-py3-none-any.whl" Version="0.1.0" UninstallAllOtherCopies="true" />
   </Python>
 </EdkRepoInstaller>
