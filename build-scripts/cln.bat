@@ -24,17 +24,16 @@ if exist ..\.git (
   set IS_GIT_REPO=0
 )
 
+if exist .\__pycache__ (
+  rmdir /S /Q __pycache__
+)
+
 pushd ..\edkrepo_installer
-rmdir /S /Q Debug
-rmdir /S /Q Release
 rmdir /S /Q EdkRepoInstaller\bin
 rmdir /S /Q EdkRepoInstaller\obj
-rmdir /S /Q SetupLauncher\Debug
-rmdir /S /Q SetupLauncher\Release
 if %IS_GIT_REPO% NEQ 0 (
   git checkout EdkRepoInstaller/Properties/AssemblyInfo.cs
   git checkout EdkRepoInstallerConfig.xml
-  git checkout SetupLauncher/SetupLauncher.rc
 )
 popd
 

@@ -7,29 +7,28 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+import argparse
 import os
 import sys
 import configparser
 import fnmatch
 import io
-import shutil
 import time
 import re
 from subprocess import call, check_call
 from xml.etree import ElementTree
 
-PYTHON_VERSION="3"
+PYTHON_VERSION = "3"
 
 #
 # Environment detection
 #
 WIN = "win"
-MAC = "mac"
 LINUX = "linux"
 if sys.platform == "win32":
     ostype = WIN
 elif sys.platform == "darwin":
-    ostype = MAC
+    ostype = LINUX  # For the commands used by this script macOS works the same as Linux
 elif sys.platform.startswith("linux"):
     ostype = LINUX
 elif os.name == "posix":
@@ -214,8 +213,6 @@ def build_wheels(extension_pkgs):
 def copy_wheels_and_set_xml(package_version, extension_pkgs):
     dir_path = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), "dist")
     dest_path = os.path.join(dir_path, "self_extract")
-    if ostype != WIN:
-        dest_path = os.path.join(dest_path, 'wheels')
     if not os.path.isdir(dest_path):
         os.makedirs(dest_path)
     wheels = []
@@ -236,19 +233,10 @@ def copy_wheels_and_set_xml(package_version, extension_pkgs):
     _set_version_number_and_wheels_cr_tools_installer_config(package_version, wheels)
 
 def create_final_copy_script(version):
-    if ostype == WIN:
-        with open("final_copy.bat", "w") as f:
-            f.write("pushd ..\\dist\n")
-            f.write("ren \"setup.exe\" \"EdkRepoSetup-{}.exe\"\n".format(version))
-            f.write("popd\n")
-    else:
-        with open('final_copy.py', 'w') as f:
-            f.write('#!/usr/bin/env python3\n')
-            f.write('import os, shutil, sys\n')
-            f.write('dist_name = "edkrepo-{{}}".format("{}")\n'.format(version))
-            f.write('installer_dir = "../dist/self_extract"\n')
-            f.write('shutil.make_archive(os.path.join("..", "dist", dist_name), "gztar", installer_dir)\n')
-        os.chmod('final_copy.py', 0o755)
+    with open("final_copy.bat", "w") as f:
+        f.write("pushd ..\\dist\n")
+        f.write("ren \"setup.exe\" \"EdkRepoSetup-{}.exe\"\n".format(version))
+        f.write("popd\n")
 
 def _copy_file(source, destination):
     if ostype == WIN:
@@ -256,29 +244,36 @@ def _copy_file(source, destination):
     else:
         check_call("cp -f {} {}".format(source, destination), shell=True)
 
-def make_version_cfg_file(version):
-    if ostype != WIN:
-        cfg_src = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'edkrepo_installer', 'linux-scripts')
-        install_cfg = configparser.ConfigParser(allow_no_value=True)
-        install_cfg.read(os.path.join(cfg_src, 'install.cfg'))
-        install_cfg['version']['installer_version'] = version
-        with open(os.path.join(cfg_src, 'install.cfg'), 'w') as f:
-            install_cfg.write(f)
-
-def main():
+def build(target_os):
     extension_pkgs = []
     print("Building Python packages and generating new version number...")
     (version, package_version) = get_current_version_number()
     set_version_number_setup_py(package_version)
-    if ostype == WIN:
+    if target_os == WIN:
         set_version_number_assembly_info(version)
         set_version_number_setup_launcher_rc(version)
         make_selfextract_version_script(version)
     print("Version number generated and set successfully")
     build_wheels(extension_pkgs)
     copy_wheels_and_set_xml(package_version, extension_pkgs)
-    make_version_cfg_file(version)
-    create_final_copy_script(version)
+    if target_os == WIN:
+        create_final_copy_script(version)
+
+def main():
+    try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--target-os', action='store', default=None,
+                            choices=['win', 'linux'],
+                            help='Provide the target installer OS')
+        args = parser.parse_args()
+        target_os = args.target_os
+        if target_os is None:
+            target_os = ostype
+        build(target_os)
+        sys.exit(0)
+    except Exception as e:
+        print('Unhandled exception: {}'.format(e))
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
