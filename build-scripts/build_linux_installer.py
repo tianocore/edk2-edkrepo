@@ -65,7 +65,11 @@ def mode_change(tarinfo):
 
 def create_archive(version):
     cwd = os.getcwd()
-    os.chdir(os.path.join('..', 'dist', 'self_extract'))
+    os.chdir(os.path.join('..', 'dist'))
+    shutil.move('self_extract', 'edkrepo-{}'.format(version))
+    os.makedirs('self_extract')
+    shutil.move('edkrepo-{}'.format(version), os.path.join('self_extract', 'edkrepo-{}'.format(version)))
+    os.chdir('self_extract')
     with tarfile.open(os.path.join('..', 'edkrepo-{}.tar.gz'.format(version)), 'w:gz') as out_targz:
         out_targz.add('.', filter=mode_change)
     os.chdir(cwd)
