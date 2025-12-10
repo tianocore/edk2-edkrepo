@@ -35,7 +35,7 @@ from edkrepo.common.humble import KEYBOARD_INTERRUPT, GIT_CMD_ERROR
 from edkrepo.common.pathfix import get_actual_path
 
 def generate_command_line(command):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog='edkrepo')
     subparsers = parser.add_subparsers(dest='subparser_name')
     try:
         current_version = version("edkrepo")
