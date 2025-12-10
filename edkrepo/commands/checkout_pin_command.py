@@ -144,9 +144,11 @@ class CheckoutPinCommand(EdkrepoCommand):
 
 
     def __pin_matches_project(self, pin, manifest, workspace_path):
+        manifest_remotes = [(x.name, x.url) for x in manifest.remotes]
+        pin_remotes = [(x.name, x.url) for x in pin.remotes]
         if pin.project_info.codename != manifest.project_info.codename:
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
-        elif not set(pin.remotes).issubset(set(manifest.remotes)):
+        elif not set(pin_remotes).issubset(set(manifest_remotes)):
             raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
         elif pin.general_config.current_combo not in combinations_in_manifest(manifest):
             ui_functions.print_warning_msg(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo), header=True)
