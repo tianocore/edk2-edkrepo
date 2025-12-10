@@ -2,7 +2,7 @@
   InstallWorker.cs
 
 @copyright
-  Copyright 2017 - 2023 Intel Corporation. All rights reserved.<BR>
+  Copyright 2017 - 2025 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -39,6 +39,7 @@ namespace TianoCore.EdkRepoInstaller
             if (ExclusivePackages.Count > 0 && PythonVersions.Count > 0)
             {
                 InstallLogger.Log("Determining currently installed Python packages...");
+                List<string> ExclusivePackagesNames = ExclusivePackages.Select(p => p.Item1).ToList();
                 bool FoundConflicting = false;
                 List<Tuple<string, PythonVersion>> PythonPaths = new List<Tuple<string, PythonVersion>>();
                 foreach (PythonVersion PyVersion in PythonVersions)
@@ -64,7 +65,20 @@ namespace TianoCore.EdkRepoInstaller
                     List<PythonPackage> InstalledPackages = PythonOperations.GetInstalledPythonPackages(PythonPath.Item1);
                     foreach (PythonPackage Package in InstalledPackages)
                     {
-                        if (ExclusivePackages.Select(p => p.Item1).Contains(Package.Name))
+                        string PackageName = Package.Name;
+                        string NormalizedPackageName = string.Empty;
+                        if (!string.IsNullOrEmpty(PackageName))
+                        {
+                            NormalizedPackageName = PackageName.Replace('_', '-');
+                        }
+                        bool FoundPackage = ExclusivePackagesNames.Contains(PackageName);
+                        if (!FoundPackage && !string.IsNullOrEmpty(NormalizedPackageName) &&
+                            ExclusivePackagesNames.Contains(NormalizedPackageName))
+                        {
+                            FoundPackage = true;
+                            PackageName = NormalizedPackageName;
+                        }
+                        if (FoundPackage)
                         {
                             AllowCancel(false);
                             if (CancelPending())
@@ -73,7 +87,7 @@ namespace TianoCore.EdkRepoInstaller
                                 return;
                             }
                             FoundConflicting = true;
-                            PythonVersion newPyVersion = ExclusivePackages.Where(p => p.Item1 == Package.Name).First().Item2;
+                            PythonVersion newPyVersion = ExclusivePackages.Where(p => p.Item1 == PackageName).First().Item2;
                             if (newPyVersion.Major != PythonPath.Item2.Major || newPyVersion.Minor != PythonPath.Item2.Minor)
                             {
                                 if (!ObsoletedPythonVersions.Contains(PythonPath.Item2))
