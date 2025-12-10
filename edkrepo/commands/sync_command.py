@@ -302,7 +302,6 @@ class SyncCommand(EdkrepoCommand):
         ci_index_xml = CiIndexXml(index_path)
         if initial_manifest.project_info.codename not in ci_index_xml.project_list:
             raise EdkrepoManifestNotFoundException(humble.SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
-        initial_manifest_remotes = {name:url for name, url in initial_manifest.remotes}
         ci_index_xml_rel_path = os.path.normpath(ci_index_xml.get_project_xml(initial_manifest.project_info.codename))
         global_manifest = os.path.join(global_manifest_directory, ci_index_xml_rel_path)
         new_manifest_to_check = ManifestXml(global_manifest)
