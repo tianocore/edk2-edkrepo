@@ -2,7 +2,7 @@
 REM @file
 REM build_windows_installer.bat
 REM
-REM Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
+REM Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
 REM SPDX-License-Identifier: BSD-2-Clause-Patent
 REM
 
@@ -135,11 +135,10 @@ if not defined TOOL_CHAIN_TAG (
   )
 )
 if /I "%TOOL_CHAIN_TAG%"=="VS2015" (
-    echo.
-    echo Prebuild:  Set the VS2015 environment.
-    echo.
-    if not defined VSINSTALLDIR call "%VS140COMNTOOLS%\vsvars32.bat"
-  )
+  echo.
+  echo Prebuild:  Set the VS2015 environment.
+  echo.
+  if not defined VSINSTALLDIR call "%VS140COMNTOOLS%\vsvars32.bat"
 )
 if not defined TOOL_CHAIN_TAG (
   echo Unable to locate a Visual Studio installation.
