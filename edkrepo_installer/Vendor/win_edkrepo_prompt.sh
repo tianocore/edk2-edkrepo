@@ -2,7 +2,7 @@
 # Note: For use on Git for Windows/MSYS2 ONLY.
 # UNIX version is in install.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -58,9 +58,13 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v $command_completion_edkr
   # changed or if the last command executed was edkrepo
   do_combo_check="0"
   edkrepo_check_last_command() {
-    if [[ "$BASH_COMMAND" == *"edkrepo"* ]] && [[ "$BASH_COMMAND" != *"_edkrepo"* ]]; then
-      if [[ "$BASH_COMMAND" != *"edkrepo_"* ]]; then
-        do_combo_check="1"
+    if [[ "$BASH_COMMAND" == *"edkrepo"* ]] && [[ "$BASH_COMMAND" != *"command_completion_edkrepo"* ]]; then
+      if [[ "$BASH_COMMAND" != *"edkrepo_check_last_command"* ]]; then
+        if [[ "$BASH_COMMAND" != *"edkrepo_combo_chpwd"* ]]; then
+          if [[ "$BASH_COMMAND" != *"add_edkrepo_combo_to_prompt"* ]]; then
+            do_combo_check="1"
+          fi
+        fi
       fi
     fi
   }

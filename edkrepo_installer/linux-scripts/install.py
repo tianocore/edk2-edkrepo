@@ -3,7 +3,7 @@
 ## @file
 # install.py
 #
-# Copyright (c) 2018 - 2024, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2025, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -38,7 +38,7 @@ elif os.name == "posix":
 else:
     raise EnvironmentError("Unsupported OS")
 
-tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation, 2024'
+tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation, 2025'
 
 # Data here should be maintained in a configuration file
 cfg_dir = '.edkrepo'
@@ -473,9 +473,13 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v command_completion_edkre
   # changed or if the last command executed was edkrepo
   do_combo_check="0"
   edkrepo_check_last_command() {
-    if [[ "$BASH_COMMAND" == *"edkrepo"* ]] && [[ "$BASH_COMMAND" != *"_edkrepo"* ]]; then
-      if [[ "$BASH_COMMAND" != *"edkrepo_"* ]]; then
-        do_combo_check="1"
+    if [[ "$BASH_COMMAND" == *"edkrepo"* ]] && [[ "$BASH_COMMAND" != *"command_completion_edkrepo"* ]]; then
+      if [[ "$BASH_COMMAND" != *"edkrepo_check_last_command"* ]]; then
+        if [[ "$BASH_COMMAND" != *"edkrepo_combo_chpwd"* ]]; then
+          if [[ "$BASH_COMMAND" != *"add_edkrepo_combo_to_prompt"* ]]; then
+            do_combo_check="1"
+          fi
+        fi
       fi
     fi
   }
@@ -541,9 +545,13 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v command_completion_edkre
   }
   chpwd_functions=(${chpwd_functions[@]} "edkrepo_combo_chpwd")
   function edkrepo_combo_preexec() {
-    if [[ "$1" = *"edkrepo"* ]] && [[ "$1" != *"_edkrepo"* ]]; then
-      if [[ "$1" != *"edkrepo_"* ]]; then
-        do_combo_check="1"
+    if [[ "$1" = *"edkrepo"* ]] && [[ "$1" != *"command_completion_edkrepo"* ]]; then
+      if [[ "$1" != *"edkrepo_combo_preexec"* ]]; then
+        if [[ "$1" != *"edkrepo_combo_chpwd"* ]]; then
+          if [[ "$1" != *"edkrepo_combo_precmd"* ]]; then
+            do_combo_check="1"
+          fi
+        fi
       fi
     fi
   }
