@@ -300,7 +300,8 @@ class SyncCommand(EdkrepoCommand):
         #see if there is an entry in CiIndex.xml that matches the prject name of the current manifest
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
         ci_index_xml = CiIndexXml(index_path)
-        if initial_manifest.project_info.codename not in ci_index_xml.project_list:
+        project_list = [*ci_index_xml.project_list, *ci_index_xml.archived_project_list]
+        if initial_manifest.project_info.codename not in project_list:
             raise EdkrepoManifestNotFoundException(humble.SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
         ci_index_xml_rel_path = os.path.normpath(ci_index_xml.get_project_xml(initial_manifest.project_info.codename))
         global_manifest = os.path.join(global_manifest_directory, ci_index_xml_rel_path)
@@ -495,10 +496,11 @@ class SyncCommand(EdkrepoCommand):
             else:
                 raise EdkrepoManifestNotFoundException(humble.SYNC_MANIFEST_NOT_FOUND.format(initial_manifest.project_info.codename))
 
-        #see if there is an entry in CiIndex.xml that matches the prject name of the current manifest
+        #see if there is an entry in CiIndex.xml that matches the project name of the current manifest
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
         ci_index_xml = CiIndexXml(index_path)
-        if initial_manifest.project_info.codename not in ci_index_xml.project_list:
+        project_list = [*ci_index_xml.project_list, *ci_index_xml.archived_project_list]
+        if initial_manifest.project_info.codename not in project_list:
             if args.override:
                 return
             else:
