@@ -53,8 +53,10 @@ def patch_installer_config(dist_root, version):
     with open(install_cfg_path, 'w') as f:
         install_cfg.write(f)
 
+edkrepo_version=None
 def mode_change(tarinfo):
-    rwx_files = ['./install.py']
+    global edkrepo_version
+    rwx_files = ['./{}/install.py'.format(edkrepo_version)]
     if tarinfo.name in rwx_files:
         tarinfo.mode = 0o755
     elif tarinfo.isfile():
@@ -64,13 +66,15 @@ def mode_change(tarinfo):
     return tarinfo
 
 def create_archive(version):
+    global edkrepo_version
+    edkrepo_version = 'edkrepo-{}'.format(version)
     cwd = os.getcwd()
     os.chdir(os.path.join('..', 'dist'))
-    shutil.move('self_extract', 'edkrepo-{}'.format(version))
+    shutil.move('self_extract', edkrepo_version)
     os.makedirs('self_extract')
-    shutil.move('edkrepo-{}'.format(version), os.path.join('self_extract', 'edkrepo-{}'.format(version)))
+    shutil.move(edkrepo_version, os.path.join('self_extract', edkrepo_version))
     os.chdir('self_extract')
-    with tarfile.open(os.path.join('..', 'edkrepo-{}.tar.gz'.format(version)), 'w:gz') as out_targz:
+    with tarfile.open(os.path.join('..', '{}.tar.gz'.format(edkrepo_version)), 'w:gz') as out_targz:
         out_targz.add('.', filter=mode_change)
     os.chdir(cwd)
 
