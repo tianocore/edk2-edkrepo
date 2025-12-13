@@ -6,6 +6,7 @@ EdkRepo is the multi-repository tool for EDK II firmware development. EdkRepo is
 
 # Documentation
 [Users Guide](docs/edkrepo_users_guide.md)
+
 [Developer Documentation](docs/doc_index.md)
 
 # Linux Build and Installation
