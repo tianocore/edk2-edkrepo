@@ -62,3 +62,4 @@ NO_PR_UPDATED = 'No pull request will be updated with this change'
 ADD_REVIEWERS = 'Adding reviewers to pull request.'
 SEND_REVIEW_INVALID_PR_STRATEGY = 'The specified PR strategy "{}" is invalid. Valid strategies are "branch" and "fork".'
 SEND_REVIEW_PR_FORK_NOT_IMPLEMENTED = 'Sending reviews via the "fork" PR strategy is not yet supported.'
+INVALID_REVIEWER = "Reviews may only be requested from collaborators. {} is not a collaborator of the {} repository."

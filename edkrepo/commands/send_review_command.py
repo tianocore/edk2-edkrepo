@@ -365,18 +365,26 @@ class SendReviewCommand(EdkrepoCommand):
                     webbrowser.open(active_prs[pr])
 
     def __github_add_reviewers(self, args, pr_patch_url, netrc_path, curl_path, proxy_str=None):
-        reviewer_array = args.reviewers[0].split(' ')
+        reviewers = args.reviewers[0].split(' ')
         pr_url = '{}/requested_reviewers'.format(pr_patch_url)
-        reviewer_request = ('{{"reviewers":{}}}'.format(reviewer_array)).replace("'", '"')
-        if proxy_str:
-            reviewer_args = [curl_path, '--netrc-file', netrc_path, '-X', 'POST', '-H',
-                            'Accept: application/vnd.github.v3+json', pr_url, '-d', reviewer_request,
-                            '--proxy', proxy_str]
-        else:
-            reviewer_args = [curl_path, '--netrc-file', netrc_path, '-X', 'POST', '-H',
-                            'Accept: application/vnd.github.v3+json', pr_url, '-d', reviewer_request]
-        reviewer_process = subprocess.Popen(reviewer_args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        reviewer_process.communicate()
+        for reviewer in reviewers:
+            reviewer_array = json.dumps([reviewer])
+            ui_functions.print_info_msg(humble.ADDING_REVIEWER.format(reviewer), header=False)
+            reviewer_request = '{{"reviewers": {} }}'.format(reviewer_array)
+            if proxy_str:
+                reviewer_args = [curl_path, '--netrc-file', netrc_path, '-X', 'POST', '-H',
+                                'Accept: application/vnd.github.v3+json', pr_url, '-d', reviewer_request,
+                                '--proxy', proxy_str]
+            else:
+                reviewer_args = [curl_path, '--netrc-file', netrc_path, '-X', 'POST', '-H',
+                                'Accept: application/vnd.github.v3+json', pr_url, '-d', reviewer_request]
+            reviewer_process = subprocess.Popen(reviewer_args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, _ = reviewer_process.communicate()
+            if stdout:
+                results = json.loads(stdout)
+                if 'status' in results.keys() and results['status'] == '422':
+                    ui_functions.print_info_msg(humble.INVALID_REVIEWER.format(reviewer, remote.name), header=False)
+
 
 
     def __create_pr_branch(self, config, repo, title):
