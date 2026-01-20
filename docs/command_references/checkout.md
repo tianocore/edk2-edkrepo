@@ -14,7 +14,7 @@ edkrepo checkout [-h] [-o] [--performance] [-v] [-c] Combination
 
 ### Combination
 
-**Type:** Required
+**Type:** Optional
 
 The name of the branch combination to checkout as defined in the project manifest file.
 
