@@ -31,7 +31,7 @@ class CheckoutCommand(EdkrepoCommand):
         args.append({'name' : 'Combination',
                      'positional' : True,
                      'position' : 0,
-                     'required': True,
+                     'required': False,
                      'description' : arguments.COMBINATION_DESCRIPTION,
                      'help-text' : arguments.COMBINATION_HELP})
         args.append(OverrideArgument)

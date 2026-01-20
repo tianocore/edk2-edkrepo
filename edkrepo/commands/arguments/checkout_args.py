@@ -12,5 +12,5 @@ checkout command meta data.
 '''
 
 COMMAND_DESCRIPTION = 'Enables checking out a specific branch combination defined in the project manifest file.'
-COMBINATION_DESCRIPTION = 'edkrepo checkout <combination>'
-COMBINATION_HELP = 'The name of the branch combination to checkout as defined in the project manifest file.'
+COMBINATION_DESCRIPTION = 'edkrepo checkout [combination]'
+COMBINATION_HELP = 'The name of the branch combination to checkout as defined in the project manifest file. If not specified, re-checks out the current combination.'

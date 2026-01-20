@@ -556,7 +556,8 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
 
     # Create combo so we have original input and do not introduce any
     # unintended behavior by messing with parameters.
-    combo = combination
+    # If no combination is provided, use the current combo.
+    combo = combination if combination else manifest.general_config.current_combo
     submodule_combo = manifest.general_config.current_combo
     try:
         # Try to handle normalize combo name to match the manifest file.
