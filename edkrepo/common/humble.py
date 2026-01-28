@@ -3,7 +3,7 @@
 ## @file
 # humble.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -129,6 +129,7 @@ GENERATING_PIN_DATA = 'Generating pin data for {0} project based on {1} combinat
 GENERATING_REPO_DATA = 'Generating pin data for {0} repo:'
 BRANCH = '    Branch : {0}'
 COMMIT = '    Commit Id: {0}'
+PATCHSET = '    Patchset: {}'
 WRITING_PIN_FILE = 'Writing pin file to {0} ...'
 COMMIT_MESSAGE = 'Pin file for project: {0} \nPin Description: {1}'
 
