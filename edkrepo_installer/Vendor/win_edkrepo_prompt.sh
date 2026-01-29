@@ -62,14 +62,55 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v $command_completion_edkr
       if [[ "$BASH_COMMAND" != *"edkrepo_check_last_command"* ]]; then
         if [[ "$BASH_COMMAND" != *"edkrepo_combo_chpwd"* ]]; then
           if [[ "$BASH_COMMAND" != *"add_edkrepo_combo_to_prompt"* ]]; then
-            do_combo_check="1"
+            if [[ "$BASH_COMMAND" != *"preexec_edkrepo"* ]]; then
+              if [[ "$BASH_COMMAND" != *"edkrepo_debug_trap"* ]]; then
+                do_combo_check="1"
+              fi
+            fi
           fi
         fi
       fi
     fi
   }
-  trap 'edkrepo_check_last_command' DEBUG
-  if [[ ! -z ${PROMPT_COMMAND+x} ]] && [[ "$PROMPT_COMMAND" != "edkrepo_combo_chpwd" ]]; then
+  
+  # Integrate with bash-preexec if available, otherwise use direct trap
+  if declare -f __bp_preexec_invoke_cmd &>/dev/null; then
+    # bash-preexec is available - use its hook system
+    preexec_edkrepo() {
+      # Call our check with the command that's about to execute
+      local cmd="$1"
+      if [[ "$cmd" == *"edkrepo"* ]] && [[ "$cmd" != *"command_completion_edkrepo"* ]]; then
+        if [[ "$cmd" != *"edkrepo_check_last_command"* ]]; then
+          if [[ "$cmd" != *"edkrepo_combo_chpwd"* ]]; then
+            if [[ "$cmd" != *"add_edkrepo_combo_to_prompt"* ]]; then
+              if [[ "$cmd" != *"preexec_edkrepo"* ]]; then
+                if [[ "$cmd" != *"edkrepo_debug_trap"* ]]; then
+                  do_combo_check="1"
+                fi
+              fi
+            fi
+          fi
+        fi
+      fi
+    }
+    # Register with bash-preexec's hook array
+    if [[ ! " ${preexec_functions[*]} " =~ " preexec_edkrepo " ]]; then
+      preexec_functions+=(preexec_edkrepo)
+    fi
+  else
+    # bash-preexec not available - preserve existing trap and add ours
+    existing_debug_trap=$(trap -p DEBUG | sed -e "s/^trap -- '\(.*\)' DEBUG$/\1/" -e "s/^trap -- \"\(.*\)\" DEBUG$/\1/")
+    edkrepo_debug_trap() {
+      # Execute existing trap first if it exists
+      if [[ -n "$existing_debug_trap" ]] && [[ "$existing_debug_trap" != "edkrepo_debug_trap" ]]; then
+        eval "$existing_debug_trap"
+      fi
+      # Then execute our logic
+      edkrepo_check_last_command
+    }
+    trap 'edkrepo_debug_trap' DEBUG
+  fi
+  if [[ ! -z ${PROMPT_COMMAND+x} ]] && [[ "$PROMPT_COMMAND" != "edkrepo_combo_chpwd" ]]; then 
     old_prompt_command=$PROMPT_COMMAND
   fi
   old_pwd=$(pwd)
