@@ -17,7 +17,8 @@ import edkrepo.commands.humble.combo_humble as humble
 import edkrepo.commands.humble.common_humble as common_humble
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path, get_manifest_repo_info_from_config
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path, get_checked_out_pin_file
+from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException, EdkrepoPinFileNotFoundException
 
 
 class ComboCommand(EdkrepoCommand):
@@ -79,14 +80,14 @@ class ComboCommand(EdkrepoCommand):
                 ui_functions.print_info_msg(humble.COMBO.format(combo), header=False)
             if args.verbose:
                 ui_functions.print_info_msg(humble.COMBO_DESCRIPTION.format(description), header=False)
-                sources = manifest.get_repo_sources(combo)
+                
+                sources = []
+                sources = self._identify_combo_sources(combo, manifest, config)
+                    
                 length = len(max([source.root for source in sources], key=len))
                 if 'pin' in combo.lower():
-                    workspace_path = get_workspace_path()
                     for source in sources:
-                        local_repo_path = os.path.join(workspace_path, source.root)
-                        repo = Repo(local_repo_path)
-                        ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), repo.git.execute(['git', '-c', 'color.ui=always','status'])).splitlines()[0], header=False)
+                        ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.commit), header=False)
                 else:
                     for source in sources:
                         if source.commit:
@@ -97,4 +98,24 @@ class ComboCommand(EdkrepoCommand):
                             ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.branch), header=False)
                         elif source.patch_set:
                             ui_functions.print_info_msg(humble.REPO_DETAILS.format(source.root.ljust(length), source.patch_set), header=False)
+
+    def _identify_combo_sources(self, combo, manifest, config):
+        """
+        Identify and return the source objects for a given combo.
+        """
+        sources = []
+        if 'pin' in combo.lower():
+            pin_filename = combo.split(':', 1)[1].strip()
+            try:
+                pin_manifest = get_checked_out_pin_file(pin_filename, manifest, config, get_workspace_path())
+                if pin_manifest and pin_manifest.combinations:
+                    sources = pin_manifest.get_repo_sources(pin_manifest.combinations[0].name)
+                else:
+                    sources = manifest.get_repo_sources(combo)
+            except (EdkrepoPinFileNotFoundException, EdkrepoManifestInvalidException) as e:
+                ui_functions.print_warning_msg(f"Failed to load pin file '{pin_filename}': {e}", header=False)
+                sources = manifest.get_repo_sources(combo)
+        else:
+            sources = manifest.get_repo_sources(combo)
+        return sources
 

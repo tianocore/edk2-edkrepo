@@ -166,5 +166,9 @@ class EdkRepoGitEmailNotFoundException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 139)
 
+class EdkrepoPinFileNotFoundException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 140)
+
 
 
