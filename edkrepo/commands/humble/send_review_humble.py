@@ -42,6 +42,8 @@ NO_TITLE = 'The title argument is required for GitHub pull requests'
 MULTIPLE_OPEN_PRS = 'You currently have {pr_count} pull requests open on branch "{branch_name}". All {pr_count} of them will be updated with this review.'
 CURRENT_BRANCH_NOT_FOUND = 'Could not find current branch "{}" on GitHub.'
 REST_CALL_ERROR = 'There was a problem in attempting to contact GitHub: {}'
+GITHUB_RESPONSE_PARSE_ERROR = 'Received invalid JSON from GitHub API: {}'
+GITHUB_UNEXPECTED_RESPONSE = 'GitHub API returned unexpected data format'
 GIT_EMAIL_NOT_FOUND = 'Email not found or configured in git config. Please set your git email using "git config --global user.email " \n' + SEND_REVIEW_EXIT
 
 # informational messages for send_review_command.py
