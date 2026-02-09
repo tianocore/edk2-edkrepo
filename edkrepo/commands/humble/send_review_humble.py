@@ -42,6 +42,8 @@ NO_TITLE = 'The title argument is required for GitHub pull requests'
 MULTIPLE_OPEN_PRS = 'You currently have {pr_count} pull requests open on branch "{branch_name}". All {pr_count} of them will be updated with this review.'
 CURRENT_BRANCH_NOT_FOUND = 'Could not find current branch "{}" on GitHub.'
 REST_CALL_ERROR = 'There was a problem in attempting to contact GitHub: {}'
+GITHUB_RESPONSE_PARSE_ERROR = 'Received invalid JSON from GitHub API: {}'
+GITHUB_UNEXPECTED_RESPONSE = 'GitHub API returned unexpected data format'
 GIT_EMAIL_NOT_FOUND = 'Email not found or configured in git config. Please set your git email using "git config --global user.email " \n' + SEND_REVIEW_EXIT
 
 # informational messages for send_review_command.py
@@ -63,3 +65,5 @@ ADD_REVIEWERS = 'Adding reviewers to pull request.'
 SEND_REVIEW_INVALID_PR_STRATEGY = 'The specified PR strategy "{}" is invalid. Valid strategies are "branch" and "fork".'
 SEND_REVIEW_PR_FORK_NOT_IMPLEMENTED = 'Sending reviews via the "fork" PR strategy is not yet supported.'
 INVALID_REVIEWER = "Reviews may only be requested from collaborators. {} is not a collaborator of the {} repository."
+LOCAL_BRANCH_UPDATE_EXISTING_PR = 'Local branch not found on GitHub. Based on the branch name, an existing pull request will be updated.'
+LOCAL_BRANCH_CREATE_NEW_PR = 'Local branch not found on GitHub. Based on the branch name, a new pull request branch will be created.'
