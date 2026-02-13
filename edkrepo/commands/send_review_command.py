@@ -182,32 +182,43 @@ class SendReviewCommand(EdkrepoCommand):
         pr_number = None
         title_string = None
 
-        # Get all active PRs by their PR number in remote, else None if no active PRs
-        active_prs = self.__get_active_prs_on_branch(args, current_branch, modified_repo, manifest, netrc_path)
-        if active_prs:
+        try:
+            # Get all active PRs by their PR number in remote, else raise if no PRs or bad data
+            active_prs = self.__get_active_prs_on_branch(args, current_branch, modified_repo, manifest, netrc_path)
             amend_existing = True
             pr_branch_name = str(current_branch)
-        else:
-            if not args.title:
-                # If there is only one commit to on the branch, then we can use the title of that commit as the title
-                # of the PR if the user did not otherwise specify a title.
-                commit_shas = modified_repo.git.git.rev_list('{}/{}..HEAD'.format(common_repo_functions.DEFAULT_REMOTE_NAME, target_branch))
-                commit_shas = commit_shas.splitlines()
-                if len(commit_shas) != 1:
-                    raise edkrepo_exception.EdkrepoInvalidParametersException(humble.NO_TITLE)
-                commit_message = modified_repo.git.commit(commit_shas[0]).message.splitlines()
-                if len(commit_message) < 1:
-                    raise edkrepo_exception.EdkrepoInvalidParametersException(humble.NO_TITLE)
-                title_string = commit_message[0]
+        except edkrepo_exception.EdkrepoGithubApiFailException as e:
+            # GitHub API failed or returned no data 
+            ui_functions.print_error_msg(str(e), header=True)
+            
+            # Use local branch name to infer whether to update existing PR or create new one
+            if str(current_branch).startswith('pull_request'):
+                ui_functions.print_info_msg('Local branch not found on GitHub based on branch name an existing pull request will be updated', header=False)
+                amend_existing = True
+                pr_branch_name = str(current_branch)
+                active_prs = {}
             else:
-                title_string = ' '.join(args.title)
+                ui_functions.print_info_msg('Local branch not found on GitHub based on branch name a new pull request branch will be created', header=False)
+                if not args.title:
+                    # If there is only one commit to on the branch, then we can use the title of that commit as the title
+                    # of the PR if the user did not otherwise specify a title.
+                    commit_shas = modified_repo.git.git.rev_list('{}/{}..HEAD'.format(common_repo_functions.DEFAULT_REMOTE_NAME, target_branch))
+                    commit_shas = commit_shas.splitlines()
+                    if len(commit_shas) != 1:
+                        raise edkrepo_exception.EdkrepoInvalidParametersException(humble.NO_TITLE)
+                    commit_message = modified_repo.git.commit(commit_shas[0]).message.splitlines()
+                    if len(commit_message) < 1:
+                        raise edkrepo_exception.EdkrepoInvalidParametersException(humble.NO_TITLE)
+                    title_string = commit_message[0]
+                else:
+                    title_string = ' '.join(args.title)
 
-            pr_branch_name = self.__create_pr_branch(config, modified_repo.git, title_string)
+                pr_branch_name = self.__create_pr_branch(config, modified_repo.git, title_string)
 
-            # Only check out the PR branch if we are not in dry-run mode
-            if not args.dry_run:
-                modified_repo.git.heads[pr_branch_name].checkout()
-
+                # Only check out the PR branch if we are not in dry-run mode
+                if not args.dry_run:
+                    modified_repo.git.heads[pr_branch_name].checkout()        
+        
         pr_branch_str = '{}:{}'.format(pr_branch_name, pr_branch_name)
 
         if not amend_existing:
@@ -432,24 +443,36 @@ class SendReviewCommand(EdkrepoCommand):
         curl_process = subprocess.Popen(curl_args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = curl_process.communicate()
         if stdout:
-            results = json.loads(stdout)
+            try:
+                results = json.loads(stdout)
+            except (json.JSONDecodeError, ValueError) as e:
+                raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_RESPONSE_PARSE_ERROR.format(e))
+            
+            # Handle case where API returns an error object instead of an array
+            if isinstance(results, dict) and 'message' in results:
+                raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_UNEXPECTED_RESPONSE)
+            
+            # Handle case where results is not iterable or is empty
+            if not isinstance(results, list):
+                raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_UNEXPECTED_RESPONSE)
+                
             pr_count = len(results)
             if pr_count >= 1:
                 try:
                     active_prs = {results[i]['number']: results[i]['html_url'] for i in range(pr_count)}
-                except KeyError as e:
+                except (KeyError, IndexError, TypeError) as e:
                     if args.verbose:
-                        ui_functions.print_error_msg(results)
-                        ui_functions.print_info_msg(curl_args)
+                        ui_functions.print_error_msg(str(results), header=False)
                     raise edkrepo_exception.EdkrepoGithubApiFailException(humble.REST_CALL_ERROR.format(e))
                 if pr_count > 1:
                     print()
                     ui_functions.print_info_msg(humble.MULTIPLE_OPEN_PRS.format(pr_count=pr_count, branch_name=current_branch))
                 return active_prs
             else:
-                return None
+                # API returned empty list, no PRs found for this branch
+                raise edkrepo_exception.EdkrepoGithubApiFailException(humble.CURRENT_BRANCH_NOT_FOUND.format(current_branch))
         else:
-            raise edkrepo_exception.EdkrepoWarningException(humble.CURRENT_BRANCH_NOT_FOUND.format(current_branch))
+            raise edkrepo_exception.EdkrepoGithubApiFailException(humble.CURRENT_BRANCH_NOT_FOUND.format(current_branch))
 
     def __get_review_type(self, manifest, repo):
         remote_review_dest = manifest.get_remote(repo.manifest.remote_name)
