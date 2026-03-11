@@ -27,6 +27,6 @@
 - [RepoSource Test Cases](../edkrepo_manifest_parser/unit_tests/RepoSource_TestCases.md)\
   Test case descriptions and expected behaviors for tests defined in [test_repo_source.py](../edkrepo_manifest_parser/unit_tests/test_repo_source.py)
 - [ManifestXml Test Cases](../edkrepo_manifest_parser/unit_tests/ManifestXml_TestCases.md)\
-n  Test case descriptions and expected behaviors for tests defined in [test_manifestxml.py](../edkrepo_manifest_parser/unit_tests/test_manifestxml.py)
+  Test case descriptions and expected behaviors for tests defined in [test_manifestxml.py](../edkrepo_manifest_parser/unit_tests/test_manifestxml.py)
 - [CiIndexXml Test Cases](../edkrepo_manifest_parser/unit_tests/CiIndexXml_TestCases.md)\
   Test case descriptions and expected behaviors for tests defined in [test_ci_index_xml.py](../edkrepo_manifest_parser/unit_tests/test_ci_index_xml.py)

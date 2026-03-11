@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest_validation.py
 #
-# Copyright (c) 2018- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -22,36 +22,47 @@ from edkrepo.common.humble import VERIFY_ERROR_HEADER
 class ValidateManifest:
     # Note: manifest_file must be a path to the manifest file not the file itself
     def __init__(self, manifest_file):
+        """Store the path to the manifest file for later validation."""
         self._manifestfile = manifest_file
 
     def validate_parsing(self):
-        try:
-            self._manifest_xmldata = ManifestXml(self._manifestfile)
-            return ("PARSING", True, None)  # (validation type, status, message)
-        except Exception as e_message:
-            self._manifest_xmldata = None
-            return ("PARSING", False, e_message)
+        """Attempt to parse the manifest XML file; return a (type, status, message) result tuple."""
+        self._manifest_xmldata, error = _try_parse_manifest_xml(self._manifestfile)
+        if error is None:
+            return ("PARSING", True, None)
+        return ("PARSING", False, error)
 
     def validate_codename(self, project):
-            if not self._manifest_xmldata:
-                return ('CODENAME', False, 'Cannot find a manifest for project {}'.format(project))
-            elif project != self._manifest_xmldata.project_info.codename:
-                return ("CODENAME", False, MANIFEST_NAME_INCONSISTENT.format(project, self._manifest_xmldata.project_info.codename, self._manifestfile))
-            else:
-                return ("CODENAME", True, None)
+        """Verify the manifest codename matches the expected project name; return a (type, status, message) result tuple."""
+        if not self._manifest_xmldata:
+            return ('CODENAME', False, 'Cannot find a manifest for project {}'.format(project))
+        elif project != self._manifest_xmldata.project_info.codename:
+            return ("CODENAME", False, MANIFEST_NAME_INCONSISTENT.format(project, self._manifest_xmldata.project_info.codename, self._manifestfile))
+        else:
+            return ("CODENAME", True, None)
 
     def validate_case_insensitive_single_match(self, project, project_list, ci_index_filename):
-        matches = self.list_entries(self, project, project_list)
+        """Verify the project name appears exactly once in project_list using case-insensitive comparison; return a (type, status, message) result tuple."""
+        matches = self.list_entries(project, project_list)
         if len(matches) == 0 or len(matches) > 1:
             return ("DUPLICATE", False, INDEX_DUPLICATE_NAMES.format(project, ci_index_filename))
         else:
             return ("DUPLICATE", True, None)
     
     def list_entries(self, project, project_list):
+        """Return all entries in project_list that case-insensitively match project."""
         return [x for x in project_list if self.case_insensitive_equal(project, x)]
 
     def case_insensitive_equal(self, str1, str2):
+        """Return True if str1 and str2 are equal under Unicode NFKD case-folding normalization."""
         return unicodedata.normalize("NFKD", str1.casefold()) == unicodedata.normalize("NFKD", str2.casefold())
+
+def _try_parse_manifest_xml(manifest_file):
+    """Attempt to construct a ManifestXml from *manifest_file*; return ``(xmldata, None)`` on success or ``(None, exception)`` on failure."""
+    try:
+        return ManifestXml(manifest_file), None
+    except Exception as e_message:
+        return None, e_message
 
 def validate_manifestfiles(manifestfile_list=[]):
     manifestfile_validation = {}
