@@ -3,7 +3,7 @@
 ## @file
 # cache_command.py
 #
-# Copyright (c) 2020-2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -104,14 +104,7 @@ class CacheCommand(EdkrepoCommand):
             pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
         # Check to see if a manifest was provided and add any missing remotes
-        manifest = None
-        if args.project is not None:
-            manifest = _get_manifest(args.project, config, args.source_manifest_repo)
-        else:
-            try:
-                manifest = get_workspace_manifest()
-            except Exception:
-                pass
+        manifest = _resolve_manifest(args, config)
 
         # If manifest is provided attempt to add any remotes that do not exist
         if manifest is not None and not args.info:
@@ -150,6 +143,7 @@ class CacheCommand(EdkrepoCommand):
         cache_obj.close(args.verbose)
 
 def _create_cache_json_object(info):
+    """Convert a list of cache info items into a JSON-serialisable list of dicts."""
     def _create_cache_dict_item(item):
         return {
             'path': item.path,
@@ -160,6 +154,7 @@ def _create_cache_json_object(info):
     return [_create_cache_dict_item(item) for item in info]
 
 def _get_manifest(project, config, source_manifest_repo=None):
+    """Load and return the ManifestXml for a project path or name; raise EdkrepoCacheException on failure."""
     if os.path.exists(project):
         manifest_path = project
     else:
@@ -179,8 +174,17 @@ def _get_manifest(project, config, source_manifest_repo=None):
         raise EdkrepoCacheException(UNABLE_TO_PARSE_MANIFEST)
     return manifest
 
+def _resolve_manifest(args, config):
+    """Return the ManifestXml for the given args, or None if unavailable."""
+    if args.project is not None:
+        return _get_manifest(args.project, config, args.source_manifest_repo)
+    try:
+        return get_workspace_manifest()
+    except Exception:
+        return None
 
 def _get_used_refs(manifest, cache_obj):
+    """Return a dict mapping remote names to the list of refs that are not yet cached."""
     used_refs = defaultdict(list)
     combo_list = [c.name for c in manifest.combinations]
     for combo in combo_list:
@@ -215,6 +219,7 @@ def _get_used_refs(manifest, cache_obj):
     return used_refs
 
 def _get_used_refs_patchset(manifest, source):
+    """Return a dict mapping remote names to SHAs referenced by CherryPick and Revert patchset operations."""
     used_refs = defaultdict(list)
     patchset = manifest.get_patchset(source.patch_set, source.remote_name)
     patchset_ops = manifest.get_patchset_operations(patchset.name, patchset.remote)
@@ -225,7 +230,9 @@ def _get_used_refs_patchset(manifest, source):
     return used_refs
 
 def _get_operation_remote(patchset, operation):
+    """Return the effective remote for a patchset operation, falling back to the patchset remote."""
     return operation.source_remote if operation.source_remote else patchset.remote
 
 def _flatten_list(lst):
+    """Flatten a list of lists into a single list."""
     return [e for sublist in lst for e in sublist]
