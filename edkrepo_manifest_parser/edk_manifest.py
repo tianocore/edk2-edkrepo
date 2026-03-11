@@ -65,26 +65,20 @@ INVALID_PATCHSET_NAME_ERROR = "The Patchset cannot be named: {}. Please rename t
 PATCHSET_PARENT_CIRCULAR_DEPENDENCY = "The PatchSet parent failed to be determined through recursion.  Check manifest for circular dependencies in daisy-chained PatchSet"
 NO_PARENT_REPO_ERROR = "No parent repository found for the nested repository at '{0}'."
 INVALID_REPO_PATH_ERROR = "The provided repo_local_root '{0}' is not a valid path with multiple sections."
+UNSUPPORTED_EXTENSION_ERROR = "Unsupported file extension: {}"
 
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
+        """Load and validate the file (XML or JSON), raising TypeError if the file is invalid or its root tag is not in xml_types."""
         self._fileref = fileref
-        try:
-            file_ext = os.path.splitext(fileref)[1]
-            if file_ext == '.xml':
-                self._tree = ET.ElementTree(file=fileref)  # fileref can be a filename or filestream
-            elif file_ext == '.json':
-                self._tree = self._json_to_xml(fileref)
-            else:
-                raise TypeError(INVALID_XML_ERROR.format(fileref, et_error))
-        except Exception as et_error:
-            raise TypeError(INVALID_XML_ERROR.format(fileref, et_error))
+        self._tree = self._load_tree(fileref)
 
         self._xml_type = self._tree.getroot().tag
         if self._xml_type not in xml_types:
             raise TypeError(UNSUPPORTED_TYPE_ERROR.format(fileref, self._xml_type))
 
     def _json_to_xml(self, fileref):
+        """Read a JSON file, convert it to an ElementTree using _build_etree_node and _pretty_format, and return the tree."""
         with open(fileref, 'r') as f:
             json_in = json.load(f)
 
@@ -99,9 +93,7 @@ class BaseXmlHelper():
 
 
     def _build_etree_node(self, current_dict, parent):
-        '''
-        Build ElementTree node as a subelement of parent node.
-        '''
+        """Build an ElementTree SubElement from current_dict and attach it as a child of parent; recurse into children."""
         node_tag = current_dict['name']
 
         # attribs
@@ -129,11 +121,27 @@ class BaseXmlHelper():
 
 
     def _pretty_format(self, current, parent=None, index=-1, depth=0):
+        """Recursively add indentation whitespace to all nodes in the ElementTree for human-readable formatting."""
         for i, node in enumerate(current):
             self._pretty_format(node, current, i, depth + 1)
         if parent is not None:
             if index == 0:
                 parent.text = '\n' + ('  ' * depth)
+
+    def _load_tree(self, fileref):
+        """Load an ElementTree from a .xml file or a .json file via self._json_to_xml; raise TypeError if the file is invalid or the extension is unsupported."""
+        try:
+            file_ext = os.path.splitext(fileref)[1]
+            if file_ext == '.xml':
+                return ET.ElementTree(file=fileref)  # fileref can be a filename or filestream
+            elif file_ext == '.json':
+                return self._json_to_xml(fileref)
+            else:
+                raise TypeError(INVALID_XML_ERROR.format(fileref, UNSUPPORTED_EXTENSION_ERROR.format(file_ext)))
+        except TypeError:
+            raise
+        except Exception as et_error:
+            raise TypeError(INVALID_XML_ERROR.format(fileref, et_error))
 
 #
 #  This class will parse and the Index XML file and provide the data to the caller
