@@ -3,7 +3,7 @@
 ## @file
 # checkout_pin_command.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -20,13 +20,12 @@ from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_rep
 from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET, SUBMODULE_DEINIT_FAILED
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoProjectMismatchException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from project_utils.submodule import deinit_full, maintain_submodules
 import edkrepo.common.ui_functions as ui_functions
-
 
 
 class CheckoutPinCommand(EdkrepoCommand):
@@ -62,7 +61,7 @@ class CheckoutPinCommand(EdkrepoCommand):
         else:
             manifest_repo_path = None
 
-        pin_path = self.__get_pin_path(args, workspace_path, manifest_repo_path, manifest)
+        pin_path = _get_pin_path(args, workspace_path, manifest_repo_path, manifest)
         pin = ManifestXml(pin_path)
         manifest_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
         check_dirty_repos(manifest, workspace_path)
@@ -71,7 +70,7 @@ class CheckoutPinCommand(EdkrepoCommand):
             repo = Repo(local_path)
             origin = repo.remotes.origin
             origin.fetch()
-        self.__pin_matches_project(pin, manifest, workspace_path)
+        _pin_matches_project(pin, manifest, workspace_path)
         sparse_enabled = sparse_checkout_enabled(workspace_path, manifest_sources)
         if sparse_enabled:
             ui_functions.print_info_msg(SPARSE_RESET, header = False)
@@ -97,77 +96,80 @@ class CheckoutPinCommand(EdkrepoCommand):
                 ui_functions.print_info_msg(SPARSE_CHECKOUT, header = False)
                 sparse_checkout(workspace_path, pin_repo_sources, manifest)
 
-    def __get_pin_path(self, args, workspace_path, manifest_repo_path, manifest):
-        pin_path = None
-        if not args.pinfile.endswith('.xml'):
-            pin_name = '{}.xml'.format(args.pinfile)
-        else:
-            pin_name = args.pinfile
+def _get_pin_path(args, workspace_path, manifest_repo_path, manifest):
+    """Locate the pin XML file via absolute path, manifest repo, or workspace; raise if not found."""
+    pin_path = None
+    if not args.pinfile.endswith('.xml'):
+        pin_name = '{}.xml'.format(args.pinfile)
+    else:
+        pin_name = args.pinfile
 
-        if os.path.isabs(args.pinfile) and os.path.isfile(args.pinfile):
-            pin_path = os.path.normpath(args.pinfile)
-        elif manifest_repo_path is not None:
-            pin_path = self.__find_pin_in_manifest_repo(pin_name, manifest_repo_path, manifest.general_config.pin_path)
-        else:
-            pin_path = self.__find_pin_in_workspace(workspace_path, pin_name)
+    if os.path.isabs(args.pinfile) and os.path.isfile(args.pinfile):
+        pin_path = os.path.normpath(args.pinfile)
+    elif manifest_repo_path is not None:
+        pin_path = _find_pin_in_manifest_repo(pin_name, manifest_repo_path, manifest.general_config.pin_path)
+    else:
+        pin_path = _find_pin_in_workspace(workspace_path, pin_name)
 
-        if pin_path:
-            return pin_path
-        else:
-            raise EdkrepoInvalidParametersException(humble.NOT_FOUND)
+    if pin_path:
+        return pin_path
+    else:
+        raise EdkrepoInvalidParametersException(humble.NOT_FOUND)
+    
+def _find_pin_in_manifest_repo(pin_name, manifest_repo_path, pin_path):
+    """Search for the pin file under the manifest repo pin_path subdirectory and root; return the path or None."""
+    expected_path_in_manifest_repo = os.path.normpath(os.path.join(manifest_repo_path, pin_path, pin_name))
+    path_if_at_root_of_man_repo = os.path.normpath(os.path.join(manifest_repo_path, pin_name))
+    if os.path.isfile(expected_path_in_manifest_repo):
+        return expected_path_in_manifest_repo
+    elif os.path.isfile(path_if_at_root_of_man_repo): # Corner case to catch pins that may have been placed in the root dir of the manifest repo.
+        return path_if_at_root_of_man_repo
+    else:
+        return None
+    
+def _find_pin_in_workspace(workspace_path, pin_name):
+    """Search for the pin file at the workspace root and repo/ subdirectory; return the path or None."""
+    # Before walking the entire workspace attempt to locate the pin at the root and in the repo/ dir as a performance improvement.
+    path_at_wkspc_root = os.path.normpath(os.path.join(workspace_path, pin_name))
+    path_in_repo_dir = os.path.normpath(os.path.join(workspace_path, 'repo', pin_name))
+    if os.path.isfile(path_at_wkspc_root):
+        return path_at_wkspc_root
+    elif os.path.isfile(path_in_repo_dir):
+        return path_in_repo_dir
+    elif os.path.dirname(pin_name) is None:
+        for dirpath, dirnames, filenames in os.walk(workspace_path):
+            if pin_name in filenames:
+                return os.path.join(dirpath, pin_name)
+    else:
+        return None
 
-
-    def __find_pin_in_manifest_repo(self, pin_name, manifest_repo_path, pin_path):
-        expected_path_in_manifest_repo = os.path.normpath(os.path.join(manifest_repo_path, pin_path, pin_name))
-        path_if_at_root_of_man_repo = os.path.normpath(os.path.join(manifest_repo_path, pin_name))
-        if os.path.isfile(expected_path_in_manifest_repo):
-            return expected_path_in_manifest_repo
-        elif os.path.isfile(path_if_at_root_of_man_repo): # Corner case to catch pins that may have been placed in the root dir of the manifest repo.
-            return path_if_at_root_of_man_repo
-        else:
-            return None
-
-    def __find_pin_in_workspace(self, workspace_path, pin_name):
-        # Before walking the entire workspace attempt to locate the pin at the root and in the repo/ dir as a performance improvement.
-        path_at_wkspc_root = os.path.normpath(os.path.join(workspace_path, pin_name))
-        path_in_repo_dir = os.path.normpath(os.path.join(workspace_path, 'repo', pin_name))
-        if os.path.isfile(path_at_wkspc_root):
-            return path_at_wkspc_root
-        elif os.path.isfile(path_in_repo_dir):
-            return path_in_repo_dir
-        elif os.path.dirname(pin_name) is None:
-             for dirpath, dirnames, filenames in os.walk(workspace_path):
-                if pin_name in filenames:
-                    return os.path.join(dirpath, pin_name)
-        else:
-            return None
-
-
-    def __pin_matches_project(self, pin, manifest, workspace_path):
-        manifest_remotes = [(x.name, x.url) for x in manifest.remotes]
-        pin_remotes = [(x.name, x.url) for x in pin.remotes]
-        if pin.project_info.codename != manifest.project_info.codename:
-            raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
-        elif not set(pin_remotes).issubset(set(manifest_remotes)):
-            raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
-        elif pin.general_config.current_combo not in combinations_in_manifest(manifest):
-            ui_functions.print_warning_msg(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo), header=True)
-        combo_name = pin.general_config.current_combo
-        pin_sources = pin.get_repo_sources(combo_name)
-        pin_root_remote = {source.root:source.remote_name for source in pin_sources}
-        try:
-            # If the pin and the project manifest have the same combo get the
-            # repo sources from that combo. Otherwise get the default combo's
-            # repo sources
-            manifest_sources = manifest.get_repo_sources(combo_name)
-        except ValueError:
-            manifest_sources = manifest.get_repo_sources(manifest.general_config.default_combo)
-        manifest_root_remote = {source.root:source.remote_name for source in manifest_sources}
-        if set(pin_root_remote.items()).isdisjoint(set(manifest_root_remote.items())):
-            raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
-        pin_root_commit = {source.root:source.commit for source in pin_sources}
-        for source in pin_sources:
-            source_repo_path = os.path.join(workspace_path, source.root)
-            repo = Repo(source_repo_path)
-            if repo.commit(pin_root_commit[source.root]) is None:
-                raise EdkrepoProjectMismatchException(humble.NOT_FOUND)
+def _pin_matches_project(pin, manifest, workspace_path):
+    """Validate that the pin's codename, remotes, combo, and repo/remote mapping are compatible with the manifest."""
+    manifest_remotes = [(x.name, x.url) for x in manifest.remotes]
+    pin_remotes = [(x.name, x.url) for x in pin.remotes]
+    if pin.project_info.codename != manifest.project_info.codename:
+        raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
+    elif not set(pin_remotes).issubset(set(manifest_remotes)):
+        raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
+    elif pin.general_config.current_combo not in combinations_in_manifest(manifest):
+        ui_functions.print_warning_msg(humble.COMBO_NOT_FOUND.format(pin.general_config.current_combo), header=True)
+    combo_name = pin.general_config.current_combo
+    pin_sources = pin.get_repo_sources(combo_name)
+    pin_root_remote = {source.root:source.remote_name for source in pin_sources}
+    try:
+        # If the pin and the project manifest have the same combo get the
+        # repo sources from that combo. Otherwise get the default combo's
+        # repo sources
+        manifest_sources = manifest.get_repo_sources(combo_name)
+    except ValueError:
+        manifest_sources = manifest.get_repo_sources(manifest.general_config.default_combo)
+    manifest_root_remote = {source.root:source.remote_name for source in manifest_sources}
+    if set(pin_root_remote.items()).isdisjoint(set(manifest_root_remote.items())):
+        raise EdkrepoProjectMismatchException(humble.MANIFEST_MISMATCH)
+    pin_root_commit = {source.root:source.commit for source in pin_sources}
+    for source in pin_sources:
+        source_repo_path = os.path.join(workspace_path, source.root)
+        repo = Repo(source_repo_path)
+        if repo.commit(pin_root_commit[source.root]) is None:
+            raise EdkrepoProjectMismatchException(humble.NOT_FOUND)
+        
