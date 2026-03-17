@@ -1127,10 +1127,13 @@ class _RepoSource():
 
         if self.patch_set is not None and (self.branch is not None or self.commit is not None or self.tag is not None):
             raise ValueError(INVALID_COMBO_DEFINITION_ERROR)
-        
-        if len(os.path.normpath(self.root).split(os.path.sep)) > 1:
-            self.nested_repo = True
-        else:
+
+        try:
+            if (element.attrib['nested_repo'].lower() == 'true') and len(os.path.normpath(self.root).split(os.path.sep)) > 1:
+                self.nested_repo = True
+            else:
+                self.nested_repo = False
+        except Exception:
             self.nested_repo = False
 
     @property
