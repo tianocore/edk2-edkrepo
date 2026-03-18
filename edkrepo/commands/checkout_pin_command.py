@@ -3,7 +3,7 @@
 ## @file
 # checkout_pin_command.py
 #
-# Copyright (c) 2026, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 

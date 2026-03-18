@@ -61,24 +61,57 @@ class TestCheckoutPinCommand:
     REPO_SUBDIR = 'repo'
     COMBO_NOT_FOUND_MSG = 'combo not found'
 
-    # --- helpers ---
-
-    @staticmethod
-    def _make_remote(name, url):
+    def _make_remote(self, name, url):
         r = MagicMock()
         r.name = name
         r.url = url
         return r
 
-    @staticmethod
-    def _make_source(root, remote_name, commit='abc'):
+    def _make_source(self, root, remote_name, commit='abc'):
         s = MagicMock()
         s.root = root
         s.remote_name = remote_name
         s.commit = commit
         return s
 
-    # get_metadata
+    def _make_pin_args(self, pinfile):
+        args = MagicMock()
+        args.pinfile = pinfile
+        return args
+
+    @pytest.fixture
+    def default_remote(self):
+        r = MagicMock()
+        r.name = self.REMOTE_NAME
+        r.url = self.REMOTE_URL
+        return r
+
+    @pytest.fixture
+    def default_source(self, default_remote):
+        s = MagicMock()
+        s.root = self.REPO_ROOT_A
+        s.remote_name = default_remote.name
+        s.commit = self.COMMIT_SHA
+        return s
+
+    @pytest.fixture
+    def matched_pin_manifest(self, default_remote):
+        pin = MagicMock()
+        manifest = MagicMock()
+        pin.project_info.codename = self.PROJECT_A
+        manifest.project_info.codename = self.PROJECT_A
+        pin.remotes = [default_remote]
+        manifest.remotes = [default_remote]
+        pin.general_config.current_combo = self.COMBO_X
+        return pin, manifest
+
+    @pytest.fixture
+    def mock_pin_repo(self):
+        with patch('edkrepo.commands.checkout_pin_command.Repo') as mock_repo_cls:
+            mock_repo = MagicMock()
+            mock_repo.commit.return_value = MagicMock()
+            mock_repo_cls.return_value = mock_repo
+            yield mock_repo
 
     def test_get_metadata_returns_expected_structure(self):
         cmd = CheckoutPinCommand()
@@ -87,15 +120,10 @@ class TestCheckoutPinCommand:
         assert metadata[self.META_NAME] == self.COMMAND_NAME
         assert metadata[self.META_ALIAS] == self.COMMAND_ALIAS
         assert self.META_HELP_TEXT in metadata
-        arg_names = [
-            a[self.META_NAME] if isinstance(a, dict) and self.META_NAME in a else None
-            for a in metadata[self.META_ARGUMENTS]
-        ]
+        arg_names = [arg[self.META_NAME] for arg in metadata[self.META_ARGUMENTS]]
         assert self.ARG_PINFILE in arg_names
         assert self.ARG_OVERRIDE in arg_names
         assert self.ARG_SOURCE_MANIFEST_REPO in arg_names
-
-    # run_command
 
     @patch('edkrepo.commands.checkout_pin_command.maintain_submodules')
     @patch('edkrepo.commands.checkout_pin_command.get_repo_cache_obj', return_value=None)
@@ -114,19 +142,19 @@ class TestCheckoutPinCommand:
     def test_run_command_performs_checkout_and_writes_combo(
         self, mock_gwp, mock_gwm, mock_fsmr, mock_lavmr, mock_gpp,
         mock_manifest_xml_cls, mock_cdr, mock_repo_cls, mock_pmp,
-        mock_sce, mock_deinit, mock_checkout_repos, mock_grco, mock_ms
+        mock_sce, mock_deinit, mock_checkout_repos, mock_grco, mock_ms,
+        default_source
     ):
         mock_manifest = MagicMock()
         mock_manifest.general_config.current_combo = self.COMBO_X
-        source = self._make_source(self.REPO_ROOT_A, self.REMOTE_NAME)
-        mock_manifest.get_repo_sources.return_value = [source]
+        mock_manifest.get_repo_sources.return_value = [default_source]
         mock_gwm.return_value = mock_manifest
 
         mock_lavmr.return_value = ([self.MANIFEST_REPO_PATH], [], [])
 
         mock_pin = MagicMock()
         mock_pin.general_config.current_combo = self.COMBO_X
-        mock_pin.get_repo_sources.return_value = [source]
+        mock_pin.get_repo_sources.return_value = [default_source]
         mock_manifest_xml_cls.return_value = mock_pin
 
         mock_repo = MagicMock()
@@ -144,15 +172,12 @@ class TestCheckoutPinCommand:
         mock_checkout_repos.assert_called_once()
         mock_manifest.write_current_combo.assert_called_once()
 
-    # _get_pin_path
-
     @patch('os.path.isfile')
     @patch('os.path.isabs')
     def test_get_pin_path_absolute_path_resolved(self, mock_isabs, mock_isfile):
         mock_isabs.return_value = True
         mock_isfile.return_value = True
-        args = MagicMock()
-        args.pinfile = self.ABS_PIN_PATH
+        args = self._make_pin_args(self.ABS_PIN_PATH)
         manifest = MagicMock()
 
         result = _get_pin_path(args, self.WORKSPACE_PATH, self.MANIFEST_REPO_PATH, manifest)
@@ -165,8 +190,7 @@ class TestCheckoutPinCommand:
     def test_get_pin_path_resolved_via_manifest_repo(self, mock_isabs, mock_isfile, mock_find_in_manifest):
         expected = os.path.normpath(os.path.join(self.MANIFEST_REPO_PATH, self.PIN_PATH_SUBDIR, self.PIN_FILE_XML))
         mock_find_in_manifest.return_value = expected
-        args = MagicMock()
-        args.pinfile = self.PIN_FILE_NO_EXT
+        args = self._make_pin_args(self.PIN_FILE_NO_EXT)
         manifest = MagicMock()
         manifest.general_config.pin_path = self.PIN_PATH_SUBDIR
 
@@ -181,8 +205,7 @@ class TestCheckoutPinCommand:
     def test_get_pin_path_resolved_via_workspace(self, mock_isabs, mock_isfile, mock_find_in_workspace):
         expected = os.path.normpath(os.path.join(self.WORKSPACE_PATH, self.PIN_FILE_XML))
         mock_find_in_workspace.return_value = expected
-        args = MagicMock()
-        args.pinfile = self.PIN_FILE_XML
+        args = self._make_pin_args(self.PIN_FILE_XML)
         manifest = MagicMock()
 
         result = _get_pin_path(args, self.WORKSPACE_PATH, None, manifest)
@@ -194,14 +217,11 @@ class TestCheckoutPinCommand:
     @patch('os.path.isfile', return_value=False)
     @patch('os.path.isabs', return_value=False)
     def test_get_pin_path_not_found_raises_exception(self, mock_isabs, mock_isfile, mock_find_in_workspace):
-        args = MagicMock()
-        args.pinfile = self.PIN_FILE_MISSING
+        args = self._make_pin_args(self.PIN_FILE_MISSING)
         manifest = MagicMock()
 
         with pytest.raises(EdkrepoInvalidParametersException):
             _get_pin_path(args, self.WORKSPACE_PATH, None, manifest)
-
-    # _find_pin_in_manifest_repo
 
     @patch('os.path.isfile')
     def test_find_pin_in_manifest_repo_found_at_expected_path(self, mock_isfile):
@@ -227,8 +247,6 @@ class TestCheckoutPinCommand:
 
         assert result is None
 
-    # _find_pin_in_workspace
-
     @patch('os.path.isfile')
     def test_find_pin_in_workspace_found_at_root(self, mock_isfile):
         root_path = os.path.normpath(os.path.join(self.WORKSPACE_PATH, self.PIN_FILE_XML))
@@ -252,8 +270,6 @@ class TestCheckoutPinCommand:
         result = _find_pin_in_workspace(self.WORKSPACE_PATH, self.PIN_FILE_XML)
 
         assert result is None
-
-    # _pin_matches_project
 
     @patch('edkrepo.commands.checkout_pin_command.combinations_in_manifest')
     def test_pin_matches_project_codename_mismatch_raises_exception(self, mock_combos):
@@ -279,40 +295,25 @@ class TestCheckoutPinCommand:
         with pytest.raises(EdkrepoProjectMismatchException):
             _pin_matches_project(pin, manifest, self.WORKSPACE_PATH)
 
-    @patch('edkrepo.commands.checkout_pin_command.Repo')
     @patch('edkrepo.commands.checkout_pin_command.ui_functions')
     @patch('edkrepo.commands.checkout_pin_command.combinations_in_manifest')
-    def test_pin_matches_project_combo_not_in_manifest_prints_warning(self, mock_combos, mock_ui, mock_repo_cls):
-        mock_repo = MagicMock()
-        mock_repo.commit.return_value = MagicMock()
-        mock_repo_cls.return_value = mock_repo
-        pin = MagicMock()
-        manifest = MagicMock()
-        pin.project_info.codename = self.PROJECT_A
-        manifest.project_info.codename = self.PROJECT_A
-        shared_remote = self._make_remote(self.REMOTE_NAME, self.REMOTE_URL)
-        pin.remotes = [shared_remote]
-        manifest.remotes = [shared_remote]
-        pin.general_config.current_combo = self.COMBO_X
+    def test_pin_matches_project_combo_not_in_manifest_prints_warning(
+        self, mock_combos, mock_ui, mock_pin_repo, matched_pin_manifest, default_source
+    ):
+        pin, manifest = matched_pin_manifest
         mock_combos.return_value = [self.COMBO_Y]
-        source = self._make_source(self.REPO_ROOT_A, self.REMOTE_NAME)
-        pin.get_repo_sources.return_value = [source]
-        manifest.get_repo_sources.return_value = [source]
+        pin.get_repo_sources.return_value = [default_source]
+        manifest.get_repo_sources.return_value = [default_source]
 
         _pin_matches_project(pin, manifest, self.WORKSPACE_PATH)
 
         mock_ui.print_warning_msg.assert_called_once()
 
     @patch('edkrepo.commands.checkout_pin_command.combinations_in_manifest')
-    def test_pin_matches_project_root_remote_disjoint_raises_exception(self, mock_combos):
-        pin = MagicMock()
-        manifest = MagicMock()
-        pin.project_info.codename = self.PROJECT_A
-        manifest.project_info.codename = self.PROJECT_A
-        shared_remote = self._make_remote(self.REMOTE_NAME, self.REMOTE_URL)
-        pin.remotes = [shared_remote]
-        manifest.remotes = [shared_remote]
-        pin.general_config.current_combo = self.COMBO_X
+    def test_pin_matches_project_root_remote_disjoint_raises_exception(
+        self, mock_combos, matched_pin_manifest
+    ):
+        pin, manifest = matched_pin_manifest
         mock_combos.return_value = [self.COMBO_X]
         pin_source = self._make_source(self.REPO_ROOT_PIN, self.REMOTE_NAME)
         manifest_source = self._make_source(self.REPO_ROOT_MANIFEST, self.UPSTREAM_REMOTE)
@@ -322,47 +323,27 @@ class TestCheckoutPinCommand:
         with pytest.raises(EdkrepoProjectMismatchException):
             _pin_matches_project(pin, manifest, self.WORKSPACE_PATH)
 
-    @patch('edkrepo.commands.checkout_pin_command.Repo')
     @patch('edkrepo.commands.checkout_pin_command.combinations_in_manifest')
-    def test_pin_matches_project_all_validations_pass(self, mock_combos, mock_repo_cls):
-        mock_repo = MagicMock()
-        mock_repo.commit.return_value = MagicMock()
-        mock_repo_cls.return_value = mock_repo
-        pin = MagicMock()
-        manifest = MagicMock()
-        pin.project_info.codename = self.PROJECT_A
-        manifest.project_info.codename = self.PROJECT_A
-        shared_remote = self._make_remote(self.REMOTE_NAME, self.REMOTE_URL)
-        pin.remotes = [shared_remote]
-        manifest.remotes = [shared_remote]
-        pin.general_config.current_combo = self.COMBO_X
+    def test_pin_matches_project_all_validations_pass(
+        self, mock_combos, mock_pin_repo, matched_pin_manifest, default_source
+    ):
+        pin, manifest = matched_pin_manifest
         mock_combos.return_value = [self.COMBO_X]
-        source = self._make_source(self.REPO_ROOT_A, self.REMOTE_NAME, self.COMMIT_SHA)
-        pin.get_repo_sources.return_value = [source]
-        manifest.get_repo_sources.return_value = [source]
+        pin.get_repo_sources.return_value = [default_source]
+        manifest.get_repo_sources.return_value = [default_source]
 
         _pin_matches_project(pin, manifest, self.WORKSPACE_PATH)
 
-        mock_repo.commit.assert_called_once_with(self.COMMIT_SHA)
+        mock_pin_repo.commit.assert_called_once_with(self.COMMIT_SHA)
 
-    @patch('edkrepo.commands.checkout_pin_command.Repo')
     @patch('edkrepo.commands.checkout_pin_command.combinations_in_manifest')
-    def test_pin_matches_project_value_error_falls_back_to_default_combo(self, mock_combos, mock_repo_cls):
-        mock_repo = MagicMock()
-        mock_repo.commit.return_value = MagicMock()
-        mock_repo_cls.return_value = mock_repo
-        pin = MagicMock()
-        manifest = MagicMock()
-        pin.project_info.codename = self.PROJECT_A
-        manifest.project_info.codename = self.PROJECT_A
-        shared_remote = self._make_remote(self.REMOTE_NAME, self.REMOTE_URL)
-        pin.remotes = [shared_remote]
-        manifest.remotes = [shared_remote]
-        pin.general_config.current_combo = self.COMBO_X
+    def test_pin_matches_project_value_error_falls_back_to_default_combo(
+        self, mock_combos, mock_pin_repo, matched_pin_manifest, default_source
+    ):
+        pin, manifest = matched_pin_manifest
         mock_combos.return_value = [self.COMBO_X]
-        source = self._make_source(self.REPO_ROOT_A, self.REMOTE_NAME)
-        pin.get_repo_sources.return_value = [source]
-        manifest.get_repo_sources.side_effect = [ValueError(self.COMBO_NOT_FOUND_MSG), [source]]
+        pin.get_repo_sources.return_value = [default_source]
+        manifest.get_repo_sources.side_effect = [ValueError(self.COMBO_NOT_FOUND_MSG), [default_source]]
 
         _pin_matches_project(pin, manifest, self.WORKSPACE_PATH)
 
