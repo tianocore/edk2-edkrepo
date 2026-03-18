@@ -1,2 +1,6 @@
-For edkrepo_dev.py use, this folder has the least priority to be selected as the edkrepo global data directory.  
+For edkrepo.bat and edkrepo_dev.py use, this folder has the highest priority to be selected as the edkrepo global data directory.  
+If EDK2_EDKREPO_PATH is not set, or this directory does not exist, the default C:/ProgramData/edkrepo/ directory will be used. 
+
+User must add an edkrepo.cfg file to this folder before use.
+User may add edkrepo_user.cfg file to this folder.
 

@@ -38,14 +38,16 @@ def get_edkrepo_global_data_directory():
         common_appdata = create_unicode_buffer(MAX_PATH)
         SHGetFolderPath(None, CSIDL_COMMON_APPDATA, None, SHGFP_TYPE_CURRENT, common_appdata)
         global_data_dir = os.path.join(common_appdata.value, "edkrepo")
-        local_data_dir = os.path.join(os.path.dirname(sys.argv[0]), "edkrepo_dev_local_data")
     elif sys.platform == "darwin" or sys.platform.startswith("linux") or os.name == "posix":
         global_data_dir = expanduser("~/.edkrepo")
+    edk2_edkrepo_path = os.environ.get("EDK2_EDKREPO_PATH")
+    if edk2_edkrepo_path and os.path.isdir(edk2_edkrepo_path):
+        local_data_dir = os.path.join(os.path.dirname(edk2_edkrepo_path), "edkrepo_dev_local_data")
+        if os.path.isdir(local_data_dir):
+            global_data_dir = local_data_dir
     if not os.path.isdir(global_data_dir):
         if not os.path.exists(os.path.dirname(global_data_dir)):
             raise EdkrepoGlobalDataDirectoryNotFoundException(humble.GLOBAL_DATA_DIR_NOT_FOUND.format(os.path.dirname(global_data_dir)))
-        if sys.platform == "win32" and os.path.isdir(local_data_dir):
-            return local_data_dir
         os.mkdir(global_data_dir)
     return global_data_dir
 
