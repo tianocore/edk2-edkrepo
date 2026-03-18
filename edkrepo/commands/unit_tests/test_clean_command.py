@@ -9,6 +9,7 @@
 
 import os
 import sys
+import pytest
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
@@ -34,7 +35,17 @@ class TestCleanCommand:
     ARG_DIRS = 'dirs'
     ARG_INCLUDE_IGNORED = 'include-ignored'
 
-    # helpers
+    @pytest.fixture(autouse=True)
+    def _patches(self):
+        with patch('edkrepo.commands.clean_command.get_workspace_path') as mock_gwp, \
+             patch('edkrepo.commands.clean_command.get_workspace_manifest') as mock_gwm, \
+             patch('edkrepo.commands.clean_command.Repo') as mock_repo_cls, \
+             patch('edkrepo.commands.clean_command.ui_functions') as mock_ui:
+            self.mock_get_workspace_path = mock_gwp
+            self.mock_get_workspace_manifest = mock_gwm
+            self.mock_repo_cls = mock_repo_cls
+            self.mock_ui = mock_ui
+            yield
 
     def _make_args(self, force=False, dirs=False, quiet=False, include_ignored=False):
         args = MagicMock()
@@ -44,13 +55,12 @@ class TestCleanCommand:
         args.include_ignored = include_ignored
         return args
 
-    def _setup_workspace(self, mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls,
-                         clean_output=None, roots=None):
+    def _setup_workspace(self, clean_output=None, roots=None):
         if clean_output is None:
             clean_output = self.NO_OUTPUT
         if roots is None:
             roots = [self.REPO_ROOT_1]
-        mock_get_workspace_path.return_value = self.WORKSPACE_PATH
+        self.mock_get_workspace_path.return_value = self.WORKSPACE_PATH
         manifest = MagicMock()
         manifest.general_config.current_combo = self.COMBO_A
         sources = []
@@ -59,13 +69,11 @@ class TestCleanCommand:
             source.root = root
             sources.append(source)
         manifest.get_repo_sources.return_value = sources
-        mock_get_workspace_manifest.return_value = manifest
+        self.mock_get_workspace_manifest.return_value = manifest
         mock_repo = MagicMock()
         mock_repo.git.clean.return_value = clean_output
-        mock_repo_cls.return_value = mock_repo
+        self.mock_repo_cls.return_value = mock_repo
         return mock_repo
-
-    # get_metadata
 
     def test_get_metadata_returns_expected_structure(self):
         cmd = CleanCommand()
@@ -82,78 +90,75 @@ class TestCleanCommand:
         assert self.ARG_DIRS in arg_names
         assert self.ARG_INCLUDE_IGNORED in arg_names
 
-    # run_command
-
-    @patch('edkrepo.commands.clean_command.ui_functions')
-    @patch('edkrepo.commands.clean_command.Repo')
-    @patch('edkrepo.commands.clean_command.get_workspace_manifest')
-    @patch('edkrepo.commands.clean_command.get_workspace_path')
-    def test_dry_run_produces_output_print_called(self, mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls, mock_ui):
-        mock_repo = self._setup_workspace(mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls, clean_output=self.DRY_RUN_OUTPUT)
+    def test_no_force_sets_n_true_print_called(self):
+        mock_repo = self._setup_workspace(clean_output=self.DRY_RUN_OUTPUT)
         args = self._make_args()
 
         CleanCommand().run_command(args, {})
 
         mock_repo.git.clean.assert_called_once_with(f=False, d=False, n=True, q=False, x=False)
-        mock_ui.print_info_msg.assert_called_once_with(self.DRY_RUN_OUTPUT, header=False)
+        self.mock_ui.print_info_msg.assert_called_once_with(self.DRY_RUN_OUTPUT, header=False)
 
-    @patch('edkrepo.commands.clean_command.ui_functions')
-    @patch('edkrepo.commands.clean_command.Repo')
-    @patch('edkrepo.commands.clean_command.get_workspace_manifest')
-    @patch('edkrepo.commands.clean_command.get_workspace_path')
-    def test_force_mode_produces_output_print_called(self, mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls, mock_ui):
-        mock_repo = self._setup_workspace(mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls, clean_output=self.FORCE_OUTPUT)
+    def test_force_sets_n_false_print_called(self):
+        mock_repo = self._setup_workspace(clean_output=self.FORCE_OUTPUT)
         args = self._make_args(force=True, dirs=True)
 
         CleanCommand().run_command(args, {})
 
         mock_repo.git.clean.assert_called_once_with(f=True, d=True, n=False, q=False, x=False)
-        mock_ui.print_info_msg.assert_called_once_with(self.FORCE_OUTPUT, header=False)
+        self.mock_ui.print_info_msg.assert_called_once_with(self.FORCE_OUTPUT, header=False)
 
-    @patch('edkrepo.commands.clean_command.ui_functions')
-    @patch('edkrepo.commands.clean_command.Repo')
-    @patch('edkrepo.commands.clean_command.get_workspace_manifest')
-    @patch('edkrepo.commands.clean_command.get_workspace_path')
-    def test_clean_produces_no_output_print_not_called(self, mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls, mock_ui):
-        self._setup_workspace(mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls)
+    def test_clean_produces_no_output_print_not_called(self):
+        self._setup_workspace()
         args = self._make_args(force=True)
 
         CleanCommand().run_command(args, {})
 
-        mock_ui.print_info_msg.assert_not_called()
+        self.mock_ui.print_info_msg.assert_not_called()
 
-    @patch('edkrepo.commands.clean_command.ui_functions')
-    @patch('edkrepo.commands.clean_command.Repo')
-    @patch('edkrepo.commands.clean_command.get_workspace_manifest')
-    @patch('edkrepo.commands.clean_command.get_workspace_path')
-    def test_quiet_and_force_passes_q_true(self, mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls, mock_ui):
-        mock_repo = self._setup_workspace(mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls)
-        args = self._make_args(force=True, quiet=True)
+    def test_quiet_false_force_false_passes_q_false(self):
+        mock_repo = self._setup_workspace()
+        args = self._make_args(quiet=False, force=False)
+
+        CleanCommand().run_command(args, {})
+
+        mock_repo.git.clean.assert_called_once_with(f=False, d=False, n=True, q=False, x=False)
+
+    def test_quiet_false_force_true_passes_q_false(self):
+        mock_repo = self._setup_workspace()
+        args = self._make_args(quiet=False, force=True)
+
+        CleanCommand().run_command(args, {})
+
+        mock_repo.git.clean.assert_called_once_with(f=True, d=False, n=False, q=False, x=False)
+
+    def test_quiet_true_force_false_passes_q_true(self):
+        mock_repo = self._setup_workspace()
+        args = self._make_args(quiet=True, force=False)
+
+        CleanCommand().run_command(args, {})
+
+        mock_repo.git.clean.assert_called_once_with(f=False, d=False, n=True, q=True, x=False)
+
+    def test_quiet_true_force_true_passes_q_true(self):
+        mock_repo = self._setup_workspace()
+        args = self._make_args(quiet=True, force=True)
 
         CleanCommand().run_command(args, {})
 
         mock_repo.git.clean.assert_called_once_with(f=True, d=False, n=False, q=True, x=False)
 
-    @patch('edkrepo.commands.clean_command.ui_functions')
-    @patch('edkrepo.commands.clean_command.Repo')
-    @patch('edkrepo.commands.clean_command.get_workspace_manifest')
-    @patch('edkrepo.commands.clean_command.get_workspace_path')
-    def test_multiple_repos_each_cleaned(self, mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls, mock_ui):
-        mock_repo = self._setup_workspace(mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls,
-                                          roots=[self.REPO_ROOT_1, self.REPO_ROOT_2])
+    def test_multiple_repos_each_cleaned(self):
+        mock_repo = self._setup_workspace(roots=[self.REPO_ROOT_1, self.REPO_ROOT_2])
         args = self._make_args(force=True)
 
         CleanCommand().run_command(args, {})
 
-        assert mock_repo_cls.call_count == 2
+        assert self.mock_repo_cls.call_count == 2
         assert mock_repo.git.clean.call_count == 2
 
-    @patch('edkrepo.commands.clean_command.ui_functions')
-    @patch('edkrepo.commands.clean_command.Repo')
-    @patch('edkrepo.commands.clean_command.get_workspace_manifest')
-    @patch('edkrepo.commands.clean_command.get_workspace_path')
-    def test_include_ignored_passes_x_true(self, mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls, mock_ui):
-        mock_repo = self._setup_workspace(mock_get_workspace_path, mock_get_workspace_manifest, mock_repo_cls)
+    def test_include_ignored_passes_x_true(self):
+        mock_repo = self._setup_workspace()
         args = self._make_args(force=True, include_ignored=True)
 
         CleanCommand().run_command(args, {})

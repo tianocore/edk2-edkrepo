@@ -3,7 +3,7 @@
 ## @file
 # clean_command.py
 #
-# Copyright (c) 2026, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -59,7 +59,7 @@ class CleanCommand(EdkrepoCommand):
             result = repo.git.clean(f=args.force,
                                     d=args.dirs,
                                     n=(not args.force),
-                                    q=(args.quiet and args.force),
+                                    q=args.quiet,
                                     x=(args.include_ignored))
             if result:
                 ui_functions.print_info_msg(result, header = False)
