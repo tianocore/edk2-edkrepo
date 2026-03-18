@@ -64,76 +64,69 @@ def _try_parse_manifest_xml(manifest_file):
     except Exception as e_message:
         return None, e_message
 
+def _collect_file_validation_results(manifest_filepath):
+    """Validate parsing and codename for a single manifest file; return a list of (type, status, message) result tuples."""
+    manifest_obj = ValidateManifest(manifest_filepath)
+    results = []
+    validate_parsing = manifest_obj.validate_parsing()
+    results.append(validate_parsing)
+    if manifest_obj._manifest_xmldata:
+        val_codename = manifest_obj.validate_codename(manifest_obj._manifest_xmldata.project_info.codename)
+        results.append(val_codename)
+    else:
+        results.append(('CODENAME', False, 'Cannot process codename validation'))
+    return results
+
+def _resolve_project_manifest_path(ci_index_xml, global_manifest_directory, project):
+    """Return the absolute filesystem path to the manifest XML file for the given project."""
+    project_path = os.path.normpath(ci_index_xml.get_project_xml(project))
+    return os.path.join(global_manifest_directory, project_path)
+
+def _collect_project_validation_results(manifest_filepath, project, project_list, ci_index_filename):
+    """Run parsing, codename, and deduplication validations for one project; return a list of (type, status, message) result tuples."""
+    manifest_obj = ValidateManifest(manifest_filepath)
+    results = []
+    validate_parsing = manifest_obj.validate_parsing()
+    results.append(validate_parsing)
+    val_codename = manifest_obj.validate_codename(project)
+    results.append(val_codename)
+    val_name_duplication = manifest_obj.validate_case_insensitive_single_match(project, project_list, ci_index_filename)
+    results.append(val_name_duplication)
+    return results
+
 def validate_manifestfiles(manifestfile_list=[]):
+    """Validate parsing and codename for each manifest file in the list; return a dict mapping filepath to result lists."""
     manifestfile_validation = {}
     for manifest_filepath in manifestfile_list:
-        manifest_obj = None
-        validate_parsing = None
-        val_codename = None
-        results = []
-        # Validate parsing and add results
-        manifest_obj = ValidateManifest(manifest_filepath)
-        validate_parsing = manifest_obj.validate_parsing()
-        results.append(validate_parsing)
-
-        # Validate code name and add results
-        if manifest_obj._manifest_xmldata:
-            val_codename = manifest_obj.validate_codename(manifest_obj._manifest_xmldata.project_info.codename)
-            results.append(val_codename)
-            manifestfile_validation[manifest_filepath] = results
-        else:
-            results.append(('CODENAME', False, 'Cannot process codename validation'))
-        manifestfile_validation[manifest_filepath] = results
+        manifestfile_validation[manifest_filepath] = _collect_file_validation_results(manifest_filepath)
     return manifestfile_validation
 
 def validate_manifestrepo(global_manifest_directory, verify_archived=False):
+    """Validate all manifest files referenced by CiIndex.xml; return a dict mapping filepath to result lists."""
     manifestfile_validation = {}
-    # Open CiIndex.xml and parse the data
     ci_index_filename = os.path.join(global_manifest_directory, 'CiIndex.xml')
     ci_index_xml = CiIndexXml(ci_index_filename)
-    # Check every entry in the CiIndex.xml file to verify consistency
     project_list = ci_index_xml.project_list
     if verify_archived:
         project_list.extend(ci_index_xml.archived_project_list)
     for project in project_list:
-        manifest_filepath = None
-        manifest_obj = None
-        validate_parsing = None
-        val_name_duplication = None
-        results = []
-        # Get project XML file path
-        project_path = os.path.normpath(ci_index_xml.get_project_xml(project))
-
-        # Validate parsing and add results
-        manifest_filepath = os.path.join(global_manifest_directory, project_path)
-        manifest_obj = ValidateManifest(manifest_filepath)
-        validate_parsing = manifest_obj.validate_parsing()
-        results.append(validate_parsing)
-
-        # Validate Code name and add results
-        val_codename = manifest_obj.validate_codename(project)
-        results.append(val_codename)
-
-        # Verify that name not already used and add results.  The name is not case sensitive.
-        val_name_duplication = manifest_obj.validate_case_insensitive_single_match(project, project_list, ci_index_filename)
-        results.append(val_name_duplication)
-
-        # Add all results to a dictionary with file path as key
+        manifest_filepath = _resolve_project_manifest_path(ci_index_xml, global_manifest_directory, project)
+        results = _collect_project_validation_results(manifest_filepath, project, project_list, ci_index_filename)
         manifestfile_validation[manifest_filepath] = results
     return manifestfile_validation
 
 def get_manifest_validation_status(manifestfile_validation):
-    # Check for all validation results and print status.
+    """Verify the validation status of all manifest files; return True if any failure is detected, False otherwise."""
     manifest_error = False
     for manifestfile in manifestfile_validation.keys():
         for result in manifestfile_validation[manifestfile]:
             if not result[1]:
                 manifest_error = True
-                break  # break for first error
-
+                break
     return manifest_error
 
 def print_manifest_errors(manifestfile_validation):
+    """Print the error header and details for every failed validation result in the dict."""
     print(VERIFY_ERROR_HEADER)
     for manifestfile in manifestfile_validation.keys():
         for result in manifestfile_validation[manifestfile]:
@@ -141,25 +134,22 @@ def print_manifest_errors(manifestfile_validation):
                 print ("File name: {} ".format(manifestfile))
                 print ("Error type: {} ".format(result[0]))
                 print("Error message: {} \n".format(result[2]))
+
 def main():
+    """Parse CLI arguments and run manifest validation, printing results or raising on failure."""
     parser = argparse.ArgumentParser()
-    # Add mutually exclusive arguments group
     mutex = parser.add_mutually_exclusive_group()
     mutex.add_argument("-a", '--all', help="CiIndex xml directory path to validate all manifest files")
     mutex.add_argument('--files', nargs='+', help="List of manifest xml file paths for validation ")
     args = parser.parse_args()
 
-    # Validate list of  manifest files
     if args.files:
         manifestfile_validation = validate_manifestfiles(args.files)
-    # Validate all manifest files in CiIndex xml
     elif args.all:
         manifestfile_validation = validate_manifestrepo(args.all)
 
-    # Check for all validation results and print status.
     manifest_error = get_manifest_validation_status(manifestfile_validation)
 
-    # Check status.If any error print errors and raise exception.
     if not manifest_error:
         print("Manifest validation status: PASS \n")
     else:
@@ -173,3 +163,4 @@ if __name__ == '__main__':
     except Exception as e:
         traceback.print_exc()
         sys.exit(1)
+        
