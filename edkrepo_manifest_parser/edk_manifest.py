@@ -307,6 +307,20 @@ class ManifestXml(BaseXmlHelper):
             for sparse_data in subroot.iter(tag='SparseData'):
                 self._sparse_data.append(_SparseData(sparse_data))
 
+        #
+        # Process <PatchSets> tag
+        #
+        subroot = self._tree.find('PatchSets')
+        if subroot is not None:
+            for patchset in subroot.iter(tag='PatchSet'):
+                if patchset.attrib['name'] == "main" or patchset.attrib['name'] == "master":
+                    raise ValueError(INVALID_PATCHSET_NAME_ERROR.format(patchset.attrib['name']))
+                self._patch_sets[(patchset.attrib['name'], getattr(_PatchSet(patchset).tuple, "remote"))] =_PatchSet(patchset).tuple
+                operations = []
+                for subelem in patchset:
+                    operations.append(_PatchSetOperations(subelem).tuple)
+                self._patch_set_operations[(patchset.attrib['name'], getattr(_PatchSet(patchset).tuple, "remote"))] = operations
+
         if self._xml_type == 'Pin':
             # done with Pin parsing at this point, so exit init
             # remaining tag types are unique to manifest xml (for now...)
@@ -339,20 +353,6 @@ class ManifestXml(BaseXmlHelper):
         if subroot is not None:
             for f2f_mapping in subroot.iter(tag='FolderToFolderMapping'):
                 self._folder_to_folder_mappings.append(_FolderToFolderMapping(f2f_mapping))
-
-        #
-        # Process <PatchSets> tag
-        #
-        subroot = self._tree.find('PatchSets')
-        if subroot is not None:
-            for patchset in subroot.iter(tag='PatchSet'):
-                if patchset.attrib['name'] == "main" or patchset.attrib['name'] == "master":
-                    raise ValueError(INVALID_PATCHSET_NAME_ERROR.format(patchset.attrib['name']))
-                self._patch_sets[(patchset.attrib['name'], getattr(_PatchSet(patchset).tuple, "remote"))] =_PatchSet(patchset).tuple
-                operations = []
-                for subelem in patchset:
-                    operations.append(_PatchSetOperations(subelem).tuple)
-                self._patch_set_operations[(patchset.attrib['name'], getattr(_PatchSet(patchset).tuple, "remote"))] = operations
         return
 
     def is_pin_file(self):
