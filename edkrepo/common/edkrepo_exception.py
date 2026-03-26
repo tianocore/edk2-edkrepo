@@ -3,7 +3,7 @@
 ## @file
 # edkrepo_exception.py
 #
-# Copyright (c) 2017- 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -170,5 +170,8 @@ class EdkrepoPinFileNotFoundException(EdkrepoException):
     def __init__(self, message):
         super().__init__(message, 140)
 
+class EdkrepoProxyNotSetException(EdkrepoException):
+    def __init__(self, message):
+        super().__init__(message, 141)
 
 

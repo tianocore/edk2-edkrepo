@@ -3,7 +3,7 @@
 ## @file
 # cache.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 from collections import namedtuple
@@ -15,6 +15,7 @@ from git.exc import GitCommandError
 
 from edkrepo.common.progress_handler import GitProgressHandler
 from edkrepo.common.edkrepo_exception import EdkrepoGitException
+from edkrepo.common.common_repo_functions import fetch_from_remote
 from project_utils.project_utils_strings import CACHE_ADD_REMOTE, CACHE_ADDING_REPO, CACHE_CHECK_ROOT_DIR
 from project_utils.project_utils_strings import CACHE_FAILED_TO_CLOSE, CACHE_FAILED_TO_OPEN, CACHE_FETCH_REMOTE
 from project_utils.project_utils_strings import CACHE_REMOTE_EXISTS, CACHE_REMOVE_REPO, CACHE_REPO_EXISTS
@@ -69,7 +70,7 @@ class RepoCache(object):
         repo.create_remote(remote_name, url)
         if verbose:
             print(CACHE_FETCH_REMOTE.format(remote_name, url))
-        repo.remotes[remote_name].fetch(progress=GitProgressHandler())
+        fetch_from_remote(repo, repo.remotes[remote_name], progress=GitProgressHandler())
         repo.git.execute(['git', 'lfs', 'fetch', '--all'])
 
     def open(self, verbose=False):
@@ -231,14 +232,14 @@ class RepoCache(object):
                     print(CACHE_FETCH_REMOTE.format(dir_name, remote.url))
                 if sha_or_branch is not None and ((remote.name == dir_name) or (remote.url == url_or_name)):
                     print('Fetching ref {}'.format(sha_or_branch))
-                    remote.fetch(refspec=sha_or_branch, progress=GitProgressHandler())
+                    fetch_from_remote(repo, remote, refspec=sha_or_branch, progress=GitProgressHandler())
                     try:
                         repo.git.execute(['git', 'lfs', 'fetch', '{}'.format(remote.name), '{}'.format(sha_or_branch), '--recent'])
                     except GitCommandError:
                         print('No recent LFS object found in {}:{}'.format(remote.name, sha_or_branch))
                         pass
                 else:
-                    remote.fetch(progress=GitProgressHandler())
+                    fetch_from_remote(repo, remote, progress=GitProgressHandler())
                     try:
                         repo.git.execute(['git', 'lfs', 'fetch', '--recent'])
                     except GitCommandError:

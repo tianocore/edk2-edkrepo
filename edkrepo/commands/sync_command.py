@@ -3,7 +3,7 @@
 ## @file
 # sync_command.py
 #
-# Copyright (c) 2017 - 2023, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -36,7 +36,7 @@ from edkrepo.common.common_repo_functions import update_editor_config
 from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
 from edkrepo.common.common_repo_functions import update_hooks, combinations_in_manifest
 from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
-from edkrepo.common.common_repo_functions import find_git_version
+from edkrepo.common.common_repo_functions import find_git_version, fetch_from_remote
 from edkrepo.common.git_version import GitVersion
 from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
@@ -175,41 +175,20 @@ class SyncCommand(EdkrepoCommand):
                 update_hooks(hooks_add, hooks_update, hooks_uninstall, local_repo_path, repo_to_sync, config, global_manifest_directory)
             repo = Repo(local_repo_path)
             #Fetch notes
-            repo.remotes.origin.fetch("refs/notes/*:refs/notes/*")
+            fetch_from_remote(repo, repo.remotes.origin, "refs/notes/*:refs/notes/*")
             if repo_to_sync.patch_set:
                 patchset_branch_creation_flow(repo_to_sync, repo, workspace_path, manifest, global_manifest_path, args.override)
             elif repo_to_sync.commit is None and repo_to_sync.tag is None:
                 local_commits = False
                 initial_active_branch = repo.active_branch
-                repo.remotes.origin.fetch("refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_sync.branch))
+                fetch_from_remote(repo, repo.remotes.origin, "refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_sync.branch))
                 #The new branch may not exist in the heads list yet if it is a new branch
                 repo.git.checkout(repo_to_sync.branch)
                 if not args.fetch:
                     ui_functions.print_info_msg(humble.SYNCING.format(repo_to_sync.root, repo.active_branch), header = False)
                 else:
                     ui_functions.print_info_msg(humble.FETCHING.format(repo_to_sync.root, repo.active_branch), header = False)
-                try:
-                    repo.remotes.origin.fetch()
-                except GitCommandError as e:
-                    prune_needed = False
-                    prune_needed_heuristic_str = "error: some local refs could not be updated"
-                    if e.stdout.strip().find(prune_needed_heuristic_str) != -1:
-                        prune_needed = True
-                    if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
-                        prune_needed = True
-                    prune_needed_heuristic_str = "error: cannot lock ref"
-                    if e.stdout.strip().find(prune_needed_heuristic_str) != -1:
-                        prune_needed = True
-                    if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
-                        prune_needed = True
-                    if prune_needed:
-                        ui_functions.print_info_msg(humble.SYNC_AUTOMATIC_REMOTE_PRUNE)
-                        time.sleep(1.0)
-                        repo.git.remote('prune', 'origin')
-                        time.sleep(1.0)
-                        repo.remotes.origin.fetch()
-                    else:
-                        raise
+                fetch_from_remote(repo, repo.remotes.origin)
 
                 if not args.override and not repo.is_ancestor(ancestor_rev='HEAD', rev='origin/{}'.format(repo_to_sync.branch)):
                     ui_functions.print_info_msg(humble.SYNC_COMMITS_ON_TARGET.format(repo_to_sync.branch, repo_to_sync.root), header=False)
@@ -272,30 +251,7 @@ class SyncCommand(EdkrepoCommand):
         for initial_repo in initial_sources:
             local_repo_path = os.path.join(workspace_path, initial_repo.root)
             repo = Repo(local_repo_path)
-            origin = repo.remotes.origin
-            try:
-                origin.fetch()
-            except GitCommandError as e:
-                prune_needed = False
-                prune_needed_heuristic_str = "error: some local refs could not be updated"
-                if e.stdout.strip().find(prune_needed_heuristic_str) != -1:
-                    prune_needed = True
-                if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
-                    prune_needed = True
-                prune_needed_heuristic_str = "error: cannot lock ref"
-                if e.stdout.strip().find(prune_needed_heuristic_str) != -1:
-                    prune_needed = True
-                if e.stderr.strip().find(prune_needed_heuristic_str) != -1:
-                    prune_needed = True
-                if prune_needed:
-                    ui_functions.print_info_msg(humble.SYNC_AUTOMATIC_REMOTE_PRUNE)
-                    # The sleep is to give the operating system time to close all the file handles that Git has open
-                    time.sleep(1.0)
-                    repo.git.remote('prune', 'origin')
-                    time.sleep(1.0)
-                    origin.fetch()
-                else:
-                    raise
+            fetch_from_remote(repo, repo.remotes.origin)
 
         #see if there is an entry in CiIndex.xml that matches the prject name of the current manifest
         index_path = os.path.join(global_manifest_directory, 'CiIndex.xml')
