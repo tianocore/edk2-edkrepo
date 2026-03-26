@@ -44,6 +44,21 @@ CONFLICTING_PARTIAL_CLONE = 'Multiple partial clone arguments were provided.'
 SPARSE_CHECKOUT = 'Performing sparse checkout...'
 SPARSE_RESET = 'Resetting sparse checkout state...'
 
+# Remote fetch/prune messages
+AUTOMATIC_REMOTE_PRUNE = 'Performing automatic remote prune...'
+AUTOMATIC_REFS_REPACK = 'Performing automatic refs repack to fix duplicate ref entries...'
+
+# Case conflict scrubbing messages
+CASE_CONFLICT_SCRUB = 'Scrubbing case-conflicting remote refs...'
+CASE_CONFLICT_FOUND = 'Found {} case-conflicting remote ref(s)'
+CASE_CONFLICT_NONE = 'No case-conflicting remote refs found'
+CASE_CONFLICT_DELETED = 'Deleted {} case-conflicting remote ref(s)'
+CASE_CONFLICT_DELETING_REF = '  Deleting: refs/remotes/{} (conflicts with refs/remotes/{})'
+CASE_CONFLICT_DELETE_FAILED = 'Failed to delete ref {}: {}'
+STALE_REFLOG_SCRUB = 'Scrubbing stale remote reflog files...'
+STALE_REFLOG_DELETING_FILE = '  Deleting stale reflog: {}'
+STALE_REFLOG_DELETING_DIR = '  Removing empty reflog directory: {}'
+
 # Error messages for checkout_command.py
 CHECKOUT_EXIT = 'Exiting without performing checkout opereration.'
 CHECKOUT_INVALID_COMBO = UNSUPPORTED_COMBO + CHECKOUT_EXIT
@@ -151,4 +166,6 @@ LOCAL_BRANCH_EXISTS = "The branch {} already exists. Please resolve the branch n
 COLLISION_DETECTED = "A branch with the same name detected. Renaming the old {} branch and creating a new one from the manifest."
 BRANCH_COLLIDES_WITH_PARENT_SHA = "Patchset should not use branch name as base parent_sha"
 
+# Error messages for environment setup
+PROXY_STR_NOT_FOUND = 'Could not find a value for GitHub proxy in Git config.'
 NETRC_NOT_FOUND = 'Path to netrc not found. Please ensure you have configured your netrc file properly according to your OS guide.'

@@ -3,7 +3,7 @@
 ## @file
 # checkout_pin_command.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -16,7 +16,7 @@ import edkrepo.commands.arguments.checkout_pin_args as arguments
 import edkrepo.commands.humble.checkout_pin_humble as humble
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import sparse_checkout_enabled, reset_sparse_checkout, sparse_checkout
-from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest
+from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest, fetch_from_remote
 from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET, SUBMODULE_DEINIT_FAILED
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoProjectMismatchException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
@@ -69,8 +69,7 @@ class CheckoutPinCommand(EdkrepoCommand):
         for source in manifest_sources:
             local_path = os.path.join(workspace_path, source.root)
             repo = Repo(local_path)
-            origin = repo.remotes.origin
-            origin.fetch()
+            fetch_from_remote(repo, repo.remotes.origin)
         self.__pin_matches_project(pin, manifest, workspace_path)
         sparse_enabled = sparse_checkout_enabled(workspace_path, manifest_sources)
         if sparse_enabled:
