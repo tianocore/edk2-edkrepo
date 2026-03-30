@@ -1237,6 +1237,7 @@ class _SparseData():
 
 class _FolderToFolderMappingFolderExclude():
     def __init__(self, element):
+        """Parse optional path attribute from a ``<Exclude>`` element; defaults to ``None``."""
         self.path = None
         try:
             self.path = element.attrib['path']
@@ -1245,6 +1246,7 @@ class _FolderToFolderMappingFolderExclude():
 
     @property
     def tuple(self):
+        """Return a :class:`FolderToFolderMappingFolderExclude` namedtuple representation of this exclude entry."""
         return FolderToFolderMappingFolderExclude(self.path)
 
 
