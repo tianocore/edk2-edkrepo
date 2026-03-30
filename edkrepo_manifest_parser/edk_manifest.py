@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -140,6 +140,7 @@ class BaseXmlHelper():
 #
 class CiIndexXml(BaseXmlHelper):
     def __init__(self, fileref):
+        """Parse `fileref` as a CiIndex XML file and populate the internal project map."""
         super().__init__(fileref, 'ProjectList')
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
@@ -149,6 +150,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def project_list(self):
+        """Return a list of names for all non-archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is False:
@@ -157,6 +159,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def archived_project_list(self):
+        """Return a list of names for all archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is True:
@@ -164,6 +167,7 @@ class CiIndexXml(BaseXmlHelper):
         return proj_names
 
     def get_project_xml(self, project_name):
+        """Return the XML path for `project_name`, or raise `ValueError` if not found."""
         if project_name in self._projects:
             return self._projects[project_name].xmlPath
         else:
@@ -1028,11 +1032,8 @@ class _RemoteRepo():
 
 class _RepoHook():
     def __init__(self, element, remotes):
-        try:
-            self.source = element.attrib['source']
-            self.dest_path = element.attrib['destination']
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional attributes from a ``<ClientGitHook>`` element, resolving the remote URL from ``remotes``."""
+        self.source, self.dest_path = _parse_repo_hook_required_attribs(element)
         try:
             self.remote_url = remotes[element.attrib['remote']].url
         except Exception:
@@ -1044,8 +1045,17 @@ class _RepoHook():
 
     @property
     def tuple(self):
+        """Return a :class:`RepoHook` namedtuple representation of this hook."""
         return RepoHook(self.source, self.dest_path, self.dest_file, self.remote_url)
 
+def _parse_repo_hook_required_attribs(element):
+    """Return ``(source, dest_path)`` from a ``<ClientGitHook>`` element, or raise ``KeyError`` if either is absent."""
+    try:
+        source = element.attrib['source']
+        dest_path = element.attrib['destination']
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return source, dest_path
 
 class _Combination():
     def __init__(self, element):
