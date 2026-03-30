@@ -983,6 +983,7 @@ class _ProjectInfo():
 
 class _GeneralConfig():
     def __init__(self, element):
+        """Parse optional child elements from a ``<GeneralConfig>`` XML element; absent fields default to ``None``."""
         try:
             self.pin_path = element.find('PinPath').text
         except Exception:
@@ -1002,6 +1003,7 @@ class _GeneralConfig():
 
     @property
     def tuple(self):
+        """Return a :class:`GeneralConfig` namedtuple representation of this general configuration."""
         return GeneralConfig(self.default_combo, self.curr_combo, self.pin_path, self.source_manifest_repo)
 
 
