@@ -1098,11 +1098,8 @@ def _parse_remote_repo_required_attribs(element):
 
 class _RepoHook():
     def __init__(self, element, remotes):
-        try:
-            self.source = element.attrib['source']
-            self.dest_path = element.attrib['destination']
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional attributes from a ``<ClientGitHook>`` element, resolving the remote URL from ``remotes``."""
+        self.source, self.dest_path = _parse_repo_hook_required_attribs(element)
         try:
             self.remote_url = remotes[element.attrib['remote']].url
         except Exception:
@@ -1114,8 +1111,17 @@ class _RepoHook():
 
     @property
     def tuple(self):
+        """Return a :class:`RepoHook` namedtuple representation of this hook."""
         return RepoHook(self.source, self.dest_path, self.dest_file, self.remote_url)
 
+def _parse_repo_hook_required_attribs(element):
+    """Return ``(source, dest_path)`` from a ``<ClientGitHook>`` element, or raise ``KeyError`` if either is absent."""
+    try:
+        source = element.attrib['source']
+        dest_path = element.attrib['destination']
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return source, dest_path
 
 class _Combination():
     def __init__(self, element):
