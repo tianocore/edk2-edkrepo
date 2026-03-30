@@ -1196,6 +1196,7 @@ class _RepoSource():
 
 class _SparseSettings():
     def __init__(self, element):
+        """Parse optional sparseByDefault attribute from a ``<SparseSettings>`` element; defaults to ``False``."""
         self.sparse_by_default = False
         try:
             self.sparse_by_default = (element.attrib['sparseByDefault'].lower() == 'true')
@@ -1204,6 +1205,7 @@ class _SparseSettings():
 
     @property
     def tuple(self):
+        """Return a :class:`SparseSettings` namedtuple representation of this sparse settings."""
         return SparseSettings(self.sparse_by_default)
 
 
