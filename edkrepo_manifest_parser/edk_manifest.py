@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -140,6 +140,7 @@ class BaseXmlHelper():
 #
 class CiIndexXml(BaseXmlHelper):
     def __init__(self, fileref):
+        """Parse `fileref` as a CiIndex XML file and populate the internal project map."""
         super().__init__(fileref, 'ProjectList')
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
@@ -149,6 +150,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def project_list(self):
+        """Return a list of names for all non-archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is False:
@@ -157,6 +159,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def archived_project_list(self):
+        """Return a list of names for all archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is True:
@@ -164,6 +167,7 @@ class CiIndexXml(BaseXmlHelper):
         return proj_names
 
     def get_project_xml(self, project_name):
+        """Return the XML path for `project_name`, or raise `ValueError` if not found."""
         if project_name in self._projects:
             return self._projects[project_name].xmlPath
         else:
@@ -941,11 +945,8 @@ class _PatchSetOperations():
 
 class _ProjectInfo():
     def __init__(self, element):
-        try:
-            self.codename = element.find('CodeName').text
-            self.descript = element.find('Description').text
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional child elements from a ``<ProjectInfo>`` XML element."""
+        self.codename, self.descript = _parse_project_info_required_fields(element)
 
         try:
             self.lead_list = []
@@ -974,8 +975,18 @@ class _ProjectInfo():
 
     @property
     def tuple(self):
+        """Return a :class:`ProjectInfo` namedtuple representation of this project info."""
         return ProjectInfo(self.codename, self.descript, self.lead_list, self.reviewer_list, self.org, self.short_name)
 
+
+def _parse_project_info_required_fields(element):
+    """Return ``(codename, descript)`` from a ``<ProjectInfo>`` element, or raise ``KeyError`` if either child is absent."""
+    try:
+        codename = element.find('CodeName').text
+        descript = element.find('Description').text
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return codename, descript
 
 class _GeneralConfig():
     def __init__(self, element):
