@@ -945,11 +945,8 @@ class _PatchSetOperations():
 
 class _ProjectInfo():
     def __init__(self, element):
-        try:
-            self.codename = element.find('CodeName').text
-            self.descript = element.find('Description').text
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional child elements from a ``<ProjectInfo>`` XML element."""
+        self.codename, self.descript = _parse_project_info_required_fields(element)
 
         try:
             self.lead_list = []
@@ -978,8 +975,18 @@ class _ProjectInfo():
 
     @property
     def tuple(self):
+        """Return a :class:`ProjectInfo` namedtuple representation of this project info."""
         return ProjectInfo(self.codename, self.descript, self.lead_list, self.reviewer_list, self.org, self.short_name)
 
+
+def _parse_project_info_required_fields(element):
+    """Return ``(codename, descript)`` from a ``<ProjectInfo>`` element, or raise ``KeyError`` if either child is absent."""
+    try:
+        codename = element.find('CodeName').text
+        descript = element.find('Description').text
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return codename, descript
 
 class _GeneralConfig():
     def __init__(self, element):
