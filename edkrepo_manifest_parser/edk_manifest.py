@@ -1065,14 +1065,10 @@ class _GeneralConfig():
         """Return a :class:`GeneralConfig` namedtuple representation of this general configuration."""
         return GeneralConfig(self.default_combo, self.curr_combo, self.pin_path, self.source_manifest_repo)
 
-
 class _RemoteRepo():
     def __init__(self, element):
-        try:
-            self.name = element.attrib['name']
-            self.url = element.text
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional attributes from a ``<RemoteRepo>`` XML element."""
+        self.name, self.url = _parse_remote_repo_required_attribs(element)
         try:
             self.owner = element.attrib['owner']
         except:
@@ -1088,8 +1084,17 @@ class _RemoteRepo():
 
     @property
     def tuple(self):
+        """Return a :class:`RemoteRepo` namedtuple representation of this remote repository."""
         return RemoteRepo(self.name, self.url, self.owner, self.review_type, self.pr_strategy)
 
+def _parse_remote_repo_required_attribs(element):
+    """Return ``(name, url)`` from a ``<RemoteRepo>`` element, or raise ``KeyError`` if ``name`` is absent."""
+    try:
+        name = element.attrib['name']
+        url = element.text
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return name, url
 
 class _RepoHook():
     def __init__(self, element, remotes):
