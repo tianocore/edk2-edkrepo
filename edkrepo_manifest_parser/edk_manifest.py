@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -140,6 +140,7 @@ class BaseXmlHelper():
 #
 class CiIndexXml(BaseXmlHelper):
     def __init__(self, fileref):
+        """Parse `fileref` as a CiIndex XML file and populate the internal project map."""
         super().__init__(fileref, 'ProjectList')
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
@@ -149,6 +150,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def project_list(self):
+        """Return a list of names for all non-archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is False:
@@ -157,6 +159,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def archived_project_list(self):
+        """Return a list of names for all archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is True:
@@ -164,6 +167,7 @@ class CiIndexXml(BaseXmlHelper):
         return proj_names
 
     def get_project_xml(self, project_name):
+        """Return the XML path for `project_name`, or raise `ValueError` if not found."""
         if project_name in self._projects:
             return self._projects[project_name].xmlPath
         else:
@@ -1238,23 +1242,27 @@ class _FolderToFolderMapping():
     def tuple(self):
         return FolderToFolderMapping(self.project1, self.project2, self.remote_name, self.folders)
 
-
 class _SubmoduleAlternateRemote():
     def __init__(self, element, remotes):
-        try:
-            self.remote_name = element.attrib['remote']
-            self.originalUrl = element.attrib['originalUrl']
-            self.altUrl = element.text
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
-
-        if self.remote_name not in remotes:
-            raise KeyError(NO_REMOTE_EXISTS_WITH_NAME.format(self.remote_name))
+        """Parse required attributes and validate the remote from a ``<SubmoduleAlternateRemote>`` element."""
+        self.remote_name, self.originalUrl, self.altUrl = _parse_submodule_alternate_remote_attribs(element, remotes)
 
     @property
     def tuple(self):
+        """Return a :class:`SubmoduleAlternateRemote` namedtuple representation."""
         return SubmoduleAlternateRemote(self.remote_name, self.originalUrl, self.altUrl)
 
+def _parse_submodule_alternate_remote_attribs(element, remotes):
+    """Return ``(remote_name, original_url, alt_url)`` or raise ``KeyError`` if any required attribute is missing or the remote name is not in ``remotes``."""
+    try:
+        remote_name = element.attrib['remote']
+        original_url = element.attrib['originalUrl']
+        alt_url = element.text
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    if remote_name not in remotes:
+        raise KeyError(NO_REMOTE_EXISTS_WITH_NAME.format(remote_name))
+    return remote_name, original_url, alt_url
 
 class _SubmoduleInitEntry():
     def __init__(self, element):
