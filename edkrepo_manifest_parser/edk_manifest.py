@@ -897,15 +897,12 @@ class ManifestXml(BaseXmlHelper):
 
 class _PatchSet():
     def __init__(self, element):
-        try:
-            self.remote = element.attrib['remote']
-            self.name = element.attrib['name']
-            self.parentSha = element.attrib['parentSha']
-            self.fetchBranch = element.attrib['fetchBranch']
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required attributes from a ``<PatchSet>`` XML element."""
+        self.remote, self.name, self.parentSha, self.fetchBranch = \
+            _parse_patchset_required_attribs(element)
 
     def __eq__(self, other_patchset):
+        """Return ``True`` if *other_patchset* has the same four required fields."""
         if isinstance(other_patchset, _PatchSet):
             return (self.name, self.remote, self.parentSha, self.fetchBranch) == \
             (other_patchset.name, other_patchset.remote, other_patchset.parentSha, other_patchset.fetchBranch)
@@ -913,7 +910,19 @@ class _PatchSet():
 
     @property
     def tuple(self):
+        """Return a :class:`PatchSet` namedtuple representation of this patchset."""
         return PatchSet(self.remote, self.name, self.parentSha, self.fetchBranch)
+
+def _parse_patchset_required_attribs(element):
+    """Return ``(remote, name, parentSha, fetchBranch)`` from a ``<PatchSet>`` element, or raise ``KeyError`` if any required attribute is absent."""
+    try:
+        remote = element.attrib['remote']
+        name = element.attrib['name']
+        parentSha = element.attrib['parentSha']
+        fetchBranch = element.attrib['fetchBranch']
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return remote, name, parentSha, fetchBranch
 
 class _PatchSetOperations():
     def __init__(self, element):
