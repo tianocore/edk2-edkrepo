@@ -1077,12 +1077,8 @@ class _Combination():
 
 class _RepoSource():
     def __init__(self, element, remotes):
-        try:
-            self.root = element.attrib['localRoot']
-            self.remote_name = element.attrib['remote']
-            self.remote_url = remotes[element.attrib['remote']].url
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional attributes from a ``<Source>`` XML element, resolving the remote URL from ``remotes``."""
+        self.root, self.remote_name, self.remote_url = _parse_repo_source_required_attribs(element, remotes)
         try:
             self.branch = element.attrib['branch']
         except Exception:
@@ -1139,10 +1135,20 @@ class _RepoSource():
 
     @property
     def tuple(self):
+        """Return a :class:`RepoSource` namedtuple representation of this repository source."""
         return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
                           self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set, self.blobless, self.treeless,
                           self.nested_repo)
 
+def _parse_repo_source_required_attribs(element, remotes):
+    """Return ``(root, remote_name, remote_url)`` from a ``<Source>`` element, or raise ``KeyError`` if any required attribute or remote lookup fails."""
+    try:
+        root = element.attrib['localRoot']
+        remote_name = element.attrib['remote']
+        remote_url = remotes[element.attrib['remote']].url
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return root, remote_name, remote_url
 
 class _SparseSettings():
     def __init__(self, element):
