@@ -1125,14 +1125,12 @@ def _parse_repo_hook_required_attribs(element):
 
 class _Combination():
     def __init__(self, element):
-        try:
-            self.name = element.attrib['name']
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional attributes from a ``<Combination>`` XML element."""
+        self.name = _parse_combination_required_attribs(element)
         try:
             self.description = element.attrib['description']
         except Exception:
-            self.description = None   # description is optional attribute
+            self.description = None
         try:
             self.archived = (element.attrib['archived'].lower() == 'true')
         except Exception:
@@ -1144,8 +1142,16 @@ class _Combination():
 
     @property
     def tuple(self):
+        """Return a :class:`Combination` namedtuple representation of this combination."""
         return Combination(self.name, self.description, self.venv_enable)
 
+def _parse_combination_required_attribs(element):
+    """Return the ``name`` attribute from a ``<Combination>`` element, or raise ``KeyError`` if absent."""
+    try:
+        name = element.attrib['name']
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return name
 
 class _RepoSource():
     def __init__(self, element, remotes):
