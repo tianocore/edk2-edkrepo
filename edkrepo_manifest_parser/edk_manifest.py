@@ -1262,11 +1262,8 @@ class _SubmoduleAlternateRemote():
 
 class _SubmoduleInitEntry():
     def __init__(self, element):
-        try:
-            self.remote_name = element.attrib['remote']
-            self.path = element.text
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional attributes from a ``<SubmoduleInitEntry>`` element."""
+        self.remote_name, self.path = _parse_submodule_init_required_attribs(element)
         try:
             self.combo = element.attrib['combo']
         except Exception:
@@ -1278,8 +1275,17 @@ class _SubmoduleInitEntry():
 
     @property
     def tuple(self):
+        """Return a :class:`SubmoduleInitPath` namedtuple representation."""
         return SubmoduleInitPath(self.remote_name, self.combo, self.recursive, self.path)
 
+def _parse_submodule_init_required_attribs(element):
+    """Return ``(remote_name, path)`` or raise ``KeyError`` if the required ``remote`` attribute is missing."""
+    try:
+        remote_name = element.attrib['remote']
+        path = element.text
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return remote_name, path
 
 #
 # Optional entry point for debug and validation of the CiIndexXml & ManifestXml classes
