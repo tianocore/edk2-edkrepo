@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -140,6 +140,7 @@ class BaseXmlHelper():
 #
 class CiIndexXml(BaseXmlHelper):
     def __init__(self, fileref):
+        """Parse `fileref` as a CiIndex XML file and populate the internal project map."""
         super().__init__(fileref, 'ProjectList')
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
@@ -149,6 +150,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def project_list(self):
+        """Return a list of names for all non-archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is False:
@@ -157,6 +159,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def archived_project_list(self):
+        """Return a list of names for all archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is True:
@@ -164,6 +167,7 @@ class CiIndexXml(BaseXmlHelper):
         return proj_names
 
     def get_project_xml(self, project_name):
+        """Return the XML path for `project_name`, or raise `ValueError` if not found."""
         if project_name in self._projects:
             return self._projects[project_name].xmlPath
         else:
@@ -1179,6 +1183,7 @@ class _SparseData():
 
 class _FolderToFolderMappingFolderExclude():
     def __init__(self, element):
+        """Parse optional path attribute from a ``<Exclude>`` element; defaults to ``None``."""
         self.path = None
         try:
             self.path = element.attrib['path']
@@ -1187,6 +1192,7 @@ class _FolderToFolderMappingFolderExclude():
 
     @property
     def tuple(self):
+        """Return a :class:`FolderToFolderMappingFolderExclude` namedtuple representation of this exclude entry."""
         return FolderToFolderMappingFolderExclude(self.path)
 
 
