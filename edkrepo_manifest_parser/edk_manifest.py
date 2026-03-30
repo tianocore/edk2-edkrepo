@@ -1207,6 +1207,7 @@ class _SparseSettings():
 
 class _SparseData():
     def __init__(self, element):
+        """Parse optional attributes and AlwaysInclude/AlwaysExclude children from a ``<SparseData>`` element."""
         self.combination = None
         self.remote_name = None
         self.always_include = []
@@ -1226,6 +1227,7 @@ class _SparseData():
 
     @property
     def tuple(self):
+        """Return a :class:`SparseData` namedtuple representation of this sparse data."""
         return SparseData(self.combination, self.remote_name, self.always_include, self.always_exclude)
 
 
