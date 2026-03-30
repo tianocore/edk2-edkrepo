@@ -360,12 +360,14 @@ class ManifestXml(BaseXmlHelper):
         return
 
     def is_pin_file(self):
+        """Return True if the parsed file is of type Pin, False otherwise."""
         if self._xml_type == 'Pin':
             return True
         else:
             return False
 
     def add_combo(self, element):
+        """Append `element` to the CombinationList in the tree and register it internally."""
         self._tree.find('CombinationList').append(element)
         combo = _Combination(element)
         self._add_combo_source(element, combo)
@@ -380,12 +382,13 @@ class ManifestXml(BaseXmlHelper):
         self._combo_sources[combo.name] = temp_sources
 
     def _add_unique_item(self, obj, item_dict, tag):
-        # add the 'obj' to 'dict', or raise error if it already exists
+        """Add `obj` to `item_dict` keyed by name, or raise KeyError if the key already exists."""
         if obj.name in item_dict:
             raise KeyError(DUPLICATE_TAG_ERROR.format(tag, obj.name))
         item_dict[obj.name] = obj
 
     def _tuple_list(self, obj_list):
+        """Return a list of `.tuple` values for each object in `obj_list`."""
         tuples = []
         for obj in obj_list:
             tuples.append(obj.tuple)
@@ -398,32 +401,40 @@ class ManifestXml(BaseXmlHelper):
     #
     @property
     def project_info(self):
+        """Return the ProjectInfo namedtuple for this manifest."""
         return self._project_info.tuple
 
     @property
     def general_config(self):
+        """Return the GeneralConfig namedtuple for this manifest."""
         return self._general_config.tuple
 
     @property
     def remotes(self):
+        """Return a list of RemoteRepo namedtuples for all remotes in this manifest."""
         return self._tuple_list(self._remotes.values())
 
     def get_remote(self, remote_name):
+        """Return the _RemoteRepo object for `remote_name`, or None if not found."""
         if remote_name in self._remotes:
             return self._remotes[remote_name]
-    
+
     def get_remotes_dict(self):
+        """Return a dict mapping each remote name to its URL."""
         return {remote.name: remote.url for remote in self.remotes}
 
     @property
     def combinations(self):
+        """Return a list of Combination namedtuples for all non-archived combinations."""
         return self._tuple_list([x for x in self._combinations.values() if not x.archived])
 
     @property
     def archived_combinations(self):
+        """Return a list of Combination namedtuples for all archived combinations."""
         return self._tuple_list([x for x in self._combinations.values() if x.archived])
 
     def get_repo_sources(self, combo_name):
+        """Return RepoSource tuples for `combo_name`; fall back to default combo on 'Pin:' prefix, or raise ValueError."""
         if combo_name in self._combo_sources:
             return self._tuple_list(self._combo_sources[combo_name])
         elif combo_name.startswith('Pin:'):
@@ -434,8 +445,8 @@ class ManifestXml(BaseXmlHelper):
             raise ValueError(COMBO_INVALIDINPUT_ERROR.format(combo_name))
 
     def get_parent_of_nested_repo(self, repo_sources_to_search, repo_local_root):
-        if len(os.path.normpath(repo_local_root).split(os.sep)) <= 1:
-            raise ValueError(INVALID_REPO_PATH_ERROR.format(repo_local_root))
+        """Return the parent RepoSource for `repo_local_root`, or raise ValueError if not found."""
+        _validate_repo_local_root_or_raise(repo_local_root)
 
         current_path = os.path.normpath(repo_local_root)
 
@@ -452,24 +463,29 @@ class ManifestXml(BaseXmlHelper):
 
     @property
     def repo_hooks(self):
+        """Return a list of RepoHook namedtuples for all client git hooks."""
         return self._tuple_list(self._client_hook_list)
 
     @property
     def dsc_list(self):
+        """Return the list of DSC file paths defined in this manifest."""
         return self._dsc_list
 
     @property
     def sparse_settings(self):
+        """Return the SparseSettings namedtuple if defined, otherwise None."""
         if self._sparse_settings:
             return self._sparse_settings.tuple
         return None
 
     @property
     def sparse_data(self):
+        """Return a list of SparseData namedtuples for all sparse checkout entries."""
         return self._tuple_list(self._sparse_data)
 
     @property
     def folder_to_folder_mappings(self):
+        """Return a list of FolderToFolderMapping namedtuples for all folder mappings."""
         f2f_tuples = []
         for f2f_mapping in self._folder_to_folder_mappings:
             folders = f2f_mapping.folders
@@ -485,9 +501,11 @@ class ManifestXml(BaseXmlHelper):
 
     @property
     def current_combo(self):
+        """Return the name of the currently cloned combination."""
         return self.general_config.current_combo
 
     def get_combo_element(self, name):
+        """Return a deepcopy of the `<Combination>` element with the given name, or raise ValueError."""
         combinations = self._tree.find('CombinationList')
         for combo in combinations.iter(tag='Combination'):
             if combo.attrib['name'] == name:
@@ -496,13 +514,16 @@ class ManifestXml(BaseXmlHelper):
 
     @property
     def commit_templates(self):
+        """Return the dict of commit message templates keyed by remote name."""
         return self._commit_templates
 
     @property
     def submodule_alternate_remotes(self):
+        """Return a list of SubmoduleAlternateRemote namedtuples for all alternate remote entries."""
         return self._tuple_list(self._submodule_alternate_remotes)
 
     def get_submodule_alternates_for_remote(self, remote_name):
+        """Return a list of SubmoduleAlternateRemote tuples whose remote_name matches `remote_name`."""
         alternates = []
         for alternate in self._submodule_alternate_remotes:
             if alternate.remote_name == remote_name:
@@ -510,6 +531,7 @@ class ManifestXml(BaseXmlHelper):
         return alternates
 
     def get_submodule_init_paths(self, remote_name=None, combo=None):
+        """Return SubmoduleInitPath tuples filtered by remote_name and/or combo; returns all if both are None."""
         submodule_list = []
         if remote_name is None and combo is None:
             submodule_list = self._tuple_list(self._submodule_init_list)
@@ -570,6 +592,7 @@ class ManifestXml(BaseXmlHelper):
         self._general_config.source_manifest_repo = manifest_repo
 
     def write_tree(self, filename=None):
+        """Write the internal ElementTree directly to `filename`."""
         self._tree.write(filename)
 
     def _dfs_traverse_etree(self, node):
@@ -598,6 +621,7 @@ class ManifestXml(BaseXmlHelper):
         return current_dict
 
     def generate_pin_etree(self, description, combo_name, repo_source_list):
+        """Build and return an ElementTree representing a Pin file for the given combo and sources."""
         pin_tree = ET.ElementTree(ET.Element('Pin'))
         pin_root = pin_tree.getroot()
 
@@ -746,12 +770,14 @@ class ManifestXml(BaseXmlHelper):
         return pin_tree
 
     def generate_pin_xml(self, description, combo_name, repo_source_list, filename=None):
-        # Filename should be .xml
+        # Filename should be XML
+        """Generate a Pin XML file from the given combo and sources and write it to `filename`."""
         pin_tree = self.generate_pin_etree(description, combo_name, repo_source_list)
         pin_tree.write(filename)
 
     def generate_pin_json(self, description, combo_name, repo_source_list, filename=None):
         # Filename should be .json
+        """Generate a Pin JSON file from the given combo and sources and write it to `filename`."""
         pin_tree = self.generate_pin_etree(description, combo_name, repo_source_list)
         pin_root = pin_tree.getroot()
 
@@ -761,6 +787,7 @@ class ManifestXml(BaseXmlHelper):
             f.write(json.dumps(json_out, indent=2))
 
     def _compare_elements(self, element1, element2):
+        """Return True if `element1` and `element2` are structurally equal, including tag, text, attributes, and children."""
         if element1.tag != element2.tag:
             return False
         if element1.text != element2.text:
@@ -783,6 +810,7 @@ class ManifestXml(BaseXmlHelper):
         return all(self._compare_elements(e1, e2) for e1, e2 in zip(element1, element2))
 
     def equals(self, other, ignore_current_combo=False):
+        """Return True if this manifest is structurally equal to `other`, optionally ignoring the current combo."""
         status = self._compare_elements(self._tree.getroot(), other._tree.getroot())
         if not status:
             tree1 = copy.deepcopy(self._tree.getroot())
@@ -819,9 +847,11 @@ class ManifestXml(BaseXmlHelper):
         return status
 
     def __eq__(self, other):
+        """Return True if this manifest equals `other` using structural comparison."""
         return self.equals(other)
 
     def __ne__(self, other):
+        """Return True if this manifest does not equal `other`."""
         return not self.__eq__(other)
 
     @property
@@ -835,6 +865,7 @@ class ManifestXml(BaseXmlHelper):
         return patchsets
 
     def get_patchset(self, name, remote):
+        """Return the PatchSet for `(name, remote)`, or raise KeyError if not found."""
         if (name, remote) in self._patch_sets.keys():
             for patchset in self._patch_sets.keys():
                 if patchset[0] == name and patchset[1] == remote:
@@ -843,6 +874,7 @@ class ManifestXml(BaseXmlHelper):
             raise KeyError(NO_PATCHSET_EXISTS.format(name))
 
     def get_patchsets_for_combo(self, combo=None):
+        """Return a dict of patchsets for the given combo, or all combos if combo is None; raise KeyError if none found."""
         patchsets = {}
         if combo is None:
             sources = self._combo_sources
@@ -894,7 +926,12 @@ class ManifestXml(BaseXmlHelper):
                 raise ValueError(PATCHSET_PARENT_CIRCULAR_DEPENDENCY)
             return patch_set_operations
         raise ValueError(PATCHSET_UNKNOWN_ERROR.format(name, self._fileref))
-
+    
+def _validate_repo_local_root_or_raise(repo_local_root):
+    """Raise ValueError if repo_local_root has only one path component."""
+    if len(os.path.normpath(repo_local_root).split(os.sep)) <= 1:
+        raise ValueError(INVALID_REPO_PATH_ERROR.format(repo_local_root))
+        
 class _PatchSet():
     def __init__(self, element):
         try:
