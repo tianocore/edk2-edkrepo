@@ -937,12 +937,12 @@ class ManifestXml(BaseXmlHelper):
                 raise ValueError(PATCHSET_PARENT_CIRCULAR_DEPENDENCY)
             return patch_set_operations
         raise ValueError(PATCHSET_UNKNOWN_ERROR.format(name, self._fileref))
-    
+
 def _validate_repo_local_root_or_raise(repo_local_root):
     """Raise ValueError if repo_local_root has only one path component."""
     if len(os.path.normpath(repo_local_root).split(os.sep)) <= 1:
         raise ValueError(INVALID_REPO_PATH_ERROR.format(repo_local_root))
-        
+
 class _PatchSet():
     def __init__(self, element):
         """Parse required attributes from a ``<PatchSet>`` XML element."""
@@ -1162,12 +1162,8 @@ def _parse_combination_required_attribs(element):
 
 class _RepoSource():
     def __init__(self, element, remotes):
-        try:
-            self.root = element.attrib['localRoot']
-            self.remote_name = element.attrib['remote']
-            self.remote_url = remotes[element.attrib['remote']].url
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional attributes from a ``<Source>`` XML element, resolving the remote URL from ``remotes``."""
+        self.root, self.remote_name, self.remote_url = _parse_repo_source_required_attribs(element, remotes)
         try:
             self.branch = element.attrib['branch']
         except Exception:
@@ -1216,7 +1212,7 @@ class _RepoSource():
 
         if self.patch_set is not None and (self.branch is not None or self.commit is not None or self.tag is not None):
             raise ValueError(INVALID_COMBO_DEFINITION_ERROR)
-        
+
         if len(os.path.normpath(self.root).split(os.path.sep)) > 1:
             self.nested_repo = True
         else:
@@ -1224,10 +1220,20 @@ class _RepoSource():
 
     @property
     def tuple(self):
+        """Return a :class:`RepoSource` namedtuple representation of this repository source."""
         return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
                           self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set, self.blobless, self.treeless,
                           self.nested_repo)
 
+def _parse_repo_source_required_attribs(element, remotes):
+    """Return ``(root, remote_name, remote_url)`` from a ``<Source>`` element, or raise ``KeyError`` if any required attribute or remote lookup fails."""
+    try:
+        root = element.attrib['localRoot']
+        remote_name = element.attrib['remote']
+        remote_url = remotes[element.attrib['remote']].url
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return root, remote_name, remote_url
 
 class _SparseSettings():
     def __init__(self, element):
