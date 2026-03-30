@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -140,6 +140,7 @@ class BaseXmlHelper():
 #
 class CiIndexXml(BaseXmlHelper):
     def __init__(self, fileref):
+        """Parse `fileref` as a CiIndex XML file and populate the internal project map."""
         super().__init__(fileref, 'ProjectList')
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
@@ -149,6 +150,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def project_list(self):
+        """Return a list of names for all non-archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is False:
@@ -157,6 +159,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def archived_project_list(self):
+        """Return a list of names for all archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is True:
@@ -164,6 +167,7 @@ class CiIndexXml(BaseXmlHelper):
         return proj_names
 
     def get_project_xml(self, project_name):
+        """Return the XML path for `project_name`, or raise `ValueError` if not found."""
         if project_name in self._projects:
             return self._projects[project_name].xmlPath
         else:
@@ -1073,12 +1077,8 @@ class _Combination():
 
 class _RepoSource():
     def __init__(self, element, remotes):
-        try:
-            self.root = element.attrib['localRoot']
-            self.remote_name = element.attrib['remote']
-            self.remote_url = remotes[element.attrib['remote']].url
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+        """Parse required and optional attributes from a ``<Source>`` XML element, resolving the remote URL from ``remotes``."""
+        self.root, self.remote_name, self.remote_url = _parse_repo_source_required_attribs(element, remotes)
         try:
             self.branch = element.attrib['branch']
         except Exception:
@@ -1135,10 +1135,20 @@ class _RepoSource():
 
     @property
     def tuple(self):
+        """Return a :class:`RepoSource` namedtuple representation of this repository source."""
         return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
                           self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set, self.blobless, self.treeless,
                           self.nested_repo)
 
+def _parse_repo_source_required_attribs(element, remotes):
+    """Return ``(root, remote_name, remote_url)`` from a ``<Source>`` element, or raise ``KeyError`` if any required attribute or remote lookup fails."""
+    try:
+        root = element.attrib['localRoot']
+        remote_name = element.attrib['remote']
+        remote_url = remotes[element.attrib['remote']].url
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return root, remote_name, remote_url
 
 class _SparseSettings():
     def __init__(self, element):
