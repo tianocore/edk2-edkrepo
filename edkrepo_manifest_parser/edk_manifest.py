@@ -1252,6 +1252,7 @@ class _FolderToFolderMappingFolderExclude():
 
 class _FolderToFolderMappingFolder():
     def __init__(self, element):
+        """Parse optional folder attributes and Exclude children from a ``<Folder>`` or ``<File>`` element."""
         self.project1_folder = None
         self.project2_folder = None
         self.excludes = []
@@ -1268,6 +1269,7 @@ class _FolderToFolderMappingFolder():
 
     @property
     def tuple(self):
+        """Return a :class:`FolderToFolderMappingFolder` namedtuple representation of this folder entry."""
         return FolderToFolderMappingFolder(self.project1_folder, self.project2_folder, self.excludes)
 
 
