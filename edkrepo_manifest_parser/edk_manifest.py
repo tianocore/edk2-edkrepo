@@ -173,20 +173,23 @@ class CiIndexXml(BaseXmlHelper):
         else:
             raise ValueError(INVALID_PROJECTNAME_ERROR.format(project_name))
 
-
 class _Project():
     def __init__(self, element):
+        """Parse required and optional attributes from a `<Project>` XML element."""
+        self.name, self.xmlPath = _parse_project_required_attribs(element)
         try:
-            self.name = element.attrib['name']
-            self.xmlPath = element.attrib['xmlPath']
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
-        try:
-            # if the archived attrib is not explicitly set to true, then assume false
             self.archived = (element.attrib['archived'].lower() == 'true')
         except Exception:
             self.archived = False
 
+def _parse_project_required_attribs(element):
+    """Return (name, xmlPath) from `element`, or raise `KeyError` if either required attribute is missing."""
+    try:
+        name = element.attrib['name']
+        xml_path = element.attrib['xmlPath']
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    return name, xml_path
 
 #
 #  This class will parse and the manifest XML file and populate the named
