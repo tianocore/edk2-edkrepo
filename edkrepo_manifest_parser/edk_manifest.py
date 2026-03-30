@@ -1265,6 +1265,7 @@ class _FolderToFolderMappingFolder():
 
 class _FolderToFolderMapping():
     def __init__(self, element):
+        """Parse optional attributes and Folder/File children from a ``<FolderToFolderMapping>`` element."""
         self.project1 = None
         self.project2 = None
         self.remote_name = None
@@ -1288,6 +1289,7 @@ class _FolderToFolderMapping():
 
     @property
     def tuple(self):
+        """Return a :class:`FolderToFolderMapping` namedtuple representation of this folder-to-folder mapping."""
         return FolderToFolderMapping(self.project1, self.project2, self.remote_name, self.folders)
 
 
