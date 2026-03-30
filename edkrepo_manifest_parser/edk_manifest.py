@@ -928,6 +928,7 @@ class _PatchSet():
 
 class _PatchSetOperations():
     def __init__(self, element):
+        """Parse optional attributes from a patchset operation element; absent attributes default to ``None``."""
         self.type = element.tag
         try:
             self.file = element.attrib['file']
@@ -952,6 +953,7 @@ class _PatchSetOperations():
 
     @property
     def tuple(self):
+        """Return a :class:`PatchOperation` namedtuple representation of this operation."""
         return PatchOperation(self.type, self.file, self.sha, self.source_remote, self.source_branch, self.merge_strategy)
 
 class _ProjectInfo():
