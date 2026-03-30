@@ -3,7 +3,7 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -140,6 +140,7 @@ class BaseXmlHelper():
 #
 class CiIndexXml(BaseXmlHelper):
     def __init__(self, fileref):
+        """Parse `fileref` as a CiIndex XML file and populate the internal project map."""
         super().__init__(fileref, 'ProjectList')
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
@@ -149,6 +150,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def project_list(self):
+        """Return a list of names for all non-archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is False:
@@ -157,6 +159,7 @@ class CiIndexXml(BaseXmlHelper):
 
     @property
     def archived_project_list(self):
+        """Return a list of names for all archived projects in the index."""
         proj_names = []
         for proj in self._projects.values():
             if proj.archived is True:
@@ -164,6 +167,7 @@ class CiIndexXml(BaseXmlHelper):
         return proj_names
 
     def get_project_xml(self, project_name):
+        """Return the XML path for `project_name`, or raise `ValueError` if not found."""
         if project_name in self._projects:
             return self._projects[project_name].xmlPath
         else:
@@ -979,6 +983,7 @@ class _ProjectInfo():
 
 class _GeneralConfig():
     def __init__(self, element):
+        """Parse optional child elements from a ``<GeneralConfig>`` XML element; absent fields default to ``None``."""
         try:
             self.pin_path = element.find('PinPath').text
         except Exception:
@@ -998,6 +1003,7 @@ class _GeneralConfig():
 
     @property
     def tuple(self):
+        """Return a :class:`GeneralConfig` namedtuple representation of this general configuration."""
         return GeneralConfig(self.default_combo, self.curr_combo, self.pin_path, self.source_manifest_repo)
 
 
