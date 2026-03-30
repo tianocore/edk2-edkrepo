@@ -1242,23 +1242,27 @@ class _FolderToFolderMapping():
     def tuple(self):
         return FolderToFolderMapping(self.project1, self.project2, self.remote_name, self.folders)
 
-
 class _SubmoduleAlternateRemote():
     def __init__(self, element, remotes):
-        try:
-            self.remote_name = element.attrib['remote']
-            self.originalUrl = element.attrib['originalUrl']
-            self.altUrl = element.text
-        except KeyError as k:
-            raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
-
-        if self.remote_name not in remotes:
-            raise KeyError(NO_REMOTE_EXISTS_WITH_NAME.format(self.remote_name))
+        """Parse required attributes and validate the remote from a ``<SubmoduleAlternateRemote>`` element."""
+        self.remote_name, self.originalUrl, self.altUrl = _parse_submodule_alternate_remote_attribs(element, remotes)
 
     @property
     def tuple(self):
+        """Return a :class:`SubmoduleAlternateRemote` namedtuple representation."""
         return SubmoduleAlternateRemote(self.remote_name, self.originalUrl, self.altUrl)
 
+def _parse_submodule_alternate_remote_attribs(element, remotes):
+    """Return ``(remote_name, original_url, alt_url)`` or raise ``KeyError`` if any required attribute is missing or the remote name is not in ``remotes``."""
+    try:
+        remote_name = element.attrib['remote']
+        original_url = element.attrib['originalUrl']
+        alt_url = element.text
+    except KeyError as k:
+        raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
+    if remote_name not in remotes:
+        raise KeyError(NO_REMOTE_EXISTS_WITH_NAME.format(remote_name))
+    return remote_name, original_url, alt_url
 
 class _SubmoduleInitEntry():
     def __init__(self, element):
