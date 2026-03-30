@@ -3,7 +3,7 @@
 ## @file
 # send_review_command.py
 #
-# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -111,7 +111,7 @@ class SendReviewCommand(EdkrepoCommand):
         try:
             repo.git.commit(latest_sha)
         except ValueError:
-            repo.git.remotes.origin.fetch('refs/heads/{}'.format(target_branch))
+            common_repo_functions.fetch_from_remote(repo.git, repo.git.remotes.origin, 'refs/heads/{}'.format(target_branch))
         branch_origin = next(itertools.islice(repo.git.iter_commits(), commit_count, commit_count + 1))
         behind_count = int(repo.git.git.rev_list('--count', '{}..{}'.format(branch_origin.hexsha, latest_sha)))
         if behind_count:

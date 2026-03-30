@@ -3,7 +3,7 @@
 ## @file
 # common_repo_functions.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -27,7 +27,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException
 from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
 from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
-from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
+from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoProxyNotSetException
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoNotFoundException
 from edkrepo.common.progress_handler import GitProgressHandler
 from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, BRANCH_EXISTS, CHECKING_OUT_DEFAULT, CHECKING_OUT_PATCHSET, LOCAL_BRANCH_EXISTS
@@ -53,9 +53,11 @@ from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, V
 from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
 from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED, BRANCH_COLLIDES_WITH_PARENT_SHA
 from edkrepo.common.humble import MISSING_BRANCH_COMMIT, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED, TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import CLONE_FAIL, NETRC_NOT_FOUND
+from edkrepo.common.humble import CLONE_FAIL, PROXY_STR_NOT_FOUND, NETRC_NOT_FOUND
+from edkrepo.common.humble import AUTOMATIC_REMOTE_PRUNE, AUTOMATIC_REFS_REPACK
 from edkrepo.common.pathfix import get_actual_path, expanduser
 from edkrepo.common.git_version import GitVersion
+from edkrepo.common.repo_case_conflict_solver import scrub_repo_case_conflicts, scrub_stale_remote_reflogs
 from project_utils.sparse import BuildInfo, process_sparse_checkout
 from edkrepo.config.config_factory import get_workspace_path
 from edkrepo.config.config_factory import get_workspace_manifest
@@ -329,7 +331,7 @@ def check_branches(sources, workspace_path):
             continue
         if repo_to_check.branch not in repo.remotes['origin'].refs:
             try:
-               repo.remotes.origin.fetch("refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_check.branch), progress=GitProgressHandler())
+               fetch_from_remote(repo, repo.remotes.origin, "refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_check.branch), progress=GitProgressHandler())
             except:
                 raise EdkrepoManifestInvalidException(CHECKOUT_NO_REMOTE.format(repo_to_check.root))
 
@@ -833,7 +835,7 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
         if patchset.remote == remote.name:
             REMOTE_IN_REMOTE_LIST = True
             try:
-                repo.remotes.origin.fetch(patchset.fetch_branch, progress=GitProgressHandler())
+                fetch_from_remote(repo, repo.remotes.origin, patchset.fetch_branch, progress=GitProgressHandler())
             except:
                 raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
             parent_patchsets = _list_patchset_ancestors(manifest_obj, patchset)
@@ -985,7 +987,7 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                         raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(operation.source_remote))
                 else:
                     try:
-                        repo.remotes.origin.fetch(operation.source_branch)
+                        fetch_from_remote(repo, repo.remotes.origin, operation.source_branch)
                     except:
                         raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                     try:
@@ -1027,6 +1029,77 @@ def get_commits_ahead(repo, rev1, rev2):
         "{}..{}".format(
             rev1,
             rev2))
+
+def _is_case_insensitive_fs():
+    """Returns True on filesystems that are case-insensitive by default (Windows, macOS)."""
+    return os.name == 'nt' or sys.platform == 'darwin'
+
+def _fetch_error_needs_prune(e):
+    combined = (e.stdout or '') + (e.stderr or '')
+    return ('error: some local refs could not be updated' in combined or
+            'error: cannot lock ref' in combined or
+            'unable to update local ref' in combined or
+            'unable to resolve reference' in combined or
+            'cannot update the ref' in combined)
+
+def _fetch_error_needs_repack(e):
+    combined = (e.stdout or '') + (e.stderr or '')
+    return 'incorrect old value provided' in combined
+
+def fetch_from_remote(repo, remote, *args, _repack_attempted=False, _prune_attempted=False, **kwargs):
+    """
+    Fetch from a remote, automatically pruning stale remote-tracking refs on failure.
+
+    On case-insensitive filesystems, if the prune itself fails due to
+    case-conflicting ref names in the local .git directory,
+    scrub_repo_case_conflicts() is called before retrying the prune.
+
+    Args:
+        repo:     GitPython Repo object
+        remote:   GitPython Remote object (e.g. repo.remotes.origin)
+        *args:    Optional refspec arguments forwarded to remote.fetch()
+        **kwargs: Optional keyword arguments forwarded to remote.fetch() (e.g. progress=)
+    """
+    try:
+        return remote.fetch(*args, **kwargs)
+    except git.GitCommandError as fetch_error:
+        if _fetch_error_needs_repack(fetch_error):
+            if _repack_attempted:
+                raise
+            # Refs exist in both loose and packed forms with conflicting values.
+            # Pack all refs to consolidate them, then retry via a recursive call
+            # so that a potential subsequent prune error is also handled
+            # automatically.
+            ui_functions.print_info_msg(AUTOMATIC_REFS_REPACK, header=False)
+            # Give the OS time to release file handles Git has open
+            time.sleep(1.0)
+            repo.git.pack_refs('--all')
+            time.sleep(1.0)
+            return fetch_from_remote(repo, remote, *args, _repack_attempted=True, _prune_attempted=_prune_attempted, **kwargs)
+        elif _fetch_error_needs_prune(fetch_error):
+            if _prune_attempted:
+                raise
+            ui_functions.print_info_msg(AUTOMATIC_REMOTE_PRUNE, header=False)
+            # Give the OS time to release file handles Git has open
+            time.sleep(1.0)
+            try:
+                repo.git.remote('prune', remote.name)
+            except git.GitCommandError:
+                if _is_case_insensitive_fs():
+                    time.sleep(1.0)
+                    scrub_repo_case_conflicts(repo, verbose=True)
+                    time.sleep(1.0)
+                    ui_functions.print_info_msg(AUTOMATIC_REMOTE_PRUNE, header=False)
+                    repo.git.remote('prune', remote.name)
+                else:
+                    raise
+            time.sleep(1.0)
+            if _is_case_insensitive_fs():
+                scrub_stale_remote_reflogs(repo, verbose=True)
+                time.sleep(1.0)
+            return fetch_from_remote(repo, remote, *args, _repack_attempted=_repack_attempted, _prune_attempted=True, **kwargs)
+        else:
+            raise
 
 def get_proxy_str():
     proxy_out = subprocess.run('git config --global --get-urlmatch http https://github.com',
