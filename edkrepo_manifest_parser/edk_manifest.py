@@ -147,21 +147,17 @@ class CiIndexXml(BaseXmlHelper):
             # Todo: add check for unique
             self._projects[proj.name] = proj
 
+    def _filter_projects_by_archived(self, archived):
+        return [proj.name for proj in self._projects.values()
+                if proj.archived is archived]
+
     @property
     def project_list(self):
-        proj_names = []
-        for proj in self._projects.values():
-            if proj.archived is False:
-                proj_names.append(proj.name)
-        return proj_names
+        return self._filter_projects_by_archived(False)
 
     @property
     def archived_project_list(self):
-        proj_names = []
-        for proj in self._projects.values():
-            if proj.archived is True:
-                proj_names.append(proj.name)
-        return proj_names
+        return self._filter_projects_by_archived(True)
 
     def get_project_xml(self, project_name):
         if project_name in self._projects:
