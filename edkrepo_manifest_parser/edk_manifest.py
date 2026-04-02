@@ -135,6 +135,12 @@ class BaseXmlHelper():
             if index == 0:
                 parent.text = '\n' + ('  ' * depth)
 
+    def _add_unique_item(self, obj, item_dict, tag):
+        # add the 'obj' to 'dict', or raise error if it already exists
+        if obj.name in item_dict:
+            raise KeyError(DUPLICATE_TAG_ERROR.format(tag, obj.name))
+        item_dict[obj.name] = obj
+
 #
 #  This class will parse and the Index XML file and provide the data to the caller
 #
@@ -144,8 +150,7 @@ class CiIndexXml(BaseXmlHelper):
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
             proj = _Project(element)
-            # Todo: add check for unique
-            self._projects[proj.name] = proj
+            self._add_unique_item(proj, self._projects, 'Project')
 
     @property
     def project_list(self):
@@ -374,12 +379,6 @@ class ManifestXml(BaseXmlHelper):
         for element in subroot.iter(tag='Source'):
             temp_sources.append(_RepoSource(element, self._remotes))
         self._combo_sources[combo.name] = temp_sources
-
-    def _add_unique_item(self, obj, item_dict, tag):
-        # add the 'obj' to 'dict', or raise error if it already exists
-        if obj.name in item_dict:
-            raise KeyError(DUPLICATE_TAG_ERROR.format(tag, obj.name))
-        item_dict[obj.name] = obj
 
     def _tuple_list(self, obj_list):
         tuples = []
