@@ -3,7 +3,7 @@
 ## @file
 # container_support.py
 #
-# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,7 +11,8 @@ import os
 import sys
 
 if sys.platform == "win32":
-    from ctypes import windll, c_void_p, c_bool, c_long, c_ulong, Structure, POINTER, byref, sizeof, WinError, GetLastError
+    from ctypes import (POINTER, GetLastError, Structure, WinError, byref,
+                        c_bool, c_long, c_ulong, c_void_p, sizeof, windll)
 
     class _USEROBJECTFLAGS(Structure):
         _fields_ = [("fInherit", c_ulong),

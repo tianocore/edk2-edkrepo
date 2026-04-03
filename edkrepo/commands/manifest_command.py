@@ -3,24 +3,24 @@
 ## @file
 # manifest_command.py
 #
-# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import os
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.manifest_args as arguments
-import edkrepo.commands.humble.manifest_humble as humble
 import edkrepo.commands.humble.common_humble as common_humble
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoManifestNotFoundException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_single_index
+import edkrepo.commands.humble.manifest_humble as humble
+import edkrepo_manifest_parser.edk_manifest_validation as manifest_validation
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.edkrepo_exception import (
+    EdkrepoManifestNotFoundException, EdkrepoWorkspaceInvalidException)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_project_in_single_index, find_source_manifest_repo,
+    list_available_manifest_repos, pull_all_manifest_repos)
 from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
-import edkrepo_manifest_parser.edk_manifest_validation as manifest_validation
 
 
 class ManifestCommand(EdkrepoCommand):
@@ -114,7 +114,7 @@ class ManifestCommand(EdkrepoCommand):
                             self.verbose_project_data(project, proj_manifest, ci_index_xml)
                     except Exception as e:
                         print(humble.BAD_MANIFEST)
-    
+
     def verbose_project_data(self, project, proj_manifest, ci_index_xml):
         print(humble.MANIFEST_FILE_PATH.format(ci_index_xml.get_project_xml(project)))
         print(humble.DEV_LEAD.format(' '.join(x for x in proj_manifest.project_info.dev_leads)))

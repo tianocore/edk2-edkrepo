@@ -3,14 +3,15 @@
 ## @file
 # update_manifest_repo_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import DryRunArgument
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 import edkrepo.commands.arguments.update_manifest_repo as arguments
+from edkrepo.commands.edkrepo_command import DryRunArgument, EdkrepoCommand
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import \
+    pull_all_manifest_repos
+
 
 class UpdateManifestRepoCommand(EdkrepoCommand):
     def __init__(self):

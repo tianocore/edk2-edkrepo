@@ -3,14 +3,13 @@
 ## @file
 # manifest_repos_maintenance_humble.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 ''' Contains user facing strings for manifest_repos_mgmt.py '''
 
-from colorama import Fore
-from colorama import Style
+from colorama import Fore, Style
 
 CLONE_SINGLE_MAN_REPO = 'Cloning global manifest repository to: {} from: {}'
 SYNC_SINGLE_MAN_REPO = 'Syncing the global manifest repository: {}'

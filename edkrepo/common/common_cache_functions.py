@@ -3,7 +3,7 @@
 ## @file
 # common_cache_functions.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,6 +12,7 @@ import os
 from edkrepo.config.config_factory import get_edkrepo_global_data_directory
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from project_utils.cache import RepoCache
+
 
 def get_cache_directory(config):
     if config['user_cfg_file'].caching_state:

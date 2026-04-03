@@ -3,12 +3,14 @@
 ## @file
 # composite_command.py
 #
-# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from edkrepo.commands.edkrepo_command import VerboseArgument, PerformanceArgument, ColorArgument
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.edkrepo_command import (ColorArgument,
+                                              PerformanceArgument,
+                                              VerboseArgument)
 
 
 class CompositeCommand(object):

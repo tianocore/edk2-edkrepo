@@ -3,7 +3,7 @@
 ## @file
 # squash.py
 #
-# Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,8 +11,11 @@ import os
 import sys
 from subprocess import check_call
 
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
-from edkrepo.common.humble import COMMIT_NOT_FOUND, NOT_GIT_REPO, SQUASH_COMMON_ANCESTOR_REQUIRED
+from edkrepo.common.edkrepo_exception import (
+    EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException)
+from edkrepo.common.humble import (COMMIT_NOT_FOUND, NOT_GIT_REPO,
+                                   SQUASH_COMMON_ANCESTOR_REQUIRED)
+
 
 def get_git_repo_root():
     path = os.path.realpath(os.getcwd())

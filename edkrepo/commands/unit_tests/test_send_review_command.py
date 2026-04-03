@@ -1,9 +1,18 @@
-import sys
-import os
-import json
-import pytest
-from unittest.mock import patch, Mock
+#!/usr/bin/env python3
+#
+## @file
+# test_send_review_command.py
+#
+# Copyright (c) 2026, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
 
+import json
+import os
+import sys
+from unittest.mock import Mock, patch
+
+import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 from edkrepo.commands.send_review_command import SendReviewCommand
@@ -17,14 +26,14 @@ class TestGetActivePrsOnBranch:
     def command(self):
         """Provide SendReviewCommand instance"""
         return SendReviewCommand()
-    
+
     @pytest.fixture
     def mock_args(self):
         """Provide mock args with common defaults"""
         args = Mock()
         args.verbose = False
         return args
-    
+
     @pytest.fixture
     def mock_manifest(self):
         """Provide mock manifest with remote configuration"""
@@ -34,7 +43,7 @@ class TestGetActivePrsOnBranch:
         remote.name = "test_repo"
         manifest.get_remote = Mock(return_value=remote)
         return manifest
-    
+
     @pytest.fixture
     def mock_modified_repo(self):
         """Provide mock repository object"""
@@ -51,11 +60,11 @@ class TestGetActivePrsOnBranch:
         """Test that method raises EdkrepoGithubApiFailException when API returns empty array"""
         mock_curl.return_value = "/usr/bin/curl"
         mock_proxy.return_value = None
-        
+
         mock_process = Mock()
         mock_process.communicate.return_value = (json.dumps([]).encode(), b'')
         mock_popen.return_value = mock_process
-        
+
         with pytest.raises(edkrepo_exception.EdkrepoGithubApiFailException):
             command._SendReviewCommand__get_active_prs_on_branch(
                 mock_args, "test_branch", mock_modified_repo, mock_manifest, "/path/to/.netrc"
@@ -69,12 +78,12 @@ class TestGetActivePrsOnBranch:
         """Test that method raises EdkrepoGithubApiFailException when API response is missing required fields"""
         mock_curl.return_value = "/usr/bin/curl"
         mock_proxy.return_value = None
-        
+
         api_response = [{"number": 123}]
         mock_process = Mock()
         mock_process.communicate.return_value = (json.dumps(api_response).encode(), b'')
         mock_popen.return_value = mock_process
-        
+
         with pytest.raises(edkrepo_exception.EdkrepoGithubApiFailException):
             command._SendReviewCommand__get_active_prs_on_branch(
                 mock_args, "test_branch", mock_modified_repo, mock_manifest, "/path/to/.netrc"
@@ -88,11 +97,11 @@ class TestGetActivePrsOnBranch:
         """Test that method raises EdkrepoGithubApiFailException when API returns malformed JSON"""
         mock_curl.return_value = "/usr/bin/curl"
         mock_proxy.return_value = None
-        
+
         mock_process = Mock()
         mock_process.communicate.return_value = (b'invalid json{[}', b'')
         mock_popen.return_value = mock_process
-        
+
         with pytest.raises(edkrepo_exception.EdkrepoGithubApiFailException):
             command._SendReviewCommand__get_active_prs_on_branch(
                 mock_args, "test_branch", mock_modified_repo, mock_manifest, "/path/to/.netrc"
@@ -106,12 +115,12 @@ class TestGetActivePrsOnBranch:
         """Test that method raises EdkrepoGithubApiFailException when API returns error object"""
         mock_curl.return_value = "/usr/bin/curl"
         mock_proxy.return_value = None
-        
+
         error_response = {"message": "Not Found"}
         mock_process = Mock()
         mock_process.communicate.return_value = (json.dumps(error_response).encode(), b'')
         mock_popen.return_value = mock_process
-        
+
         with pytest.raises(edkrepo_exception.EdkrepoGithubApiFailException):
             command._SendReviewCommand__get_active_prs_on_branch(
                 mock_args, "test_branch", mock_modified_repo, mock_manifest, "/path/to/.netrc"
@@ -125,11 +134,11 @@ class TestGetActivePrsOnBranch:
         """Test that method raises EdkrepoGithubApiFailException when API returns non-list type"""
         mock_curl.return_value = "/usr/bin/curl"
         mock_proxy.return_value = None
-        
+
         mock_process = Mock()
         mock_process.communicate.return_value = (json.dumps("string response").encode(), b'')
         mock_popen.return_value = mock_process
-        
+
         with pytest.raises(edkrepo_exception.EdkrepoGithubApiFailException):
             command._SendReviewCommand__get_active_prs_on_branch(
                 mock_args, "test_branch", mock_modified_repo, mock_manifest, "/path/to/.netrc"
@@ -143,7 +152,7 @@ class TestBranchNameInference:
     def command(self):
         """Provide SendReviewCommand instance"""
         return SendReviewCommand()
-    
+
     @pytest.fixture
     def mock_args(self):
         """Provide mock args with common test defaults"""
@@ -155,7 +164,7 @@ class TestBranchNameInference:
         args.reviewers = None
         args.noweb = True
         return args
-    
+
     @pytest.fixture
     def mock_manifest(self):
         """Provide mock manifest with remote configuration"""
@@ -165,7 +174,7 @@ class TestBranchNameInference:
         remote.name = "test_repo"
         manifest.get_remote = Mock(return_value=remote)
         return manifest
-    
+
     @pytest.fixture
     def mock_modified_repo(self):
         """Provide mock repository object with git configuration"""
@@ -183,7 +192,7 @@ class TestBranchNameInference:
                                              command, mock_args, mock_manifest, mock_modified_repo):
         """Test that valid API response triggers update flow without branch inference"""
         mock_get_prs.return_value = {123: 'https://github.com/test_owner/test_repo/pull/123'}
-        
+
         try:
             command._SendReviewCommand__send_github_pr_branch_mode(
                 mock_args, Mock(), "feature/my-branch", "main",
@@ -191,7 +200,7 @@ class TestBranchNameInference:
             )
         except Exception:
             pass
-        
+
         mock_create_branch.assert_not_called()
 
     @patch('edkrepo.commands.send_review_command.SendReviewCommand._SendReviewCommand__get_active_prs_on_branch')
@@ -200,7 +209,7 @@ class TestBranchNameInference:
                                                                            command, mock_args, mock_manifest, mock_modified_repo):
         """Test that branches starting with pull_request use update flow when API fails"""
         mock_get_prs.side_effect = edkrepo_exception.EdkrepoGithubApiFailException("Branch not found")
-        
+
         try:
             command._SendReviewCommand__send_github_pr_branch_mode(
                 mock_args, Mock(), "pull_request/user/2025-02-01/test_pr", "main",
@@ -208,7 +217,7 @@ class TestBranchNameInference:
             )
         except Exception:
             pass
-        
+
         mock_create_branch.assert_not_called()
 
     @patch('edkrepo.commands.send_review_command.SendReviewCommand._SendReviewCommand__get_active_prs_on_branch')
@@ -218,10 +227,10 @@ class TestBranchNameInference:
         """Test that branches not starting with pull_request use create flow when API fails"""
         mock_get_prs.side_effect = edkrepo_exception.EdkrepoGithubApiFailException("Branch not found")
         mock_create_branch.return_value = "pull_request/user/2025-02-01/new_pr"
-        
+
         # Add heads attribute for branch checkout
         mock_modified_repo.git.heads = {"pull_request/user/2025-02-01/new_pr": Mock()}
-        
+
         try:
             command._SendReviewCommand__send_github_pr_branch_mode(
                 mock_args, Mock(), "feature/my-branch", "main",
@@ -229,5 +238,5 @@ class TestBranchNameInference:
             )
         except Exception:
             pass
-        
+
         mock_create_branch.assert_called_once()

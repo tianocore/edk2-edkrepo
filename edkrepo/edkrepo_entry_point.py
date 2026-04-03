@@ -3,7 +3,7 @@
 ## @file
 # edkrepo_entry_point.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -81,6 +81,7 @@ if __name__ == "__main__" or run_via_launcher_script:
                     sys.exit(1)
 
 from edkrepo.config.config_factory import GlobalConfig
+
 
 def main():
     cfg_file = GlobalConfig()

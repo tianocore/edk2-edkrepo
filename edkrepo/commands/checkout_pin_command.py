@@ -3,7 +3,7 @@
 ## @file
 # checkout_pin_command.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,22 +11,30 @@ import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.checkout_pin_args as arguments
 import edkrepo.commands.humble.checkout_pin_humble as humble
+import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.edkrepo_command import (
+    EdkrepoCommand, OverrideArgument, SourceManifestRepoArgument)
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
-from edkrepo.common.common_repo_functions import sparse_checkout_enabled, reset_sparse_checkout, sparse_checkout
-from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest
-from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET, SUBMODULE_DEINIT_FAILED
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoProjectMismatchException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+from edkrepo.common.common_repo_functions import (check_dirty_repos,
+                                                  checkout_repos,
+                                                  combinations_in_manifest,
+                                                  reset_sparse_checkout,
+                                                  sparse_checkout,
+                                                  sparse_checkout_enabled)
+from edkrepo.common.edkrepo_exception import (
+    EdkrepoInvalidParametersException, EdkrepoProjectMismatchException)
+from edkrepo.common.humble import (SPARSE_CHECKOUT, SPARSE_RESET,
+                                   SUBMODULE_DEINIT_FAILED)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo, get_manifest_repo_path,
+    list_available_manifest_repos)
+from edkrepo.config.config_factory import (get_workspace_manifest,
+                                           get_workspace_path)
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from project_utils.submodule import deinit_full, maintain_submodules
-import edkrepo.common.ui_functions as ui_functions
-
 
 
 class CheckoutPinCommand(EdkrepoCommand):

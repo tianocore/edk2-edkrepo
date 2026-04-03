@@ -3,11 +3,10 @@
 ## @file
 # build_linux_installer.py
 #
-# Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from argparse import ArgumentParser
 import configparser
 import fnmatch
 import os
@@ -15,8 +14,10 @@ import shutil
 import sys
 import tarfile
 import traceback
+from argparse import ArgumentParser
 
 import set_version_and_build_wheels as build_edkrepo
+
 
 def get_version_info(build=None):
     build_num = 0

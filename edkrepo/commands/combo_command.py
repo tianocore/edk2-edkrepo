@@ -3,22 +3,27 @@
 ## @file
 # combo_command.py
 #
-# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 import os
-from colorama import Fore
-from colorama import Style
+
+from colorama import Fore, Style
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.combo_args as arguments
 import edkrepo.commands.humble.combo_humble as humble
 import edkrepo.commands.humble.common_humble as common_humble
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path, get_manifest_repo_info_from_config
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path, get_checked_out_pin_file
-from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException, EdkrepoPinFileNotFoundException
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.edkrepo_exception import (EdkrepoManifestInvalidException,
+                                              EdkrepoPinFileNotFoundException)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo, get_manifest_repo_info_from_config,
+    get_manifest_repo_path)
+from edkrepo.config.config_factory import (get_checked_out_pin_file,
+                                           get_workspace_manifest,
+                                           get_workspace_path)
 
 
 class ComboCommand(EdkrepoCommand):
@@ -80,10 +85,10 @@ class ComboCommand(EdkrepoCommand):
                 ui_functions.print_info_msg(humble.COMBO.format(combo), header=False)
             if args.verbose:
                 ui_functions.print_info_msg(humble.COMBO_DESCRIPTION.format(description), header=False)
-                
+
                 sources = []
                 sources = self._identify_combo_sources(combo, manifest, config)
-                    
+
                 length = len(max([source.root for source in sources], key=len))
                 if 'pin' in combo.lower():
                     for source in sources:

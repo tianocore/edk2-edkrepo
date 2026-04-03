@@ -7,15 +7,16 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo_manifest_parser.edk_manifest import RepoSource, ManifestXml
-from edkrepo.commands.create_pin_command import CreatePinCommand
 import edkrepo.common.edkrepo_exception as edkrepo_exception
+from edkrepo.commands.create_pin_command import CreatePinCommand
+from edkrepo_manifest_parser.edk_manifest import ManifestXml, RepoSource
 
 
 class TestGeneratePinData:

@@ -3,7 +3,7 @@
 ## @file
 # f2f_cherry_pick_humble.py
 #
-# Copyright (c) 2020 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,8 +11,7 @@
 the run_command function of for the f2f-cherry-pick command
 '''
 
-from colorama import Fore
-from colorama import Style
+from colorama import Fore, Style
 
 #Error messages for f2f_cherry_pick.py
 F2F_CHERRY_PICK_TEMPLATE_AND_FOLDERS = 'argument --template: not allowed with argument --folders'

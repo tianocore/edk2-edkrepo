@@ -3,20 +3,15 @@
 ## @file
 # edk_manifest.py
 #
-# Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-# Standard imports
-import xml.etree.ElementTree as ET
-from collections import namedtuple
-import os
 import copy
 import json
-
-# 3rd party imports
-#   None planned at this time
-
+import os
+import xml.etree.ElementTree as ET
+from collections import namedtuple
 
 #
 # All the namedtuple data structures that consumers of this module will need.
@@ -407,7 +402,7 @@ class ManifestXml(BaseXmlHelper):
     def get_remote(self, remote_name):
         if remote_name in self._remotes:
             return self._remotes[remote_name]
-    
+
     def get_remotes_dict(self):
         return {remote.name: remote.url for remote in self.remotes}
 
@@ -1127,7 +1122,7 @@ class _RepoSource():
 
         if self.patch_set is not None and (self.branch is not None or self.commit is not None or self.tag is not None):
             raise ValueError(INVALID_COMBO_DEFINITION_ERROR)
-        
+
         if len(os.path.normpath(self.root).split(os.path.sep)) > 1:
             self.nested_repo = True
         else:
@@ -1282,8 +1277,8 @@ class _SubmoduleInitEntry():
 #
 def main():
     import argparse
-    import traceback
     import sys
+    import traceback
 
     separator_string = '----------------------------------------------------------------'
     project_header_string = '\nProject Name:    Project XML Path'

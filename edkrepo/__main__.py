@@ -3,20 +3,21 @@
 ## @file
 # __main__.py.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import importlib
 import os
-import sys
 import site
+import sys
 import traceback
 
 #Prefer the site-packages version of edkrepo
 sitepackages = site.getsitepackages()
 sys.path = sitepackages + sys.path
 import edkrepo
+
 edkrepo_package_path = os.path.dirname(os.path.dirname(edkrepo.__file__))
 for directory in sitepackages:
     if edkrepo_package_path == directory:

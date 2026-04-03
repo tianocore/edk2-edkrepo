@@ -3,28 +3,34 @@
 ## @file
 # config_factory.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+import collections
+import configparser
 import os
 import sys
-import configparser
-import collections
+
 if sys.platform == "win32":
     from ctypes import oledll, c_void_p, c_uint32, c_wchar_p
     from ctypes import create_unicode_buffer
 
 import edkrepo.config.humble.config_factory_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoGlobalConfigNotFoundException, EdkrepoConfigFileInvalidException
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoGlobalDataDirectoryNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoConfigFileReadOnlyException, EdkrepoInvalidConfigOptionException
-from edkrepo.common.edkrepo_exception import EdkrepoPinFileNotFoundException
-from edkrepo.common.humble import MIRROR_PRIMARY_REPOS_MISSING, MIRROR_DECODE_WARNING, MAX_PATCH_SET_INVALID
-from edkrepo.common.pathfix import get_subst_drive_dict
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
+from edkrepo.common.edkrepo_exception import (
+    EdkrepoConfigFileInvalidException, EdkrepoConfigFileReadOnlyException,
+    EdkrepoGlobalConfigNotFoundException,
+    EdkrepoGlobalDataDirectoryNotFoundException,
+    EdkrepoInvalidConfigOptionException, EdkrepoPinFileNotFoundException,
+    EdkrepoWorkspaceInvalidException)
+from edkrepo.common.humble import (MAX_PATCH_SET_INVALID,
+                                   MIRROR_DECODE_WARNING,
+                                   MIRROR_PRIMARY_REPOS_MISSING)
+from edkrepo.common.pathfix import expanduser, get_subst_drive_dict
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo, get_manifest_repo_path)
 from edkrepo_manifest_parser import edk_manifest
-from edkrepo.common.pathfix import expanduser
+
 
 def get_edkrepo_global_data_directory():
     global_data_dir = None
@@ -299,13 +305,13 @@ def get_checked_out_pin_file(pin_filename, workspace_manifest, config, workspace
     pin_path = None
     if workspace_manifest.general_config.pin_path:
         pin_path = os.path.join(manifest_repo_path, workspace_manifest.general_config.pin_path, pin_filename)
-    
+
     # If not found or no pin_path, try workspace root
     if not pin_path or not os.path.isfile(pin_path):
         pin_path = os.path.join(workspace_path, pin_filename)
-    
+
     # Load and return pin manifest if found
     if os.path.isfile(pin_path):
         return edk_manifest.ManifestXml(pin_path)
-    
+
     raise EdkrepoPinFileNotFoundException(f"Pin file '{pin_filename}' not found in manifest repository or workspace root")

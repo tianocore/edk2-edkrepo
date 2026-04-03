@@ -3,7 +3,7 @@
 ## @file
 # send_review_humble.py
 #
-# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,9 +11,8 @@
 Contains informational and error messages outputted by
 the run_command functions of Edkrepo commands
 """
-from edkrepo.common.humble import AMEND, ADD, RESET_HEAD
-from edkrepo.common.humble import CHECKOUT, CHECKOUT_HEAD, BRANCH_BEHIND
-from edkrepo.common.humble import WARNING_MESSAGE
+from edkrepo.common.humble import (ADD, AMEND, BRANCH_BEHIND, CHECKOUT,
+                                   CHECKOUT_HEAD, RESET_HEAD, WARNING_MESSAGE)
 
 # Warning and error messages for send_review_command.py
 SEND_REVIEW_EXIT = 'Exiting without sending review.\n'

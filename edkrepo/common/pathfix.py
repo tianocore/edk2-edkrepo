@@ -3,15 +3,16 @@
 ## @file
 # checkout_command.py
 #
-# Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 import os
 import sys
+
 if sys.platform == "win32":
-    from ctypes import windll, POINTER, byref, GetLastError, Structure, WinError
-    from ctypes import c_void_p, c_ushort, c_int,  c_ulong, c_wchar, c_wchar_p
-    from ctypes import create_unicode_buffer
+    from ctypes import (
+        POINTER, GetLastError, Structure, WinError, byref, c_int, c_ulong,
+        c_ushort, c_void_p, c_wchar, c_wchar_p, create_unicode_buffer, windll)
 
 def _is_wow64_process():
     kernel32 = windll.kernel32
