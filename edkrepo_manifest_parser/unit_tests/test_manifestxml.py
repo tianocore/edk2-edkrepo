@@ -9,13 +9,44 @@
 
 import sys
 import os
+import re
 from unittest.mock import MagicMock
 
 # Add the parent directory to the system path to resolve imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
-from edk_manifest import RepoSource, ManifestXml, INVALID_REPO_PATH_ERROR, NO_PARENT_REPO_ERROR
+from edk_manifest import RepoSource, ManifestXml, CiIndexXml, DUPLICATE_TAG_ERROR, INVALID_REPO_PATH_ERROR, NO_PARENT_REPO_ERROR
+
+
+class TestCiIndexXmlDuplicateProject:
+
+    VALID_INDEX_XML = """<?xml version="1.0" encoding="utf-8"?>
+<ProjectList>
+  <Project name="ProjectA" xmlPath="ProjectA/ProjectA.xml" archived="false"/>
+  <Project name="ProjectB" xmlPath="ProjectB/ProjectB.xml" archived="false"/>
+</ProjectList>"""
+
+    DUPLICATE_INDEX_XML = """<?xml version="1.0" encoding="utf-8"?>
+<ProjectList>
+  <Project name="ProjectA" xmlPath="ProjectA/ProjectA.xml" archived="false"/>
+  <Project name="ProjectA" xmlPath="ProjectA/duplicate.xml" archived="false"/>
+</ProjectList>"""
+
+    def test_valid_index_xml_parses_successfully(self, tmp_path):
+        xml_file = tmp_path / "index.xml"
+        xml_file.write_text(self.VALID_INDEX_XML)
+
+        ci = CiIndexXml(str(xml_file))
+        assert set(ci.project_list) == {"ProjectA", "ProjectB"}
+
+    def test_duplicate_project_name_raises_key_error(self, tmp_path):
+        xml_file = tmp_path / "index.xml"
+        xml_file.write_text(self.DUPLICATE_INDEX_XML)
+
+        expected = re.escape(DUPLICATE_TAG_ERROR.format('Project', 'ProjectA'))
+        with pytest.raises(KeyError, match=expected):
+            CiIndexXml(str(xml_file))
 
 
 class TestNestedRepo:
