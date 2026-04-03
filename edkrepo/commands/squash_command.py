@@ -11,12 +11,17 @@ import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.squash_args as arguments
 import edkrepo.commands.humble.squash_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
-from edkrepo.common.squash import get_git_repo_root, split_commit_range, get_start_and_end_commit
-from edkrepo.common.squash import commit_list_to_message, squash_commits
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
+from edkrepo.common.squash import commit_list_to_message
+from edkrepo.common.squash import get_git_repo_root
+from edkrepo.common.squash import get_start_and_end_commit
+from edkrepo.common.squash import split_commit_range
+from edkrepo.common.squash import squash_commits
+
 
 class SquashCommand(EdkrepoCommand):
     def __init__(self):

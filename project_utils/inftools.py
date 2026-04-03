@@ -8,6 +8,7 @@
 #
 import copy
 
+
 #
 # Shared functions to help clean up lines in an INF style file.  This function is
 # only intended to clean up lines for parsing as indentation will be lost.

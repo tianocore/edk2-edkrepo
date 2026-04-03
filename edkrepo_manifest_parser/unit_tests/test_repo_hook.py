@@ -7,23 +7,28 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+
 import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo_manifest_parser.edk_manifest import REQUIRED_ATTRIB_ERROR_MSG
+from edkrepo_manifest_parser.edk_manifest import RepoHook
+from edkrepo_manifest_parser.edk_manifest import _parse_repo_hook_required_attribs
+from edkrepo_manifest_parser.edk_manifest import _RepoHook
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
-    make_mock_element,
-    make_mock_remotes,
     REMOTE_NAME,
-    REMOTE_URL,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import REMOTE_URL
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     REQUIRED_ATTRIB_SPLIT_CHAR,
 )
-from edkrepo_manifest_parser.edk_manifest import (
-    _RepoHook,
-    _parse_repo_hook_required_attribs,
-    RepoHook,
-    REQUIRED_ATTRIB_ERROR_MSG,
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_mock_element,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_mock_remotes,
 )
 
 ATTRIB_SOURCE               = 'source'

@@ -14,11 +14,14 @@ from datetime import datetime
 
 from colorama import Fore
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.log_args as arguments
-from edkrepo.common.common_repo_functions import sort_commits, find_less
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.common_repo_functions import find_less
+from edkrepo.common.common_repo_functions import sort_commits
+from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.config.config_factory import get_workspace_path
+
 
 class LogCommand(EdkrepoCommand):
     def __init__(self):

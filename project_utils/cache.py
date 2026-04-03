@@ -6,18 +6,24 @@
 # Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
-from collections import namedtuple
 import os
 import shutil
+from collections import namedtuple
 
 from git import Repo
 from git.exc import GitCommandError
 
-from edkrepo.common.progress_handler import GitProgressHandler
 from edkrepo.common.edkrepo_exception import EdkrepoGitException
-from project_utils.project_utils_strings import CACHE_ADD_REMOTE, CACHE_ADDING_REPO, CACHE_CHECK_ROOT_DIR
-from project_utils.project_utils_strings import CACHE_FAILED_TO_CLOSE, CACHE_FAILED_TO_OPEN, CACHE_FETCH_REMOTE
-from project_utils.project_utils_strings import CACHE_REMOTE_EXISTS, CACHE_REMOVE_REPO, CACHE_REPO_EXISTS
+from edkrepo.common.progress_handler import GitProgressHandler
+from project_utils.project_utils_strings import CACHE_ADD_REMOTE
+from project_utils.project_utils_strings import CACHE_ADDING_REPO
+from project_utils.project_utils_strings import CACHE_CHECK_ROOT_DIR
+from project_utils.project_utils_strings import CACHE_FAILED_TO_CLOSE
+from project_utils.project_utils_strings import CACHE_FAILED_TO_OPEN
+from project_utils.project_utils_strings import CACHE_FETCH_REMOTE
+from project_utils.project_utils_strings import CACHE_REMOTE_EXISTS
+from project_utils.project_utils_strings import CACHE_REMOVE_REPO
+from project_utils.project_utils_strings import CACHE_REPO_EXISTS
 
 CacheInfo = namedtuple('CacheInfo', ['path', 'remote', 'url'])
 

@@ -8,19 +8,26 @@
 #
 
 import collections
-from itertools import zip_longest
 import json
 import os
 import sys
+from itertools import zip_longest
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.list_repos_args as arguments
 import edkrepo.commands.humble.list_repos_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    list_available_manifest_repos,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    pull_all_manifest_repos,
+)
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+
 
 class ListReposCommand(EdkrepoCommand):
     def __init__(self):

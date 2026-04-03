@@ -9,14 +9,15 @@
 
 import importlib
 import os
-import sys
 import site
+import sys
 import traceback
 
 #Prefer the site-packages version of edkrepo
 sitepackages = site.getsitepackages()
 sys.path = sitepackages + sys.path
 import edkrepo
+
 edkrepo_package_path = os.path.dirname(os.path.dirname(edkrepo.__file__))
 for directory in sitepackages:
     if edkrepo_package_path == directory:

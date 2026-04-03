@@ -7,74 +7,115 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+import hashlib
 import json
 import os
 import shutil
-import sys
-import urllib.request
 import subprocess
-import traceback
-import hashlib
+import sys
 import time
+import traceback
+import urllib.request
 
+import colorama
 import git
 from git import Repo
-import colorama
 
 import edkrepo.common.clone_utilities as clone_utils
-from edkrepo.common.edkrepo_exception import EdkrepoBranchExistsException, EdkrepoException, EdkrepoLocalBranchExistsException, EdkrepoRevertFailedException, EdkrepoCherryPickFailedException, EdkrepoBranchCollidesWithParentShaException
+import edkrepo.common.ui_functions as ui_functions
+import edkrepo.common.workspace_maintenance.git_exclude_maintenance as git_exclude_maintenance
+from edkrepo.common.edkrepo_exception import EdkrepoBranchCollidesWithParentShaException
+from edkrepo.common.edkrepo_exception import EdkrepoBranchExistsException
+from edkrepo.common.edkrepo_exception import EdkrepoCherryPickFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoException
 from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
-from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
+from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException
+from edkrepo.common.edkrepo_exception import EdkrepoHookNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoLocalBranchExistsException
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoPatchFailedException
+from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoRemoteAddException
+from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoRemoteRemoveException
+from edkrepo.common.edkrepo_exception import EdkrepoRevertFailedException
 from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoNotFoundException
-from edkrepo.common.progress_handler import GitProgressHandler
-from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, BRANCH_EXISTS, CHECKING_OUT_DEFAULT, CHECKING_OUT_PATCHSET, LOCAL_BRANCH_EXISTS
-from edkrepo.common.humble import FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST, COLLISION_DETECTED
-from edkrepo.common.humble import REMOTE_CREATION_FAILED, REMOTE_NOT_FOUND, REMOVE_REMOTE_FAILED
-from edkrepo.common.humble import MISSING_BRANCH_COMMIT
-from edkrepo.common.humble import UNCOMMITED_CHANGES, CHECKOUT_UNCOMMITED_CHANGES
-from edkrepo.common.humble import CHECKING_OUT_COMMIT, CHECKING_CONNECTION
+from edkrepo.common.git_version import GitVersion
+from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED
+from edkrepo.common.humble import APPLYING_PATCH_FAILED
+from edkrepo.common.humble import APPLYING_REVERT_FAILED
+from edkrepo.common.humble import BRANCH_COLLIDES_WITH_PARENT_SHA
+from edkrepo.common.humble import BRANCH_EXISTS
+from edkrepo.common.humble import CHECKING_CONNECTION
 from edkrepo.common.humble import CHECKING_OUT_BRANCH
+from edkrepo.common.humble import CHECKING_OUT_COMBO
+from edkrepo.common.humble import CHECKING_OUT_COMMIT
+from edkrepo.common.humble import CHECKING_OUT_DEFAULT
+from edkrepo.common.humble import CHECKING_OUT_PATCHSET
+from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
+from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
 from edkrepo.common.humble import CHECKOUT_NO_REMOTE
+from edkrepo.common.humble import CHECKOUT_UNCOMMITED_CHANGES
+from edkrepo.common.humble import CLONE_FAIL
+from edkrepo.common.humble import COLLISION_DETECTED
+from edkrepo.common.humble import COMMIT_TEMPLATE_CUSTOM_VALUE
+from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND
+from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
+from edkrepo.common.humble import ERROR_WRITING_INCLUDE
+from edkrepo.common.humble import FETCH_BRANCH_DOES_NOT_EXIST
+from edkrepo.common.humble import HOOK_NOT_FOUND_ERROR
+from edkrepo.common.humble import INCLUDED_FILE_NAME
+from edkrepo.common.humble import INCLUDED_INSTEAD_OF_LINE
+from edkrepo.common.humble import INCLUDED_URL_LINE
+from edkrepo.common.humble import LOCAL_BRANCH_EXISTS
+from edkrepo.common.humble import MISSING_BRANCH_COMMIT
+from edkrepo.common.humble import MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
+from edkrepo.common.humble import NETRC_NOT_FOUND
+from edkrepo.common.humble import PATCHFILE_DOES_NOT_EXIST
+from edkrepo.common.humble import REMOTE_CREATION_FAILED
+from edkrepo.common.humble import REMOTE_NOT_FOUND
+from edkrepo.common.humble import REMOVE_REMOTE_FAILED
 from edkrepo.common.humble import SPARSE_CHECKOUT
 from edkrepo.common.humble import SPARSE_RESET
-from edkrepo.common.humble import CHECKING_OUT_COMBO
-from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
-from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
-from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
-from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
+from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED
 from edkrepo.common.humble import TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import HOOK_NOT_FOUND_ERROR
-from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
-from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
-from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
+from edkrepo.common.humble import UNCOMMITED_CHANGES
+from edkrepo.common.humble import VERIFY_ARCHIVED
+from edkrepo.common.humble import VERIFY_GLOBAL
 from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
-from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED, BRANCH_COLLIDES_WITH_PARENT_SHA
-from edkrepo.common.humble import MISSING_BRANCH_COMMIT, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED, TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import CLONE_FAIL, NETRC_NOT_FOUND
-from edkrepo.common.pathfix import get_actual_path, expanduser
-from edkrepo.common.git_version import GitVersion
-from project_utils.sparse import BuildInfo, process_sparse_checkout
-from edkrepo.config.config_factory import get_workspace_path
+from edkrepo.common.humble import VERIFY_PROJ
+from edkrepo.common.humble import VERIFY_PROJ_FAIL
+from edkrepo.common.pathfix import expanduser
+from edkrepo.common.pathfix import get_actual_path
+from edkrepo.common.progress_handler import GitProgressHandler
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    list_available_manifest_repos,
+)
+from edkrepo.common.workspace_maintenance.workspace_maintenance import (
+    case_insensitive_single_match,
+)
 from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.config.config_factory import get_workspace_path
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
-from edkrepo_manifest_parser.edk_manifest import ManifestXml
-from edkrepo.common.edkrepo_exception import EdkrepoHookNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
-import edkrepo.common.workspace_maintenance.git_exclude_maintenance as git_exclude_maintenance
-import edkrepo.common.ui_functions as ui_functions
 from edkrepo_manifest_parser import edk_manifest
-from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
-from edkrepo_manifest_parser.edk_manifest_validation import get_manifest_validation_status
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+from edkrepo_manifest_parser.edk_manifest_validation import (
+    get_manifest_validation_status,
+)
 from edkrepo_manifest_parser.edk_manifest_validation import print_manifest_errors
 from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestfiles
-from project_utils.submodule import deinit_full, maintain_submodules
+from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
+from project_utils.sparse import BuildInfo
+from project_utils.sparse import process_sparse_checkout
+from project_utils.submodule import deinit_full
+from project_utils.submodule import maintain_submodules
 
 CLEAR_LINE = '\x1b[K'
 DEFAULT_REMOTE_NAME = 'origin'

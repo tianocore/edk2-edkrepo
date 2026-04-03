@@ -9,6 +9,7 @@
 
 import os
 
+
 def write_git_exclude(repo_path, exclude_pattern):
     '''Writes the given exclude patterns to the .git/info/exclude file in the specified repository.
 

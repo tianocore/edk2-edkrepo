@@ -12,8 +12,11 @@
 import os
 import unicodedata
 
-from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoNotFoundException
-from edkrepo.common.humble import GEN_A_NOT_IN_B, GEN_FOUND_MULT_A_IN_B
+from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException
+from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException
+from edkrepo.common.humble import GEN_A_NOT_IN_B
+from edkrepo.common.humble import GEN_FOUND_MULT_A_IN_B
+
 
 def generate_name_for_obsolete_backup(absolute_path):
     if not os.path.exists(absolute_path):

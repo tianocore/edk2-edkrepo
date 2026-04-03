@@ -7,25 +7,35 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+
 import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
+from edk_manifest import ATTRIBUTE_MISSING_ERROR
+from edk_manifest import RepoSource
+from edk_manifest import _RepoSource
+
+from edkrepo_manifest_parser.edk_manifest import ATTRIBUTE_MISSING_ERROR
+from edkrepo_manifest_parser.edk_manifest import INVALID_COMBO_DEFINITION_ERROR
+from edkrepo_manifest_parser.edk_manifest import REQUIRED_ATTRIB_ERROR_MSG
+from edkrepo_manifest_parser.edk_manifest import RepoSource
+from edkrepo_manifest_parser.edk_manifest import _parse_repo_source_required_attribs
+from edkrepo_manifest_parser.edk_manifest import _RepoSource
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
-    make_mock_element,
-    make_mock_remotes,
     REMOTE_NAME,
-    REMOTE_URL,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import REMOTE_URL
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     REQUIRED_ATTRIB_SPLIT_CHAR,
 )
-from edkrepo_manifest_parser.edk_manifest import (
-    _RepoSource,
-    _parse_repo_source_required_attribs,
-    RepoSource,
-    REQUIRED_ATTRIB_ERROR_MSG,
-    ATTRIBUTE_MISSING_ERROR,
-    INVALID_COMBO_DEFINITION_ERROR,
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_mock_element,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_mock_remotes,
 )
 
 # XML attribute names

@@ -11,6 +11,7 @@ import re
 
 from edkrepo.common.edkrepo_exception import EdkrepoGitException
 
+
 class GitVersion():
     """
     Initialize, describe and provide comparision operators for a git version number.

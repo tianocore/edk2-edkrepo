@@ -6,8 +6,9 @@
 # Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
-import os
 import copy
+import os
+
 
 #
 # Reads a file and returns the lines as a list

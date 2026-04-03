@@ -7,10 +7,13 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import DryRunArgument
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 import edkrepo.commands.arguments.update_manifest_repo as arguments
+from edkrepo.commands.edkrepo_command import DryRunArgument
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    pull_all_manifest_repos,
+)
+
 
 class UpdateManifestRepoCommand(EdkrepoCommand):
     def __init__(self):

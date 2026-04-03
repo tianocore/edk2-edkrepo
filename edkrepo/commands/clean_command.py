@@ -11,10 +11,12 @@ import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.clean_args as arguments
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.config.config_factory import get_workspace_path
+
 
 class CleanCommand(EdkrepoCommand):
     def __init__(self):

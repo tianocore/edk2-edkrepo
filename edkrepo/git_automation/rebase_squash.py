@@ -7,8 +7,9 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import re
+import sys
+
 
 def main():
     with open(sys.argv[1], 'r', errors="surrogateescape") as f:

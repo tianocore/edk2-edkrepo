@@ -7,31 +7,46 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from collections import namedtuple
-from difflib import SequenceMatcher
 import json
 import os
 import re
-from subprocess import check_call, Popen, PIPE, STDOUT
 import sys
 import time
 import uuid
+from collections import namedtuple
+from difflib import SequenceMatcher
+from subprocess import PIPE
+from subprocess import STDOUT
+from subprocess import Popen
+from subprocess import check_call
 
-from git import Repo
 from colorama import Fore
+from git import Repo
 
-from edkrepo.common.common_repo_functions import sparse_checkout_enabled, get_full_path, get_unique_branch_name
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.common.edkrepo_exception import EdkrepoAbortCherryPickException, EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
-from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException
-from edkrepo.common.humble import NOT_GIT_REPO, COMMIT_NOT_FOUND
-from edkrepo.common.squash import get_git_repo_root, split_commit_range, get_start_and_end_commit
-from edkrepo.common.squash import commit_list_to_message, squash_commits
-from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_equal
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.commands.arguments.f2f_cherry_pick_args as arguments
 import edkrepo.commands.humble.f2f_cherry_pick_humble as humble
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.common_repo_functions import get_full_path
+from edkrepo.common.common_repo_functions import get_unique_branch_name
+from edkrepo.common.common_repo_functions import sparse_checkout_enabled
+from edkrepo.common.edkrepo_exception import EdkrepoAbortCherryPickException
+from edkrepo.common.edkrepo_exception import EdkrepoGitException
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
+from edkrepo.common.humble import COMMIT_NOT_FOUND
+from edkrepo.common.humble import NOT_GIT_REPO
+from edkrepo.common.squash import commit_list_to_message
+from edkrepo.common.squash import get_git_repo_root
+from edkrepo.common.squash import get_start_and_end_commit
+from edkrepo.common.squash import split_commit_range
+from edkrepo.common.squash import squash_commits
+from edkrepo.common.workspace_maintenance.workspace_maintenance import (
+    case_insensitive_equal,
+)
+from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.config.config_factory import get_workspace_path
 
 FolderCherryPick = namedtuple('FolderCherryPick', ['source', 'destination', 'intermediate', 'source_excludes'])
 ChangeIdRegex = re.compile(r"^\s*[Cc]hange-Id:\s*(\S+)\s*$")

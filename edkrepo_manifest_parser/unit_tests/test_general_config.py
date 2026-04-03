@@ -7,17 +7,21 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
-import pytest
+import sys
 from unittest.mock import MagicMock
 
+import pytest
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo_manifest_parser.edk_manifest import GeneralConfig
+from edkrepo_manifest_parser.edk_manifest import _GeneralConfig
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
-    make_text_element,
     make_attrib_element,
 )
-from edkrepo_manifest_parser.edk_manifest import _GeneralConfig, GeneralConfig
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_text_element,
+)
 
 CHILD_PIN_PATH              = 'PinPath'
 CHILD_DEFAULT_COMBO         = 'DefaultCombo'

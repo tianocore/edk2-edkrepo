@@ -1,11 +1,14 @@
-import sys
 import os
-from unittest.mock import MagicMock, patch
-
+import sys
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo_manifest_parser.edk_manifest import RepoSource, ManifestXml
-from edkrepo.common.clone_utilities import generate_clone_order, calculate_source_manifest_repo_directory
+from edkrepo.common.clone_utilities import calculate_source_manifest_repo_directory
+from edkrepo.common.clone_utilities import generate_clone_order
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+from edkrepo_manifest_parser.edk_manifest import RepoSource
+
 
 class TestGenerateCloneOrder:
 

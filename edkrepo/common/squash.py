@@ -11,8 +11,12 @@ import os
 import sys
 from subprocess import check_call
 
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
-from edkrepo.common.humble import COMMIT_NOT_FOUND, NOT_GIT_REPO, SQUASH_COMMON_ANCESTOR_REQUIRED
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
+from edkrepo.common.humble import COMMIT_NOT_FOUND
+from edkrepo.common.humble import NOT_GIT_REPO
+from edkrepo.common.humble import SQUASH_COMMON_ANCESTOR_REQUIRED
+
 
 def get_git_repo_root():
     path = os.path.realpath(os.getcwd())

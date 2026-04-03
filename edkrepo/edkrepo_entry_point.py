@@ -82,6 +82,7 @@ if __name__ == "__main__" or run_via_launcher_script:
 
 from edkrepo.config.config_factory import GlobalConfig
 
+
 def main():
     cfg_file = GlobalConfig()
     pref_entry = (cfg_file.preferred_entry[0]).replace('.py', '')

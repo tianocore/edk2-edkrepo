@@ -13,6 +13,7 @@ from edkrepo.config.config_factory import get_edkrepo_global_data_directory
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from project_utils.cache import RepoCache
 
+
 def get_cache_directory(config):
     if config['user_cfg_file'].caching_state:
         if config['user_cfg_file'].cache_path == 'default':

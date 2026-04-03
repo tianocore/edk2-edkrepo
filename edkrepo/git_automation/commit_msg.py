@@ -7,8 +7,9 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+
 
 def main():
     if 'COMMIT_MESSAGE_NO_EDIT' in os.environ:

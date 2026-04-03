@@ -12,9 +12,10 @@ import inspect
 import os
 import sys
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.composite_command import CompositeCommand
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.config.config_factory import GlobalConfig
+
 
 def _is_command(CommandClass):
     if CommandClass == EdkrepoCommand:
