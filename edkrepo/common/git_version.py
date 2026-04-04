@@ -3,13 +3,14 @@
 ## @file
 # git_version.py
 #
-# Copyright (c) 2018 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import re
 
 from edkrepo.common.edkrepo_exception import EdkrepoGitException
+
 
 class GitVersion():
     """

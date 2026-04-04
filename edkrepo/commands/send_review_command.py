@@ -3,30 +3,30 @@
 ## @file
 # send_review_command.py
 #
-# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import os
-from datetime import datetime
 import itertools
 import json
+import os
 import re
 import subprocess
 import webbrowser
+from datetime import datetime
 from enum import Enum
 
-from git import Repo
 from colorama import Fore
+from git import Repo
 from git.exc import GitCommandError
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
-import edkrepo.commands.humble.send_review_humble as humble
 import edkrepo.commands.arguments.send_review_args as arguments
+import edkrepo.commands.humble.send_review_humble as humble
 import edkrepo.common.common_repo_functions as common_repo_functions
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.ui_functions as ui_functions
 import edkrepo.config.config_factory as config_factory
+from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
 
 
 class SendReviewCommand(EdkrepoCommand):
@@ -188,9 +188,9 @@ class SendReviewCommand(EdkrepoCommand):
             amend_existing = True
             pr_branch_name = str(current_branch)
         except edkrepo_exception.EdkrepoGithubApiFailException as e:
-            # GitHub API failed or returned no data 
+            # GitHub API failed or returned no data
             ui_functions.print_error_msg(str(e), header=True)
-            
+
             # Use local branch name to infer whether to update existing PR or create new one
             if str(current_branch).startswith('pull_request'):
                 ui_functions.print_info_msg(humble.LOCAL_BRANCH_UPDATE_EXISTING_PR, header=False)
@@ -217,8 +217,8 @@ class SendReviewCommand(EdkrepoCommand):
 
                 # Only check out the PR branch if we are not in dry-run mode
                 if not args.dry_run:
-                    modified_repo.git.heads[pr_branch_name].checkout()        
-        
+                    modified_repo.git.heads[pr_branch_name].checkout()
+
         pr_branch_str = '{}:{}'.format(pr_branch_name, pr_branch_name)
 
         if not amend_existing:
@@ -292,7 +292,7 @@ class SendReviewCommand(EdkrepoCommand):
                         if 'number' in results.keys():
                             pr_number = results['number']
                             # Add reviewers
-                            
+
                             ui_functions.print_info_msg(humble.ADD_REVIEWERS, header=False)
                             if pr_number and args.reviewers:
                                 self.__github_add_reviewers(args, pr_patch_url, netrc_path, curl_path, proxy_str)
@@ -447,15 +447,15 @@ class SendReviewCommand(EdkrepoCommand):
                 results = json.loads(stdout)
             except (json.JSONDecodeError, ValueError) as e:
                 raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_RESPONSE_PARSE_ERROR.format(e))
-            
+
             # Handle case where API returns an error object instead of an array
             if isinstance(results, dict) and 'message' in results:
                 raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_UNEXPECTED_RESPONSE)
-            
+
             # Handle case where results is not iterable or is empty
             if not isinstance(results, list):
                 raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_UNEXPECTED_RESPONSE)
-                
+
             pr_count = len(results)
             if pr_count >= 1:
                 try:

@@ -3,7 +3,7 @@
 ## @file
 # workspace_maintenance.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,8 +12,10 @@
 import os
 import unicodedata
 
-from edkrepo.common.edkrepo_exception import EdkrepoFoundMultipleException, EdkrepoNotFoundException
+from edkrepo.common.edkrepo_exception import (EdkrepoFoundMultipleException,
+                                              EdkrepoNotFoundException)
 from edkrepo.common.humble import GEN_A_NOT_IN_B, GEN_FOUND_MULT_A_IN_B
+
 
 def generate_name_for_obsolete_backup(absolute_path):
     if not os.path.exists(absolute_path):

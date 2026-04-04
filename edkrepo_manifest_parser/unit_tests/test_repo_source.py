@@ -3,19 +3,21 @@
 ## @file
 # test_repo_source.py
 #
-# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import pytest
-from collections import namedtuple
-import sys
 import os
+import sys
+from collections import namedtuple
+
+import pytest
 
 # Add the parent directory to the system path to resolve imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from edk_manifest import _RepoSource, RepoSource, ATTRIBUTE_MISSING_ERROR
+from edk_manifest import ATTRIBUTE_MISSING_ERROR, RepoSource, _RepoSource
+
 
 # Mock classes and data for testing
 class MockElement:

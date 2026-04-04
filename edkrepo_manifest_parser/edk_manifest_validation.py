@@ -3,21 +3,22 @@
 ## @file
 # edk_manifest_validation.py
 #
-# Copyright (c) 2018- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import os
 import argparse
-import unicodedata
+import os
 import sys
 import traceback
+import unicodedata
 
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
-from edkrepo.common.humble import MANIFEST_NAME_INCONSISTENT
-from edkrepo.common.humble import INDEX_DUPLICATE_NAMES
 from edkrepo.common.edkrepo_exception import EdkrepoVerificationException
-from edkrepo.common.humble import VERIFY_ERROR_HEADER
+from edkrepo.common.humble import (INDEX_DUPLICATE_NAMES,
+                                   MANIFEST_NAME_INCONSISTENT,
+                                   VERIFY_ERROR_HEADER)
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+
 
 class ValidateManifest:
     # Note: manifest_file must be a path to the manifest file not the file itself
@@ -46,7 +47,7 @@ class ValidateManifest:
             return ("DUPLICATE", False, INDEX_DUPLICATE_NAMES.format(project, ci_index_filename))
         else:
             return ("DUPLICATE", True, None)
-    
+
     def list_entries(self, project, project_list):
         return [x for x in project_list if self.case_insensitive_equal(project, x)]
 

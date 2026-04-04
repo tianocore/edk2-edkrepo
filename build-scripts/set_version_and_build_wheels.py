@@ -3,18 +3,18 @@
 ## @file
 # set_version_and_build_wheels.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import argparse
-import os
-import sys
 import configparser
 import fnmatch
 import io
-import time
+import os
 import re
+import sys
+import time
 from subprocess import call, check_call
 from xml.etree import ElementTree
 

@@ -3,7 +3,7 @@
 ## @file
 # command_completion_edkrepo.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -13,13 +13,14 @@ import os
 import sys
 import traceback
 
-from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from edkrepo.common.common_repo_functions import combinations_in_manifest
 from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo, list_available_manifest_repos)
 from edkrepo.config import config_factory
 from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+
 
 def checkout(parsed_args, config):
     manifest = get_workspace_manifest()

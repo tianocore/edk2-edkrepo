@@ -3,19 +3,20 @@
 ## @file
 # submodule.py
 #
-# Copyright (c) 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2021 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 import argparse
-import git
 import os
 import sys
 import traceback
 
-from edkrepo_manifest_parser.edk_manifest import ManifestXml
+import git
+
 import edkrepo.common.ui_functions as ui_functions
-import project_utils.project_utils_strings as strings
 import project_utils.arguments.submodule_args as arguments
+import project_utils.project_utils_strings as strings
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
 
 
 def _init(repo, submodules=None, verbose=False):

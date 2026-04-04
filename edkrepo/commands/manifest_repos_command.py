@@ -3,21 +3,19 @@
 ## @file
 # manifest_repos_command.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import configparser
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.manifest_repo_args as arguments
 import edkrepo.commands.humble.manifest_repos_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 import edkrepo.common.ui_functions as ui_functions
-
-
-
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import \
+    list_available_manifest_repos
 
 
 class ManifestRepos(EdkrepoCommand):

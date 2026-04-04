@@ -3,19 +3,20 @@
 ## @file
 # checkout_command.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-# Our modules
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
 import edkrepo.commands.arguments.checkout_args as arguments
 import edkrepo.commands.humble.checkout_humble as humble
+from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
-from edkrepo.common.common_repo_functions import checkout, combination_is_in_manifest
+from edkrepo.common.common_repo_functions import (checkout,
+                                                  combination_is_in_manifest)
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import \
+    get_manifest_repo_path
 from edkrepo.config.config_factory import get_workspace_manifest
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import get_manifest_repo_path
 
 
 class CheckoutCommand(EdkrepoCommand):

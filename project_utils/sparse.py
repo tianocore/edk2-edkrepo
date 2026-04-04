@@ -3,14 +3,15 @@
 ## @file
 # sparse.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
+import argparse
+import collections
+import copy
 import os
 import sys
-import argparse
-import copy
-import collections
+
 import git
 
 if __name__ == "__main__":
@@ -25,8 +26,8 @@ if __name__ == "__main__":
 
 # Attempt to import common code modules.
 try:
-    import project_utils.inftools as inftools
     import project_utils.fileutils as fileutils
+    import project_utils.inftools as inftools
 except Exception as e:
     print('Import Failed: {0}'.format(e))
     sys.exit(2)

@@ -3,11 +3,10 @@
 ## @file
 # install.py
 #
-# Copyright (c) 2018 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from argparse import ArgumentParser
 import collections
 import configparser
 import hashlib
@@ -16,12 +15,13 @@ import logging
 import os
 import platform
 import re
-import stat
 import shutil
+import stat
 import subprocess
 import sys
 import traceback
 import xml.etree.ElementTree as et
+from argparse import ArgumentParser
 
 #
 # Environment detection
@@ -162,9 +162,9 @@ def get_install_to_local(args):
             return False
 
     #Note: These imports are here because we don't want to execute these imports on Mac
-    from select import select
     import termios
     import tty
+    from select import select
     def get_key(timeout=-1):
         key = None
         old_settings = termios.tcgetattr(sys.stdin.fileno())
@@ -246,9 +246,9 @@ def get_add_prompt_customization(args, username, user_home_dir):
             pass
 
     #Note: These imports are here because we don't want to execute these imports on Mac
-    from select import select
     import termios
     import tty
+    from select import select
     def get_key(timeout=-1):
         key = None
         old_settings = termios.tcgetattr(sys.stdin.fileno())
@@ -487,7 +487,7 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v command_completion_edkre
       fi
     fi
   }
-  
+
   # Integrate with bash-preexec if available, otherwise use direct trap
   if declare -f __bp_preexec_invoke_cmd &>/dev/null; then
     # bash-preexec is available - use its hook system

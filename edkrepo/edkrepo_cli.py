@@ -3,36 +3,39 @@
 ## @file
 # edkrepo_cli.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import argparse
-from operator import itemgetter
 import sys
 import traceback
+from operator import itemgetter
+
 try:
     from importlib.metadata import version
 except ImportError:
     import pkg_resources
-import time
+
+import datetime as dt
+import importlib.util
+import inspect
 import json
 import os
-import subprocess
 import site
-import inspect
-import importlib.util
-import datetime as dt
+import subprocess
+import time
 
 from git.exc import GitCommandError
 
 from edkrepo.commands import command_factory
-from edkrepo.config import config_factory
-from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoGlobalConfigNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoWarningException
-from edkrepo.common.edkrepo_exception import EdkrepoConfigFileInvalidException
-from edkrepo.common.humble import KEYBOARD_INTERRUPT, GIT_CMD_ERROR
+from edkrepo.common.edkrepo_exception import (
+    EdkrepoConfigFileInvalidException, EdkrepoException,
+    EdkrepoGlobalConfigNotFoundException, EdkrepoWarningException)
+from edkrepo.common.humble import GIT_CMD_ERROR, KEYBOARD_INTERRUPT
 from edkrepo.common.pathfix import get_actual_path
+from edkrepo.config import config_factory
+
 
 def generate_command_line(command):
     parser = argparse.ArgumentParser(prog='edkrepo')

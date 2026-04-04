@@ -3,7 +3,7 @@
 ## @file
 # status_humble.py
 #
-# Copyright (c) 2020 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,8 +11,7 @@
 the status command.
 '''
 
-from colorama import Fore
-from colorama import Style
+from colorama import Fore, Style
 
 #Messages for status_command.py
 STATUS_CURRENT_COMBO = "{}Current combo: {}{{}}{}".format(Style.BRIGHT, Fore.GREEN, Style.RESET_ALL)

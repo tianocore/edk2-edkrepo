@@ -3,11 +3,12 @@
 ## @file
 # git_exclude_maintenance.py
 #
-# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import os
+
 
 def write_git_exclude(repo_path, exclude_pattern):
     '''Writes the given exclude patterns to the .git/info/exclude file in the specified repository.

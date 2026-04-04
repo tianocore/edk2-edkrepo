@@ -3,7 +3,7 @@
 ## @file
 # maintenance_command.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,14 +12,16 @@ import sys
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.arguments import maintenance_args as arguments
-from edkrepo.commands.humble import maintenance_humble as humble
-from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig, set_long_path_support
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
-from edkrepo_manifest_parser.edk_manifest import ManifestXml
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.arguments import maintenance_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.commands.humble import maintenance_humble as humble
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
+from edkrepo.common.workspace_maintenance.git_config_maintenance import (
+    clean_git_globalconfig, set_long_path_support)
+from edkrepo.config.config_factory import (get_workspace_manifest,
+                                           get_workspace_path)
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
 
 
 class MaintenanceCommande(EdkrepoCommand):

@@ -3,21 +3,20 @@
 ## @file
 # ui_functions.py
 #
-# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import os
-import sys
 import string
+import sys
 
-import git
 import colorama
-from colorama import Fore
-from colorama import Style
-from colorama import init
+import git
+from colorama import Fore, Style, init
 
 from edkrepo.common.pathfix import expanduser
+
 
 def init_color_console(force_color_output):
     config = git.GitConfigParser(os.path.normpath(expanduser("~/.gitconfig")))

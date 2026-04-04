@@ -3,12 +3,13 @@
 ## @file
 # rebase_squash.py
 #
-# Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import re
+import sys
+
 
 def main():
     with open(sys.argv[1], 'r', errors="surrogateescape") as f:

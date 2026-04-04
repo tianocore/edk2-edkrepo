@@ -3,7 +3,7 @@
 ## @file
 # test_git_exclude_maintenance.py
 #
-# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,7 +12,9 @@ import sys
 from unittest.mock import mock_open, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo.common.workspace_maintenance.git_exclude_maintenance import write_git_exclude, generate_exclude_pattern
+from edkrepo.common.workspace_maintenance.git_exclude_maintenance import (
+    generate_exclude_pattern, write_git_exclude)
+
 
 class TestWriteGitExclude:
     REPO_PATH = "/mock/repo"

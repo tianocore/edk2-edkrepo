@@ -3,24 +3,26 @@
 ## @file
 # list_repos_command.py
 #
-# Copyright (c) 2019 - 2023, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2019 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import collections
-from itertools import zip_longest
 import json
 import os
 import sys
+from itertools import zip_longest
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.list_repos_args as arguments
 import edkrepo.commands.humble.list_repos_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.edkrepo_exception import (
+    EdkrepoInvalidParametersException, EdkrepoManifestInvalidException)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    list_available_manifest_repos, pull_all_manifest_repos)
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+
 
 class ListReposCommand(EdkrepoCommand):
     def __init__(self):
@@ -217,7 +219,7 @@ class ListReposCommand(EdkrepoCommand):
 
                 if ref_type[0]:
                     branch_data = { 'name': ref_type[0], 'projects': [] }
-                else: 
+                else:
                     branch_data = None
                 if ref_type[1]:
                     commit_data = { 'name': ref_type[1], 'projects': [] }

@@ -3,53 +3,58 @@
 ## @file
 # sync_command.py
 #
-# Copyright (c) 2017 - 2023, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import itertools
 import os
+import re
 import shutil
 import sys
 import time
-import re
 
 import git
 from git import Repo
 from git.exc import GitCommandError
 
-# Our modules
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.sync_args as arguments
 import edkrepo.commands.humble.sync_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoManifestNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
-from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, INCLUDED_FILE_NAME
-from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
-from edkrepo.common.pathfix import get_actual_path, expanduser
+import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.edkrepo_command import (EdkrepoCommand,
+                                              SourceManifestRepoArgument,
+                                              SubmoduleSkipArgument)
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
-from edkrepo.common.common_repo_functions import clone_repos, create_repos, patchset_branch_creation_flow, patchset_operations_similarity, sparse_checkout_enabled
-from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_single_manifest
-from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
-from edkrepo.common.common_repo_functions import update_editor_config
-from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
-from edkrepo.common.common_repo_functions import update_hooks, combinations_in_manifest
-from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
-from edkrepo.common.common_repo_functions import find_git_version
+from edkrepo.common.common_repo_functions import (
+    check_dirty_repos, checkout_repos, clone_repos, combinations_in_manifest,
+    create_repos, find_git_version, get_latest_sha,
+    patchset_branch_creation_flow, patchset_operations_similarity,
+    remove_included_config, reset_sparse_checkout, sparse_checkout,
+    sparse_checkout_enabled, update_editor_config, update_hooks,
+    update_repo_commit_template, verify_single_manifest, write_included_config)
+from edkrepo.common.edkrepo_exception import (EdkrepoException,
+                                              EdkrepoManifestChangedException,
+                                              EdkrepoManifestNotFoundException)
 from edkrepo.common.git_version import GitVersion
-from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig
-from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos, get_manifest_repo_path
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
-from edkrepo.config.config_factory import get_workspace_manifest_file
+from edkrepo.common.humble import (INCLUDED_FILE_NAME, SPARSE_CHECKOUT,
+                                   SPARSE_RESET)
+from edkrepo.common.pathfix import expanduser, get_actual_path
+from edkrepo.common.workspace_maintenance.git_config_maintenance import \
+    clean_git_globalconfig
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import \
+    SOURCE_MANIFEST_REPO_NOT_FOUND
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo, get_manifest_repo_path,
+    list_available_manifest_repos, pull_all_manifest_repos,
+    pull_workspace_manifest_repo)
+from edkrepo.common.workspace_maintenance.workspace_maintenance import \
+    generate_name_for_obsolete_backup
+from edkrepo.config.config_factory import (get_workspace_manifest,
+                                           get_workspace_manifest_file,
+                                           get_workspace_path)
 from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from project_utils.submodule import deinit_submodules, maintain_submodules
-import edkrepo.common.ui_functions as ui_functions
 
 
 class SyncCommand(EdkrepoCommand):

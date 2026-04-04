@@ -3,7 +3,7 @@
 ## @file
 # combo_humble.py
 #
-# Copyright (c) 2023, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2023 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,8 +11,7 @@
 Contains user visible strings printed by the list-repos command.
 '''
 
-from colorama import Fore
-from colorama import Style
+from colorama import Fore, Style
 
 CURRENT_COMBO = "{}{}* {{}}{}".format(Fore.GREEN, Style.BRIGHT, Fore.RESET)
 ARCHIVED_COMBO = "{}{}- {{}}{}".format(Fore.YELLOW, Style.BRIGHT, Style.RESET_ALL)

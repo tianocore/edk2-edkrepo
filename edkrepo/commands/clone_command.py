@@ -3,7 +3,7 @@
 ## @file
 # clone_command.py
 #
-# Copyright (c) 2017- 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,28 +11,39 @@ import os
 import shutil
 import sys
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.clone_args as arguments
-from edkrepo.common.common_cache_functions import get_repo_cache_obj
-from edkrepo.common.common_cache_functions import add_missing_cache_repos
-from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout, verify_single_manifest
-from edkrepo.common.common_repo_functions import update_editor_config, combinations_in_manifest
-from edkrepo.common.common_repo_functions import write_included_config, write_conditional_include
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
-from edkrepo.common.humble import CLONE_INVALID_WORKSPACE, CLONE_INVALID_PROJECT_ARG, CLONE_INVALID_COMBO_ARG
-from edkrepo.common.humble import SPARSE_CHECKOUT, CLONE_INVALID_LOCAL_ROOTS
-from edkrepo.common.pathfix import get_subst_drive_dict
-from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
-from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.edkrepo_command import (EdkrepoCommand,
+                                              SourceManifestRepoArgument,
+                                              SubmoduleSkipArgument)
+from edkrepo.common.common_cache_functions import (add_missing_cache_repos,
+                                                   get_repo_cache_obj)
+from edkrepo.common.common_repo_functions import (clone_repos,
+                                                  combinations_in_manifest,
+                                                  sparse_checkout,
+                                                  update_editor_config,
+                                                  verify_single_manifest,
+                                                  write_conditional_include,
+                                                  write_included_config)
+from edkrepo.common.edkrepo_exception import (
+    EdkrepoInvalidParametersException, EdkrepoManifestInvalidException,
+    EdkrepoManifestNotFoundException)
+from edkrepo.common.humble import (CLONE_INVALID_COMBO_ARG,
+                                   CLONE_INVALID_LOCAL_ROOTS,
+                                   CLONE_INVALID_PROJECT_ARG,
+                                   CLONE_INVALID_WORKSPACE, SPARSE_CHECKOUT)
+from edkrepo.common.pathfix import get_subst_drive_dict
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import (
+    PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_project_in_all_indices, find_source_manifest_repo,
+    get_manifest_repo_path, list_available_manifest_repos,
+    pull_all_manifest_repos)
+from edkrepo.common.workspace_maintenance.workspace_maintenance import \
+    case_insensitive_single_match
+from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from project_utils.submodule import maintain_submodules
-from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 
 
 class CloneCommand(EdkrepoCommand):

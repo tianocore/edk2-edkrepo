@@ -11,13 +11,14 @@ import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument
 import edkrepo.commands.arguments.create_pin_args as arguments
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.humble as humble
-from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 import edkrepo.common.ui_functions as ui_functions
-
+from edkrepo.commands.edkrepo_command import (EdkrepoCommand,
+                                              SourceManifestRepoArgument)
+from edkrepo.config.config_factory import (get_workspace_manifest,
+                                           get_workspace_path)
 
 
 class CreatePinCommand(EdkrepoCommand):
