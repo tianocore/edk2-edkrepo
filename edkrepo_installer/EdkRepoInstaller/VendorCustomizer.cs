@@ -28,7 +28,7 @@ namespace TianoCore.EdkRepoInstaller
         {
             gVendorCustomizerObject = VendorCustomizerObj;
         }
-  
+
         public static VendorCustomizer Instance
         {
             get

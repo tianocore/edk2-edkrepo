@@ -88,7 +88,7 @@ namespace TianoCore.EdkRepoInstaller
                     InstallLogger.Log(string.Format("Installation Error:\n{0}", e.ToString()));
                 }
                 WorkerComplete(false, false);
-                
+
             }
         }
 

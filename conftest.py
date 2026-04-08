@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def pytest_configure(config):
     """Add EDKREPO_ROOT to sys.path if environment variable is set and path exists."""
     edkrepo_root = os.environ.get('EDKREPO_ROOT')
-    
+
     if edkrepo_root:
         abs_path = os.path.abspath(edkrepo_root)
         if os.path.exists(abs_path):

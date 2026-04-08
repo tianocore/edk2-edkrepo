@@ -114,7 +114,7 @@ class ManifestCommand(EdkrepoCommand):
                             self.verbose_project_data(project, proj_manifest, ci_index_xml)
                     except Exception as e:
                         print(humble.BAD_MANIFEST)
-    
+
     def verbose_project_data(self, project, proj_manifest, ci_index_xml):
         print(humble.MANIFEST_FILE_PATH.format(ci_index_xml.get_project_xml(project)))
         print(humble.DEV_LEAD.format(' '.join(x for x in proj_manifest.project_info.dev_leads)))

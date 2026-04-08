@@ -54,16 +54,16 @@ class TestListManifestRepos:
     ])
     @patch('edkrepo.commands.manifest_repos_command.ui_functions.print_info_msg')
     @patch('edkrepo.commands.manifest_repos_command.manifest_repos_maintenance.get_manifest_repo_path')
-    def test_list_manifest_repos(self, mock_get_path, mock_print_info, manifest_repos_cmd, 
+    def test_list_manifest_repos(self, mock_get_path, mock_print_info, manifest_repos_cmd,
                                  mock_config, cfg_repos, user_cfg_repos, verbose, mock_paths):
         """Test _list_manifest_repos with various configurations"""
         # Setup mock paths
         if mock_paths:
             mock_get_path.side_effect = mock_paths
-        
+
         # Execute method
         manifest_repos_cmd._list_manifest_repos(cfg_repos, user_cfg_repos, mock_config, verbose)
-        
+
         # Verify print_info_msg calls
         if not cfg_repos and not user_cfg_repos:
             mock_print_info.assert_not_called()
@@ -72,23 +72,23 @@ class TestListManifestRepos:
                 if verbose:
                     path = mock_paths[cfg_repos.index(repo)] if mock_paths else None
                     mock_print_info.assert_any_call(
-                        humble.CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(path)), 
+                        humble.CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(path)),
                         header=False
                     )
                 else:
                     mock_print_info.assert_any_call(humble.CFG_LIST_ENTRY.format(repo), header=False)
-            
+
             for repo in user_cfg_repos:
                 if verbose:
                     path_index = len(cfg_repos) + user_cfg_repos.index(repo)
                     path = mock_paths[path_index] if mock_paths else None
                     mock_print_info.assert_any_call(
-                        humble.USER_CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(path)), 
+                        humble.USER_CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(path)),
                         header=False
                     )
                 else:
                     mock_print_info.assert_any_call(humble.USER_CFG_LIST_ENTRY.format(repo), header=False)
-        
+
         # Verify get_manifest_repo_path calls
         if verbose and (cfg_repos or user_cfg_repos):
             for repo in cfg_repos:
@@ -120,10 +120,10 @@ class TestListManifestReposJson:
         # Setup mock paths
         if mock_paths:
             mock_get_path.side_effect = mock_paths
-        
+
         # Execute method
         result = manifest_repos_cmd._list_manifest_repos_json(cfg_repos, user_cfg_repos, mock_config)
-        
+
         # Build expected JSON output
         expected_output = {
             "edkrepo_cfg": {
@@ -133,7 +133,7 @@ class TestListManifestReposJson:
                 "manifest_repositories": []
             }
         }
-        
+
         # Add cfg repos to expected output
         for i, repo in enumerate(cfg_repos):
             path = os.path.normpath(mock_paths[i])
@@ -141,7 +141,7 @@ class TestListManifestReposJson:
                 "name": repo,
                 "path": path
             })
-        
+
         # Add user cfg repos to expected output
         for i, repo in enumerate(user_cfg_repos):
             path_index = len(cfg_repos) + i
@@ -150,7 +150,7 @@ class TestListManifestReposJson:
                 "name": repo,
                 "path": path
             })
-        
+
         # Verify the return value is valid JSON and matches expected structure
         assert result == json.dumps(expected_output, indent=2)
         output_data = json.loads(result)
