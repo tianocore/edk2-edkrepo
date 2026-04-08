@@ -72,7 +72,7 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v $command_completion_edkr
       fi
     fi
   }
-  
+
   # Integrate with bash-preexec if available, otherwise use direct trap
   if declare -f __bp_preexec_invoke_cmd &>/dev/null; then
     # bash-preexec is available - use its hook system
@@ -110,7 +110,7 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v $command_completion_edkr
     }
     trap 'edkrepo_debug_trap' DEBUG
   fi
-  if [[ ! -z ${PROMPT_COMMAND+x} ]] && [[ "$PROMPT_COMMAND" != "edkrepo_combo_chpwd" ]]; then 
+  if [[ ! -z ${PROMPT_COMMAND+x} ]] && [[ "$PROMPT_COMMAND" != "edkrepo_combo_chpwd" ]]; then
     old_prompt_command=$PROMPT_COMMAND
   fi
   old_pwd=$(pwd)

@@ -84,7 +84,7 @@ class TestCalculateSourceManifestRepoDirectory:
         global_manifest_directory = calculate_source_manifest_repo_directory(self.MOCK_ARGS_SOURCE_MANIFEST_REPO_FLAG_CFG, self.MOCK_CONFIG, self.MOCK_MANIFEST)
         print(global_manifest_directory)
         assert global_manifest_directory == '/path/to/manifest/repo1'
-  
+
     @patch('edkrepo.common.workspace_maintenance.manifest_repos_maintenance.list_available_manifest_repos')
     @patch('edkrepo.common.workspace_maintenance.manifest_repos_maintenance.find_source_manifest_repo')
     def test_source_manifest_repo_found_in_user_cfg_no_flag(self, mock_find_source_manifest_repo, mock_list_available_manifest_repos):
@@ -120,7 +120,7 @@ class TestCalculateSourceManifestRepoDirectory:
 
         global_manifest_directory = calculate_source_manifest_repo_directory(self.MOCK_ARGS_SOURCE_MANIFEST_REPO_FLAG, self.MOCK_CONFIG, self.MOCK_MANIFEST)
         assert global_manifest_directory is None
-    
+
     def test_source_manifest_repo_not_found(self):
         mock_find_source_manifest_repo = MagicMock()
         mock_find_source_manifest_repo.return_value = None

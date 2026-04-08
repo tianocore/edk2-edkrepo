@@ -190,10 +190,10 @@ class TestGeneratePinData:
         with patch('edkrepo.commands.create_pin_command.Repo') as mock_repo_class:
             mock_repo1 = MagicMock()
             mock_repo1.head.commit.hexsha = "abc123def456"
-            
+
             mock_repo2 = MagicMock()
             mock_repo2.head.commit.hexsha = "789ghi012jkl"
-            
+
             mock_repo_class.side_effect = [mock_repo1, mock_repo2]
 
             # Execute
@@ -249,10 +249,10 @@ class TestGeneratePinData:
         with patch('edkrepo.commands.create_pin_command.Repo') as mock_repo_class:
             mock_repo2 = MagicMock()
             mock_repo2.head.commit.hexsha = "commit2sha"
-            
+
             mock_repo3 = MagicMock()
             mock_repo3.head.commit.hexsha = "commit3sha"
-            
+
             mock_repo_class.side_effect = [mock_repo2, mock_repo3]
 
             # Execute
@@ -288,10 +288,10 @@ class TestGeneratePinData:
         with patch('edkrepo.commands.create_pin_command.Repo') as mock_repo_class:
             mock_repo1 = MagicMock()
             mock_repo1.head.commit.hexsha = "abc123"
-            
+
             mock_repo2 = MagicMock()
             mock_repo2.head.commit.hexsha = "def456"
-            
+
             mock_repo_class.side_effect = [mock_repo1, mock_repo2]
 
             # Mock ui_functions to verify verbose output
