@@ -487,7 +487,7 @@ if [ -x "$(command -v edkrepo)" ] && [ -x "$(command -v command_completion_edkre
       fi
     fi
   }
-  
+
   # Integrate with bash-preexec if available, otherwise use direct trap
   if declare -f __bp_preexec_invoke_cmd &>/dev/null; then
     # bash-preexec is available - use its hook system
