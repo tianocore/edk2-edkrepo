@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 from edkrepo_manifest_parser.edk_manifest import (
+    CiIndexXml,
     ManifestXml,
     _validate_repo_local_root_or_raise,
     PatchSet,
@@ -343,3 +344,24 @@ class TestManifestXml:
         with pytest.raises(ValueError) as exc_info:
             manifest_instance.get_patchset_operations(UNKNOWN_PATCHSET, REMOTE_NAME)
         assert str(exc_info.value) == PATCHSET_UNKNOWN_ERROR.format(UNKNOWN_PATCHSET, MANIFEST_PATH)
+
+
+class TestCiIndexXml:
+
+    def test_project_lists_filter_archived_projects(self, tmp_path):
+        """Must return active and archived project names in the expected lists."""
+        xml_path = tmp_path / 'CiIndex.xml'
+        xml_path.write_text(
+            """<ProjectList>
+  <Project name="ActiveProject" xmlPath="active.xml" />
+  <Project name="ArchivedProject" xmlPath="archived.xml" archived="true" />
+  <Project name="ImplicitActiveProject" xmlPath="implicit.xml" />
+</ProjectList>
+""",
+            encoding='utf-8'
+        )
+
+        ci_index = CiIndexXml(str(xml_path))
+
+        assert ci_index.project_list == ['ActiveProject', 'ImplicitActiveProject']
+        assert ci_index.archived_project_list == ['ArchivedProject']
