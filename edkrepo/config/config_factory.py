@@ -7,24 +7,36 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+import collections
+import configparser
 import os
 import sys
-import configparser
-import collections
+
 if sys.platform == "win32":
     from ctypes import oledll, c_void_p, c_uint32, c_wchar_p
     from ctypes import create_unicode_buffer
 
 import edkrepo.config.humble.config_factory_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoGlobalConfigNotFoundException, EdkrepoConfigFileInvalidException
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoGlobalDataDirectoryNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoConfigFileReadOnlyException, EdkrepoInvalidConfigOptionException
+from edkrepo.common.edkrepo_exception import EdkrepoConfigFileInvalidException
+from edkrepo.common.edkrepo_exception import EdkrepoConfigFileReadOnlyException
+from edkrepo.common.edkrepo_exception import EdkrepoGlobalConfigNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoGlobalDataDirectoryNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidConfigOptionException
 from edkrepo.common.edkrepo_exception import EdkrepoPinFileNotFoundException
-from edkrepo.common.humble import MIRROR_PRIMARY_REPOS_MISSING, MIRROR_DECODE_WARNING, MAX_PATCH_SET_INVALID
-from edkrepo.common.pathfix import get_subst_drive_dict
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
-from edkrepo_manifest_parser import edk_manifest
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
+from edkrepo.common.humble import MAX_PATCH_SET_INVALID
+from edkrepo.common.humble import MIRROR_DECODE_WARNING
+from edkrepo.common.humble import MIRROR_PRIMARY_REPOS_MISSING
 from edkrepo.common.pathfix import expanduser
+from edkrepo.common.pathfix import get_subst_drive_dict
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    get_manifest_repo_path,
+)
+from edkrepo_manifest_parser import edk_manifest
+
 
 def get_edkrepo_global_data_directory():
     global_data_dir = None

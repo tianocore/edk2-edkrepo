@@ -9,22 +9,30 @@
 
 import os
 import re
-import traceback
 import shutil
+import traceback
 
 import git
 from git import Repo
 
+import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as humble
 import edkrepo.config.config_factory as cfg
-from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
-from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoInvalidParametersException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException, EdkrepoManifestRepoNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestRepoNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException
 from edkrepo.common.pathfix import expanduser
 from edkrepo.common.progress_handler import GitProgressHandler
-import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as humble
-from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
-from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+from edkrepo.common.workspace_maintenance.workspace_maintenance import (
+    case_insensitive_single_match,
+)
+from edkrepo.common.workspace_maintenance.workspace_maintenance import (
+    generate_name_for_obsolete_backup,
+)
+from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+
 
 def pull_single_manifest_repo(url, branch, local_path, reset_hard=False):
     '''

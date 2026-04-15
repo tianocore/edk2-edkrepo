@@ -8,14 +8,15 @@
 #
 
 import argparse
-import os
-import sys
 import configparser
 import fnmatch
 import io
-import time
+import os
 import re
-from subprocess import call, check_call
+import sys
+import time
+from subprocess import call
+from subprocess import check_call
 from xml.etree import ElementTree
 
 PYTHON_VERSION = "3"

@@ -7,20 +7,27 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+
 import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo_manifest_parser.edk_manifest import _FolderToFolderMapping
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
-    make_mock_element_with_iter,
-    make_empty_element,
-    REMOTE_NAME,
     PROJECT1_NAME,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     PROJECT2_NAME,
 )
-from edkrepo_manifest_parser.edk_manifest import (
-    _FolderToFolderMapping,
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    REMOTE_NAME,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_empty_element,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_mock_element_with_iter,
 )
 
 ATTRIB_PROJECT1             = 'project1'

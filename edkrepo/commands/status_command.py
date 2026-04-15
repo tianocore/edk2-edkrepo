@@ -9,15 +9,17 @@
 
 import os
 
-from git import Repo
 from colorama import Fore
 from colorama import Style
+from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.status_args as arguments
 import edkrepo.commands.humble.status_humble as humble
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo.config.config_factory import get_workspace_path
+
 
 class StatusCommand(EdkrepoCommand):
 

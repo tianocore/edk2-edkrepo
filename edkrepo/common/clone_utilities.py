@@ -18,6 +18,7 @@ import edkrepo.common.humble as humble
 import edkrepo.common.ui_functions as ui_functions
 import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manifest_repos_maintenance
 
+
 def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None):
     '''Generates and returns a string representing a git clone command which can be passed to subprocess for execution.
 

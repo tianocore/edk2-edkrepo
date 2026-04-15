@@ -7,24 +7,36 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import os
 import json
+import os
 from collections import defaultdict
 
 import edkrepo.commands.arguments.cache_args as arguments
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.edkrepo_command import SourceManifestRepoArgument
-from edkrepo.commands.humble.cache_humble import CACHE_ENABLED, CACHE_FETCH, SINGLE_CACHE_FETCH, CACHE_INFO
-from edkrepo.commands.humble.cache_humble import CACHE_INFO_LINE, PROJECT_NOT_FOUND, NO_INSTANCE
-from edkrepo.commands.humble.cache_humble import UNABLE_TO_LOAD_MANIFEST, UNABLE_TO_PARSE_MANIFEST
+from edkrepo.commands.humble.cache_humble import CACHE_ENABLED
+from edkrepo.commands.humble.cache_humble import CACHE_FETCH
+from edkrepo.commands.humble.cache_humble import CACHE_INFO
+from edkrepo.commands.humble.cache_humble import CACHE_INFO_LINE
+from edkrepo.commands.humble.cache_humble import NO_INSTANCE
+from edkrepo.commands.humble.cache_humble import PROJECT_NOT_FOUND
+from edkrepo.commands.humble.cache_humble import SINGLE_CACHE_FETCH
+from edkrepo.commands.humble.cache_humble import UNABLE_TO_LOAD_MANIFEST
+from edkrepo.commands.humble.cache_humble import UNABLE_TO_PARSE_MANIFEST
 from edkrepo.common.common_cache_functions import add_missing_cache_repos
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import get_latest_sha
 from edkrepo.common.edkrepo_exception import EdkrepoCacheException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
-from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_equal
-import edkrepo.common.ui_functions as ui_functions
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_project_in_all_indices,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    pull_all_manifest_repos,
+)
+from edkrepo.common.workspace_maintenance.workspace_maintenance import (
+    case_insensitive_equal,
+)
 from edkrepo.config.config_factory import get_workspace_manifest
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 

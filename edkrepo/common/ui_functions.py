@@ -8,16 +8,17 @@
 #
 
 import os
-import sys
 import string
+import sys
 
-import git
 import colorama
+import git
 from colorama import Fore
 from colorama import Style
 from colorama import init
 
 from edkrepo.common.pathfix import expanduser
+
 
 def init_color_console(force_color_output):
     config = git.GitConfigParser(os.path.normpath(expanduser("~/.gitconfig")))

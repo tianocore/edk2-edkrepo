@@ -7,23 +7,30 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+
 import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo_manifest_parser.edk_manifest import NO_REMOTE_EXISTS_WITH_NAME
+from edkrepo_manifest_parser.edk_manifest import REQUIRED_ATTRIB_ERROR_MSG
+from edkrepo_manifest_parser.edk_manifest import SubmoduleAlternateRemote
+from edkrepo_manifest_parser.edk_manifest import (
+    _parse_submodule_alternate_remote_attribs,
+)
+from edkrepo_manifest_parser.edk_manifest import _SubmoduleAlternateRemote
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
-    make_mock_element_with_text,
-    make_mock_remotes,
     REMOTE_NAME,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     REQUIRED_ATTRIB_SPLIT_CHAR,
 )
-from edkrepo_manifest_parser.edk_manifest import (
-    _SubmoduleAlternateRemote,
-    _parse_submodule_alternate_remote_attribs,
-    SubmoduleAlternateRemote,
-    REQUIRED_ATTRIB_ERROR_MSG,
-    NO_REMOTE_EXISTS_WITH_NAME,
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_mock_element_with_text,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_mock_remotes,
 )
 
 ATTRIB_REMOTE               = 'remote'

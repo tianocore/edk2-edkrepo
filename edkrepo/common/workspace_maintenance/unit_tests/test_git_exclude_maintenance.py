@@ -9,10 +9,17 @@
 
 import os
 import sys
-from unittest.mock import mock_open, patch
+from unittest.mock import mock_open
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo.common.workspace_maintenance.git_exclude_maintenance import write_git_exclude, generate_exclude_pattern
+from edkrepo.common.workspace_maintenance.git_exclude_maintenance import (
+    generate_exclude_pattern,
+)
+from edkrepo.common.workspace_maintenance.git_exclude_maintenance import (
+    write_git_exclude,
+)
+
 
 class TestWriteGitExclude:
     REPO_PATH = "/mock/repo"

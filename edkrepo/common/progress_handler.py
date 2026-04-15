@@ -9,6 +9,7 @@
 
 from git import RemoteProgress
 
+
 class GitProgressHandler(RemoteProgress):
     def __init__(self):
         super().__init__()

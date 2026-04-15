@@ -7,8 +7,10 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from edkrepo.commands.edkrepo_command import VerboseArgument, PerformanceArgument, ColorArgument
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.commands.edkrepo_command import ColorArgument
+from edkrepo.commands.edkrepo_command import PerformanceArgument
+from edkrepo.commands.edkrepo_command import VerboseArgument
 
 
 class CompositeCommand(object):

@@ -7,21 +7,27 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo_manifest_parser.edk_manifest_validation import ValidateManifest
+from edkrepo_manifest_parser.edk_manifest_validation import _try_parse_manifest_xml
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    CI_INDEX_PATH,
+)
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     MANIFEST_PATH,
-    CI_INDEX_PATH,
-    PROJECT1_NAME,
-    PROJECT2_NAME,
 )
-from edkrepo_manifest_parser.edk_manifest_validation import (
-    ValidateManifest,
-    _try_parse_manifest_xml,
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    PROJECT1_NAME,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    PROJECT2_NAME,
 )
 
 PROJECT1_NAME_LOWER      = PROJECT1_NAME.lower()

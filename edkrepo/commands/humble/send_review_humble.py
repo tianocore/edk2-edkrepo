@@ -11,8 +11,12 @@
 Contains informational and error messages outputted by
 the run_command functions of Edkrepo commands
 """
-from edkrepo.common.humble import AMEND, ADD, RESET_HEAD
-from edkrepo.common.humble import CHECKOUT, CHECKOUT_HEAD, BRANCH_BEHIND
+from edkrepo.common.humble import ADD
+from edkrepo.common.humble import AMEND
+from edkrepo.common.humble import BRANCH_BEHIND
+from edkrepo.common.humble import CHECKOUT
+from edkrepo.common.humble import CHECKOUT_HEAD
+from edkrepo.common.humble import RESET_HEAD
 from edkrepo.common.humble import WARNING_MESSAGE
 
 # Warning and error messages for send_review_command.py

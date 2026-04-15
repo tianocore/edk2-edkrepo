@@ -1,13 +1,15 @@
-﻿import sys
-import os
-from unittest.mock import MagicMock, patch
+﻿import os
+import sys
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
 
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo_manifest_parser.edk_manifest import ManifestXml, RepoSource
 from edkrepo.commands.combo_command import ComboCommand
 from edkrepo.common.edkrepo_exception import EdkrepoPinFileNotFoundException
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+from edkrepo_manifest_parser.edk_manifest import RepoSource
 
 
 class TestIdentifyComboSources:

@@ -7,15 +7,17 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+
 import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo_manifest_parser.edk_manifest import PatchOperation
+from edkrepo_manifest_parser.edk_manifest import _PatchSetOperations
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     make_mock_element,
 )
-from edkrepo_manifest_parser.edk_manifest import _PatchSetOperations, PatchOperation
 
 ELEMENT_TAG_CHERRY_PICK  = 'CherryPick'
 ATTRIB_FILE              = 'file'

@@ -11,7 +11,17 @@ import os
 import sys
 
 if sys.platform == "win32":
-    from ctypes import windll, c_void_p, c_bool, c_long, c_ulong, Structure, POINTER, byref, sizeof, WinError, GetLastError
+    from ctypes import POINTER
+    from ctypes import GetLastError
+    from ctypes import Structure
+    from ctypes import WinError
+    from ctypes import byref
+    from ctypes import c_bool
+    from ctypes import c_long
+    from ctypes import c_ulong
+    from ctypes import c_void_p
+    from ctypes import sizeof
+    from ctypes import windll
 
     class _USEROBJECTFLAGS(Structure):
         _fields_ = [("fInherit", c_ulong),

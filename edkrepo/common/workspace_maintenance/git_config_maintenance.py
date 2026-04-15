@@ -13,9 +13,10 @@ import sys
 
 import git
 
-from edkrepo.common.pathfix import expanduser
 from edkrepo.common.common_repo_functions import find_git_version
 from edkrepo.common.git_version import GitVersion
+from edkrepo.common.pathfix import expanduser
+
 
 def clean_git_globalconfig():
     global_gitconfig_path = os.path.normpath(expanduser("~/.gitconfig"))

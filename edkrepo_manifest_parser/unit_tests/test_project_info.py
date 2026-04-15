@@ -7,19 +7,18 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
-import pytest
+import sys
 from unittest.mock import MagicMock
 
+import pytest
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo_manifest_parser.edk_manifest import ProjectInfo
+from edkrepo_manifest_parser.edk_manifest import _parse_project_info_required_fields
+from edkrepo_manifest_parser.edk_manifest import _ProjectInfo
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     make_text_element,
-)
-from edkrepo_manifest_parser.edk_manifest import (
-    _ProjectInfo,
-    _parse_project_info_required_fields,
-    ProjectInfo,
 )
 
 ELEMENT_TAG_PROJECT_INFO = 'ProjectInfo'

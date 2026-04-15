@@ -9,20 +9,28 @@
 
 import os
 import sys
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo.common.humble import VERIFY_ERROR_HEADER
 from edkrepo_manifest_parser.edk_manifest_validation import (
     _collect_file_validation_results,
-    _resolve_project_manifest_path,
-    _collect_project_validation_results,
-    validate_manifestfiles,
-    validate_manifestrepo,
-    get_manifest_validation_status,
-    print_manifest_errors,
 )
-from edkrepo.common.humble import VERIFY_ERROR_HEADER
+from edkrepo_manifest_parser.edk_manifest_validation import (
+    _collect_project_validation_results,
+)
+from edkrepo_manifest_parser.edk_manifest_validation import (
+    _resolve_project_manifest_path,
+)
+from edkrepo_manifest_parser.edk_manifest_validation import (
+    get_manifest_validation_status,
+)
+from edkrepo_manifest_parser.edk_manifest_validation import print_manifest_errors
+from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestfiles
+from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
 
 MANIFEST_PATH            = '/fake/path/manifest.xml'
 MANIFEST_PATH_2          = '/fake/path/manifest2.xml'

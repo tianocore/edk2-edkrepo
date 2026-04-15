@@ -7,26 +7,27 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import os
-from datetime import datetime
 import itertools
 import json
+import os
 import re
 import subprocess
 import webbrowser
+from datetime import datetime
 from enum import Enum
 
-from git import Repo
 from colorama import Fore
+from git import Repo
 from git.exc import GitCommandError
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
-import edkrepo.commands.humble.send_review_humble as humble
 import edkrepo.commands.arguments.send_review_args as arguments
+import edkrepo.commands.humble.send_review_humble as humble
 import edkrepo.common.common_repo_functions as common_repo_functions
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.ui_functions as ui_functions
 import edkrepo.config.config_factory as config_factory
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.commands.edkrepo_command import OverrideArgument
 
 
 class SendReviewCommand(EdkrepoCommand):

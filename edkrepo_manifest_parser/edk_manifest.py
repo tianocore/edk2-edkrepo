@@ -7,16 +7,11 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-# Standard imports
-import xml.etree.ElementTree as ET
-from collections import namedtuple
-import os
 import copy
 import json
-
-# 3rd party imports
-#   None planned at this time
-
+import os
+import xml.etree.ElementTree as ET
+from collections import namedtuple
 
 #
 # All the namedtuple data structures that consumers of this module will need.
@@ -1397,8 +1392,8 @@ def _parse_submodule_init_required_attribs(element):
 #
 def main():
     import argparse
-    import traceback
     import sys
+    import traceback
 
     separator_string = '----------------------------------------------------------------'
     project_header_string = '\nProject Name:    Project XML Path'

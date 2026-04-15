@@ -7,15 +7,18 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-# Our modules
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
 import edkrepo.commands.arguments.checkout_args as arguments
 import edkrepo.commands.humble.checkout_humble as humble
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.commands.edkrepo_command import OverrideArgument
 from edkrepo.common.common_cache_functions import get_repo_cache_obj
-from edkrepo.common.common_repo_functions import checkout, combination_is_in_manifest
+from edkrepo.common.common_repo_functions import checkout
+from edkrepo.common.common_repo_functions import combination_is_in_manifest
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    get_manifest_repo_path,
+)
 from edkrepo.config.config_factory import get_workspace_manifest
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import get_manifest_repo_path
 
 
 class CheckoutCommand(EdkrepoCommand):

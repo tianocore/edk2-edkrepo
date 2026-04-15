@@ -7,27 +7,44 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+import io
 import os
 import subprocess
 import sys
-import io
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument
-from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices
-from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
-from edkrepo.config.config_factory import get_workspace_manifest
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoInvalidParametersException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 import edkrepo.commands.arguments.list_pins_args as arguments
 import edkrepo.commands.humble.list_pins_humble as humble
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.commands.edkrepo_command import SourceManifestRepoArgument
 from edkrepo.common.common_repo_functions import find_less
-from edkrepo_manifest_parser.edk_manifest import ManifestXml, CiIndexXml
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
+from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
+from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import (
+    PROJ_NOT_IN_REPO,
+)
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import (
+    SOURCE_MANIFEST_REPO_NOT_FOUND,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_project_in_all_indices,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    list_available_manifest_repos,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    pull_workspace_manifest_repo,
+)
+from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+
 
 class ListPinsCommand(EdkrepoCommand):
     def __init__(self):

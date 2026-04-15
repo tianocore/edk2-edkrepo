@@ -7,21 +7,24 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+
 import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from edkrepo_manifest_parser.edk_manifest import REQUIRED_ATTRIB_ERROR_MSG
+from edkrepo_manifest_parser.edk_manifest import SubmoduleInitPath
+from edkrepo_manifest_parser.edk_manifest import _parse_submodule_init_required_attribs
+from edkrepo_manifest_parser.edk_manifest import _SubmoduleInitEntry
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
-    make_mock_element_with_text,
     REMOTE_NAME,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     REQUIRED_ATTRIB_SPLIT_CHAR,
 )
-from edkrepo_manifest_parser.edk_manifest import (
-    _SubmoduleInitEntry,
-    _parse_submodule_init_required_attribs,
-    SubmoduleInitPath,
-    REQUIRED_ATTRIB_ERROR_MSG,
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    make_mock_element_with_text,
 )
 
 ATTRIB_REMOTE               = 'remote'

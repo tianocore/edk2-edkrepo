@@ -7,28 +7,30 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
 import os
+import sys
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo_manifest_parser.edk_manifest import (
-    ManifestXml,
-    _validate_repo_local_root_or_raise,
-    PatchSet,
-    INVALID_REPO_PATH_ERROR,
-    NO_PARENT_REPO_ERROR,
-    COMBO_INVALIDINPUT_ERROR,
-    NO_PATCHSET_IN_COMBO,
-    PATCHSET_UNKNOWN_ERROR,
-    PATCHSET_PARENT_CIRCULAR_DEPENDENCY,
-)
+from edkrepo_manifest_parser.edk_manifest import COMBO_INVALIDINPUT_ERROR
+from edkrepo_manifest_parser.edk_manifest import INVALID_REPO_PATH_ERROR
+from edkrepo_manifest_parser.edk_manifest import NO_PARENT_REPO_ERROR
+from edkrepo_manifest_parser.edk_manifest import NO_PATCHSET_IN_COMBO
+from edkrepo_manifest_parser.edk_manifest import PATCHSET_PARENT_CIRCULAR_DEPENDENCY
+from edkrepo_manifest_parser.edk_manifest import PATCHSET_UNKNOWN_ERROR
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
+from edkrepo_manifest_parser.edk_manifest import PatchSet
+from edkrepo_manifest_parser.edk_manifest import _validate_repo_local_root_or_raise
 from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
     MANIFEST_PATH,
-    REMOTE_NAME,
-    REMOTE_URL,
 )
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
+    REMOTE_NAME,
+)
+from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import REMOTE_URL
 
 ATTRIB_NAME               = 'name'
 ELEMENT_TAG_MANIFEST      = 'Manifest'

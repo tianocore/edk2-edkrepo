@@ -9,18 +9,28 @@
 
 import os
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.manifest_args as arguments
-import edkrepo.commands.humble.manifest_humble as humble
 import edkrepo.commands.humble.common_humble as common_humble
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoManifestNotFoundException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_single_index
-from edkrepo.config.config_factory import get_workspace_manifest
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+import edkrepo.commands.humble.manifest_humble as humble
 import edkrepo_manifest_parser.edk_manifest_validation as manifest_validation
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
+from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_project_in_single_index,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    find_source_manifest_repo,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    list_available_manifest_repos,
+)
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import (
+    pull_all_manifest_repos,
+)
+from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
 
 
 class ManifestCommand(EdkrepoCommand):

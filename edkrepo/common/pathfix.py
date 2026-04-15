@@ -8,10 +8,21 @@
 #
 import os
 import sys
+
 if sys.platform == "win32":
-    from ctypes import windll, POINTER, byref, GetLastError, Structure, WinError
-    from ctypes import c_void_p, c_ushort, c_int,  c_ulong, c_wchar, c_wchar_p
+    from ctypes import POINTER
+    from ctypes import GetLastError
+    from ctypes import Structure
+    from ctypes import WinError
+    from ctypes import byref
+    from ctypes import c_int
+    from ctypes import c_ulong
+    from ctypes import c_ushort
+    from ctypes import c_void_p
+    from ctypes import c_wchar
+    from ctypes import c_wchar_p
     from ctypes import create_unicode_buffer
+    from ctypes import windll
 
 def _is_wow64_process():
     kernel32 = windll.kernel32

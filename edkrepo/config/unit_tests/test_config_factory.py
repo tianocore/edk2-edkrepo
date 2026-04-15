@@ -1,12 +1,14 @@
-import sys
 import os
-from unittest.mock import MagicMock, patch
+import sys
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
 
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo_manifest_parser.edk_manifest import ManifestXml, GeneralConfig
 from edkrepo.config.config_factory import get_checked_out_pin_file
+from edkrepo_manifest_parser.edk_manifest import GeneralConfig
+from edkrepo_manifest_parser.edk_manifest import ManifestXml
 
 
 class TestGetCheckedOutPinFile:

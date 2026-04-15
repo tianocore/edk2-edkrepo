@@ -14,7 +14,6 @@ Contains user visible strings printed by the list-repos command.
 from colorama import Fore
 from colorama import Style
 
-
 MANIFEST_REPO = '{}Manifest Directory:{} {{}}'.format(Style.BRIGHT, Style.RESET_ALL)
 MANIFEST_REPO_PATH = '{}Manifest Directory Path:{} {{}}'.format(Style.BRIGHT, Style.RESET_ALL)
 MANIFEST_REPO_URL = '{}Manifest Repository URL:{} {{}}'.format(Style.BRIGHT, Style.RESET_ALL)
