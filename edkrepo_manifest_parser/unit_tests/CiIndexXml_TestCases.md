@@ -20,41 +20,41 @@ Tests `CiIndexXml.__init__` which parses a CiIndex XML file and builds the inter
 ### TestProjectList
 Tests the `project_list` property which returns the names of all non-archived projects.
 
-#### 4. Returns Only Active Project Names
+#### 1. Returns Only Active Project Names
 - **Description**: When the projects map contains a mix of active and archived projects.
 - **Expected Outcome**: Only the names of non-archived projects are returned.
 
-#### 5. Returns Empty List When All Projects Are Archived
+#### 2. Returns Empty List When All Projects Are Archived
 - **Description**: When every project in the map has `archived` set to `True`.
 - **Expected Outcome**: Returns an empty list.
 
-#### 6. Returns All Names When No Projects Are Archived
+#### 3. Returns All Names When No Projects Are Archived
 - **Description**: When every project in the map has `archived` set to `False`.
 - **Expected Outcome**: All project names are returned.
 
 ### TestArchivedProjectList
 Tests the `archived_project_list` property which returns the names of all archived projects.
 
-#### 7. Returns Only Archived Project Names
+#### 1. Returns Only Archived Project Names
 - **Description**: When the projects map contains a mix of active and archived projects.
 - **Expected Outcome**: Only the names of archived projects are returned.
 
-#### 8. Returns Empty List When No Projects Are Archived
+#### 2. Returns Empty List When No Projects Are Archived
 - **Description**: When every project in the map has `archived` set to `False`.
 - **Expected Outcome**: Returns an empty list.
 
-#### 9. Returns All Names When All Projects Are Archived
+#### 3. Returns All Names When All Projects Are Archived
 - **Description**: When every project in the map has `archived` set to `True`.
 - **Expected Outcome**: All project names are returned.
 
 ### TestGetProjectXml
 Tests `get_project_xml` which returns the XML path for a project or raises `ValueError` if the project is not found.
 
-#### 10. Returns XmlPath When Project Found
+#### 1. Returns XmlPath When Project Found
 - **Description**: When the requested project name exists in the internal projects map.
 - **Expected Outcome**: Returns the `xmlPath` attribute of the corresponding `_Project`.
 
-#### 11. Raises ValueError When Project Not Found
+#### 2. Raises ValueError When Project Not Found
 - **Description**: When the requested project name does not exist in the internal projects map.
 - **Expected Outcome**: Raises `ValueError` containing the project name.
 

@@ -13,21 +13,16 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, INVALID_PROJECTNAME_ERROR
-from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
-    CI_INDEX_PATH,
-    PROJECT1_NAME,
-    PROJECT2_NAME,
-)
+import edkrepo_manifest_parser.edk_manifest as edk_manifest
+import edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers as helpers
 
-PROJECT_XML_A             = f'{PROJECT1_NAME}/{PROJECT1_NAME}.xml'
-CI_UNKNOWN_PROJECT        = 'Unknown'
+PROJECT_XML_A = f'{helpers.PROJECT1_NAME}/{helpers.PROJECT1_NAME}.xml'
 ELEMENT_TAG_CI_PROJECT_LIST = 'ProjectList'
-CI_DEFAULT_XML_PATH       = 'fake_path.xml'
-CI_PARAMETRIZE_FIELDS     = 'archived_a,archived_b,expected'
-ID_MIXED                  = 'mixed'
-ID_ALL_ARCHIVED           = 'all_archived'
-ID_NONE_ARCHIVED          = 'none_archived'
+CI_DEFAULT_XML_PATH = 'fake_path.xml'
+CI_PARAMETRIZE_FIELDS = 'archived_a,archived_b,expected'
+ID_MIXED = 'mixed'
+ID_ALL_ARCHIVED = 'all_archived'
+ID_NONE_ARCHIVED = 'none_archived'
 
 
 class TestCiIndexXml:
@@ -57,14 +52,14 @@ class TestCiIndexXml:
     def _make_two_project_map(archived_a, archived_b):
         """Build a _projects dict with PROJECT1_NAME and PROJECT2_NAME using the given archived flags."""
         return {
-            PROJECT1_NAME: TestCiIndexXml._make_mock_project(PROJECT1_NAME, archived_a),
-            PROJECT2_NAME: TestCiIndexXml._make_mock_project(PROJECT2_NAME, archived_b),
+            helpers.PROJECT1_NAME: TestCiIndexXml._make_mock_project(helpers.PROJECT1_NAME, archived_a),
+            helpers.PROJECT2_NAME: TestCiIndexXml._make_mock_project(helpers.PROJECT2_NAME, archived_b),
         }
 
     @pytest.fixture
     def ci_instance(self):
-        """Return a bare CiIndexXml instance with an empty _projects map ready for per-test configuration."""
-        return CiIndexXml(CI_INDEX_PATH)
+        """Return a bare edk_manifest.CiIndexXml instance with an empty _projects map ready for per-test configuration."""
+        return edk_manifest.CiIndexXml(helpers.CI_INDEX_PATH)
 
     @pytest.fixture
     def mock_project_cls(self):
@@ -74,7 +69,7 @@ class TestCiIndexXml:
 
     def test_init_empty_tree_results_in_empty_project_map(self, mock_project_cls):
         """When the XML tree has no Project elements, _projects must be empty and _Project never called."""
-        ci = CiIndexXml(CI_INDEX_PATH)
+        ci = edk_manifest.CiIndexXml(helpers.CI_INDEX_PATH)
 
         assert ci._projects == {}
         mock_project_cls.assert_not_called()
@@ -83,30 +78,30 @@ class TestCiIndexXml:
         """When the tree has one Project element, _projects must contain exactly that entry keyed by name."""
         mock_elem = MagicMock()
         mock_et.return_value.iter.return_value = [mock_elem]
-        proj_a = self._make_mock_project(PROJECT1_NAME, False, PROJECT_XML_A)
+        proj_a = self._make_mock_project(helpers.PROJECT1_NAME, False, PROJECT_XML_A)
         mock_project_cls.return_value = proj_a
 
-        ci = CiIndexXml(CI_INDEX_PATH)
+        ci = edk_manifest.CiIndexXml(helpers.CI_INDEX_PATH)
 
-        assert ci._projects == {PROJECT1_NAME: proj_a}
+        assert ci._projects == {helpers.PROJECT1_NAME: proj_a}
         mock_project_cls.assert_called_once_with(mock_elem)
 
     def test_init_multiple_projects_all_keyed_by_name(self, mock_project_cls, mock_et):
         """When the tree has multiple Project elements, _projects must contain one entry per project."""
         mock_elem_a, mock_elem_b = MagicMock(), MagicMock()
         mock_et.return_value.iter.return_value = [mock_elem_a, mock_elem_b]
-        proj_a = self._make_mock_project(PROJECT1_NAME, False)
-        proj_b = self._make_mock_project(PROJECT2_NAME, True)
+        proj_a = self._make_mock_project(helpers.PROJECT1_NAME, False)
+        proj_b = self._make_mock_project(helpers.PROJECT2_NAME, True)
         mock_project_cls.side_effect = [proj_a, proj_b]
 
-        ci = CiIndexXml(CI_INDEX_PATH)
+        ci = edk_manifest.CiIndexXml(helpers.CI_INDEX_PATH)
 
-        assert ci._projects == {PROJECT1_NAME: proj_a, PROJECT2_NAME: proj_b}
+        assert ci._projects == {helpers.PROJECT1_NAME: proj_a, helpers.PROJECT2_NAME: proj_b}
 
     @pytest.mark.parametrize(CI_PARAMETRIZE_FIELDS, [
-        pytest.param(False, True,  [PROJECT1_NAME],                id=ID_MIXED),
-        pytest.param(True,  True,  [],                             id=ID_ALL_ARCHIVED),
-        pytest.param(False, False, [PROJECT1_NAME, PROJECT2_NAME], id=ID_NONE_ARCHIVED),
+        pytest.param(False, True, [helpers.PROJECT1_NAME], id=ID_MIXED),
+        pytest.param(True, True, [], id=ID_ALL_ARCHIVED),
+        pytest.param(False, False, [helpers.PROJECT1_NAME, helpers.PROJECT2_NAME], id=ID_NONE_ARCHIVED),
     ])
     def test_project_list(self, ci_instance, archived_a, archived_b, expected):
         """project_list must return only non-archived project names for each combination of archived flags."""
@@ -115,9 +110,9 @@ class TestCiIndexXml:
         assert set(ci_instance.project_list) == set(expected)
 
     @pytest.mark.parametrize(CI_PARAMETRIZE_FIELDS, [
-        pytest.param(False, True,  [PROJECT2_NAME],                id=ID_MIXED),
-        pytest.param(False, False, [],                             id=ID_NONE_ARCHIVED),
-        pytest.param(True,  True,  [PROJECT1_NAME, PROJECT2_NAME], id=ID_ALL_ARCHIVED),
+        pytest.param(False, True, [helpers.PROJECT2_NAME], id=ID_MIXED),
+        pytest.param(False, False, [], id=ID_NONE_ARCHIVED),
+        pytest.param(True, True, [helpers.PROJECT1_NAME, helpers.PROJECT2_NAME], id=ID_ALL_ARCHIVED),
     ])
     def test_archived_project_list(self, ci_instance, archived_a, archived_b, expected):
         """archived_project_list must return only archived project names for each combination of archived flags."""
@@ -128,13 +123,13 @@ class TestCiIndexXml:
     def test_get_project_xml_returns_path_when_project_found(self, ci_instance):
         """When the requested project exists in _projects, get_project_xml must return its xmlPath."""
         ci_instance._projects = {
-            PROJECT1_NAME: self._make_mock_project(PROJECT1_NAME, False, PROJECT_XML_A),
+            helpers.PROJECT1_NAME: self._make_mock_project(helpers.PROJECT1_NAME, False, PROJECT_XML_A),
         }
 
-        assert ci_instance.get_project_xml(PROJECT1_NAME) == PROJECT_XML_A
+        assert ci_instance.get_project_xml(helpers.PROJECT1_NAME) == PROJECT_XML_A
 
     def test_get_project_xml_raises_value_error_when_not_found(self, ci_instance):
         """When the requested project is absent from _projects, get_project_xml must raise ValueError."""
         with pytest.raises(ValueError) as exc_info:
-            ci_instance.get_project_xml(CI_UNKNOWN_PROJECT)
-        assert str(exc_info.value) == INVALID_PROJECTNAME_ERROR.format(CI_UNKNOWN_PROJECT)
+            ci_instance.get_project_xml(helpers.UNKNOWN)
+        assert str(exc_info.value) == edk_manifest.INVALID_PROJECTNAME_ERROR.format(helpers.UNKNOWN)

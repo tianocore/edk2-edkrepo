@@ -24,9 +24,45 @@
 
 #### `edkrepo_manifest_parser/unit_tests/`
 
-- [RepoSource Test Cases](../edkrepo_manifest_parser/unit_tests/RepoSource_TestCases.md)\
-  Test case descriptions and expected behaviors for tests defined in [test_repo_source.py](../edkrepo_manifest_parser/unit_tests/test_repo_source.py)
-- [ManifestXml Test Cases](../edkrepo_manifest_parser/unit_tests/ManifestXml_TestCases.md)\
-  Test case descriptions and expected behaviors for tests defined in [test_manifestxml.py](../edkrepo_manifest_parser/unit_tests/test_manifestxml.py)
+- [BaseXmlHelper Test Cases](../edkrepo_manifest_parser/unit_tests/BaseXmlHelper_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_base_xml_helper.py](../edkrepo_manifest_parser/unit_tests/test_base_xml_helper.py)
 - [CiIndexXml Test Cases](../edkrepo_manifest_parser/unit_tests/CiIndexXml_TestCases.md)\
   Test case descriptions and expected behaviors for tests defined in [test_ci_index_xml.py](../edkrepo_manifest_parser/unit_tests/test_ci_index_xml.py)
+- [Combination Test Cases](../edkrepo_manifest_parser/unit_tests/Combination_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_combination.py](../edkrepo_manifest_parser/unit_tests/test_combination.py)
+- [EdkManifestValidation Test Cases](../edkrepo_manifest_parser/unit_tests/EdkManifestValidation_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_edk_manifest_validation.py](../edkrepo_manifest_parser/unit_tests/test_edk_manifest_validation.py)
+- [FolderToFolderMapping Test Cases](../edkrepo_manifest_parser/unit_tests/FolderToFolderMapping_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_folder_to_folder_mapping.py](../edkrepo_manifest_parser/unit_tests/test_folder_to_folder_mapping.py)
+- [FolderToFolderMappingFolder Test Cases](../edkrepo_manifest_parser/unit_tests/FolderToFolderMappingFolder_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_folder_to_folder_mapping_folder.py](../edkrepo_manifest_parser/unit_tests/test_folder_to_folder_mapping_folder.py)
+- [FolderToFolderMappingFolderExclude Test Cases](../edkrepo_manifest_parser/unit_tests/FolderToFolderMappingFolderExclude_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_folder_to_folder_mapping_folder_exclude.py](../edkrepo_manifest_parser/unit_tests/test_folder_to_folder_mapping_folder_exclude.py)
+- [GeneralConfig Test Cases](../edkrepo_manifest_parser/unit_tests/GeneralConfig_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_general_config.py](../edkrepo_manifest_parser/unit_tests/test_general_config.py)
+- [ManifestXml Test Cases](../edkrepo_manifest_parser/unit_tests/ManifestXml_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_manifestxml.py](../edkrepo_manifest_parser/unit_tests/test_manifestxml.py)
+- [PatchSet Test Cases](../edkrepo_manifest_parser/unit_tests/PatchSet_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_patchset.py](../edkrepo_manifest_parser/unit_tests/test_patchset.py)
+- [PatchSetOperations Test Cases](../edkrepo_manifest_parser/unit_tests/PatchSetOperations_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_patchset_operations.py](../edkrepo_manifest_parser/unit_tests/test_patchset_operations.py)
+- [Project Test Cases](../edkrepo_manifest_parser/unit_tests/Project_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_project.py](../edkrepo_manifest_parser/unit_tests/test_project.py)
+- [ProjectInfo Test Cases](../edkrepo_manifest_parser/unit_tests/ProjectInfo_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_project_info.py](../edkrepo_manifest_parser/unit_tests/test_project_info.py)
+- [RemoteRepo Test Cases](../edkrepo_manifest_parser/unit_tests/RemoteRepo_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_remote_repo.py](../edkrepo_manifest_parser/unit_tests/test_remote_repo.py)
+- [RepoHook Test Cases](../edkrepo_manifest_parser/unit_tests/RepoHook_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_repo_hook.py](../edkrepo_manifest_parser/unit_tests/test_repo_hook.py)
+- [RepoSource Test Cases](../edkrepo_manifest_parser/unit_tests/RepoSource_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_repo_source.py](../edkrepo_manifest_parser/unit_tests/test_repo_source.py)
+- [SparseData Test Cases](../edkrepo_manifest_parser/unit_tests/SparseData_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_sparse_data.py](../edkrepo_manifest_parser/unit_tests/test_sparse_data.py)
+- [SparseSettings Test Cases](../edkrepo_manifest_parser/unit_tests/SparseSettings_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_sparse_settings.py](../edkrepo_manifest_parser/unit_tests/test_sparse_settings.py)
+- [SubmoduleAlternateRemote Test Cases](../edkrepo_manifest_parser/unit_tests/SubmoduleAlternateRemote_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_submodule_alternate_remote.py](../edkrepo_manifest_parser/unit_tests/test_submodule_alternate_remote.py)
+- [SubmoduleInitEntry Test Cases](../edkrepo_manifest_parser/unit_tests/SubmoduleInitEntry_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_submodule_init_entry.py](../edkrepo_manifest_parser/unit_tests/test_submodule_init_entry.py)
+- [ValidateManifest Test Cases](../edkrepo_manifest_parser/unit_tests/ValidateManifest_TestCases.md)\
+  Test case descriptions and expected behaviors for tests defined in [test_validatemanifest.py](../edkrepo_manifest_parser/unit_tests/test_validatemanifest.py)

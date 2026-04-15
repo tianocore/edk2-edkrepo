@@ -48,7 +48,7 @@ class ValidateManifest:
             return ("DUPLICATE", False, INDEX_DUPLICATE_NAMES.format(project, ci_index_filename))
         else:
             return ("DUPLICATE", True, None)
-    
+
     def list_entries(self, project, project_list):
         """Return all entries in project_list that case-insensitively match project."""
         return [x for x in project_list if self.case_insensitive_equal(project, x)]
@@ -163,4 +163,4 @@ if __name__ == '__main__':
     except Exception as e:
         traceback.print_exc()
         sys.exit(1)
-        
+
