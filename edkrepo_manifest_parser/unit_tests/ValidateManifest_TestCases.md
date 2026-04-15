@@ -16,67 +16,67 @@ Tests `_try_parse_manifest_xml` which attempts to construct a `ManifestXml` from
 ### TestValidateParsing
 Tests `validate_parsing` which attempts to parse the manifest XML file and returns a `(type, status, message)` result tuple.
 
-#### 3. Success Returns Correct Tuple and Sets Xmldata
+#### 1. Success Returns Correct Tuple and Sets Xmldata
 - **Description**: When `ManifestXml` is successfully constructed.
 - **Expected Outcome**: Returns `("PARSING", True, None)` and `_manifest_xmldata` is set to the constructed instance.
 
-#### 4. Failure Returns Correct Tuple and Clears Xmldata
+#### 2. Failure Returns Correct Tuple and Clears Xmldata
 - **Description**: When `ManifestXml` raises an exception.
 - **Expected Outcome**: Returns `("PARSING", False, <exception>)` and `_manifest_xmldata` is set to `None`.
 
 ### TestValidateCodename
 Tests `validate_codename` which verifies the manifest codename matches the expected project name and returns a `(type, status, message)` result tuple.
 
-#### 5. Fails When No Manifest Data
+#### 1. Fails When No Manifest Data
 - **Description**: When `_manifest_xmldata` is `None`.
 - **Expected Outcome**: Returns `('CODENAME', False, <message containing the project name>)`.
 
-#### 6. Succeeds When Codename Matches
+#### 2. Succeeds When Codename Matches
 - **Description**: When `_manifest_xmldata.project_info.codename` equals the given project name.
 - **Expected Outcome**: Returns `("CODENAME", True, None)`.
 
-#### 7. Fails When Codename Mismatches
+#### 3. Fails When Codename Mismatches
 - **Description**: When `_manifest_xmldata.project_info.codename` differs from the given project name.
 - **Expected Outcome**: Returns `("CODENAME", False, <non-None message>)`.
 
 ### TestValidateCaseInsensitiveSingleMatch
 Tests `validate_case_insensitive_single_match` which verifies the project name appears exactly once in the project list using case-insensitive comparison and returns a `(type, status, message)` result tuple.
 
-#### 8. Exactly One Match Returns Duplicate True
+#### 1. Exactly One Match Returns Duplicate True
 - **Description**: When exactly one case-insensitive match is found in the project list.
 - **Expected Outcome**: Returns `("DUPLICATE", True, None)`.
 
-#### 9. No Match Returns Duplicate False
+#### 2. No Match Returns Duplicate False
 - **Description**: When no case-insensitive match is found in the project list.
 - **Expected Outcome**: Returns `("DUPLICATE", False, <message containing project name>)`.
 
-#### 10. Multiple Matches Returns Duplicate False
+#### 3. Multiple Matches Returns Duplicate False
 - **Description**: When more than one case-insensitive match is found in the project list.
 - **Expected Outcome**: Returns `("DUPLICATE", False, <message containing project name>)`.
 
 ### TestListEntries
 Tests `list_entries` which returns all entries in the project list that case-insensitively match the given project name.
 
-#### 11. Returns Matching Entries
+#### 1. Returns Matching Entries
 - **Description**: When the project list contains entries that match the project name case-insensitively.
 - **Expected Outcome**: Returns a list containing all matching entries and no non-matching entries.
 
-#### 12. Returns Empty List When No Matches
+#### 2. Returns Empty List When No Matches
 - **Description**: When no entries in the project list match the project name.
 - **Expected Outcome**: Returns an empty list.
 
 ### TestCaseInsensitiveEqual
 Tests `case_insensitive_equal` which returns `True` if two strings are equal under Unicode NFKD case-folding normalization.
 
-#### 13. Equal Strings Same Case
+#### 1. Equal Strings Same Case
 - **Description**: When both arguments are identical strings (same casing).
 - **Expected Outcome**: Returns `True`.
 
-#### 14. Equal Strings Different Case
+#### 2. Equal Strings Different Case
 - **Description**: When both arguments represent the same word with different casing.
 - **Expected Outcome**: Returns `True`.
 
-#### 15. Unequal Strings
+#### 3. Unequal Strings
 - **Description**: When both arguments are completely different words.
 - **Expected Outcome**: Returns `False`.
 

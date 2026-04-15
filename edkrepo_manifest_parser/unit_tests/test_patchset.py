@@ -12,33 +12,16 @@ import os
 import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers import (
-    make_mock_element,
-    REQUIRED_ATTRIB_SPLIT_CHAR,
-    REMOTE_NAME,
-)
-from edkrepo_manifest_parser.edk_manifest import (
-    _PatchSet,
-    _parse_patchset_required_attribs,
-    PatchSet,
-    REQUIRED_ATTRIB_ERROR_MSG,
-)
+import edkrepo_manifest_parser.manifest_parser_unit_test_helpers.helpers as helpers
+import edkrepo_manifest_parser.edk_manifest as edk_manifest
 
-ATTRIB_NAME          = 'name'
-ATTRIB_REMOTE        = 'remote'
-ATTRIB_PARENT_SHA    = 'parentSha'
-ATTRIB_FETCH_BRANCH  = 'fetchBranch'
-ELEMENT_TAG_PATCHSET = 'PatchSet'
-PATCHSET_NAME        = 'ps_name'
-OTHER_PATCHSET_NAME  = 'other_ps'
-COMMIT               = 'abc123'
-BRANCH               = 'main'
-
-PARAM_MISSING_ATTRIB      = 'missing_attrib'
-ID_REMOTE_MISSING         = 'remote_missing'
-ID_NAME_MISSING           = 'name_missing'
-ID_PARENT_SHA_MISSING     = 'parent_sha_missing'
-ID_FETCH_BRANCH_MISSING   = 'fetch_branch_missing'
+ATTRIB_PARENT_SHA = 'parentSha'
+ATTRIB_FETCH_BRANCH = 'fetchBranch'
+ELEMENT_TAG_PATCHSET = 'edk_manifest.PatchSet'
+OTHER_PATCHSET_NAME = 'other_ps'
+ID_NAME_MISSING = 'name_missing'
+ID_PARENT_SHA_MISSING = 'parent_sha_missing'
+ID_FETCH_BRANCH_MISSING = 'fetch_branch_missing'
 
 
 class TestPatchSet:
@@ -46,89 +29,89 @@ class TestPatchSet:
     @staticmethod
     def _make_full_element():
         """Build a mock element with all four required patchset attributes."""
-        return make_mock_element({
-            ATTRIB_REMOTE:       REMOTE_NAME,
-            ATTRIB_NAME:         PATCHSET_NAME,
-            ATTRIB_PARENT_SHA:   COMMIT,
-            ATTRIB_FETCH_BRANCH: BRANCH,
+        return helpers.make_mock_element({
+            helpers.ATTRIB_REMOTE: helpers.REMOTE_NAME,
+            helpers.ATTRIB_NAME: helpers.PATCHSET_NAME,
+            ATTRIB_PARENT_SHA: helpers.COMMIT,
+            ATTRIB_FETCH_BRANCH: helpers.BRANCH,
         }, tag=ELEMENT_TAG_PATCHSET)
 
     def test_parse_required_attribs_returns_all_four_when_all_present(self):
         """When all four required attributes are present, must return the four values."""
         element = self._make_full_element()
 
-        remote, name, parent_sha, fetch_branch = _parse_patchset_required_attribs(element)
+        remote, name, parent_sha, fetch_branch = edk_manifest._parse_patchset_required_attribs(element)
 
-        assert remote == REMOTE_NAME
-        assert name == PATCHSET_NAME
-        assert parent_sha == COMMIT
-        assert fetch_branch == BRANCH
+        assert remote == helpers.REMOTE_NAME
+        assert name == helpers.PATCHSET_NAME
+        assert parent_sha == helpers.COMMIT
+        assert fetch_branch == helpers.BRANCH
 
-    @pytest.mark.parametrize(PARAM_MISSING_ATTRIB, [
-        pytest.param(ATTRIB_REMOTE,       id=ID_REMOTE_MISSING),
-        pytest.param(ATTRIB_NAME,         id=ID_NAME_MISSING),
-        pytest.param(ATTRIB_PARENT_SHA,   id=ID_PARENT_SHA_MISSING),
+    @pytest.mark.parametrize(helpers.PARAM_MISSING_ATTRIB, [
+        pytest.param(helpers.ATTRIB_REMOTE, id=helpers.ID_REMOTE_MISSING),
+        pytest.param(helpers.ATTRIB_NAME, id=ID_NAME_MISSING),
+        pytest.param(ATTRIB_PARENT_SHA, id=ID_PARENT_SHA_MISSING),
         pytest.param(ATTRIB_FETCH_BRANCH, id=ID_FETCH_BRANCH_MISSING),
     ])
     def test_parse_required_attribs_raises_key_error_when_missing(self, missing_attrib):
         """When any required attribute is absent, must raise KeyError with the required-attrib message."""
         full = {
-            ATTRIB_REMOTE:       REMOTE_NAME,
-            ATTRIB_NAME:         PATCHSET_NAME,
-            ATTRIB_PARENT_SHA:   COMMIT,
-            ATTRIB_FETCH_BRANCH: BRANCH,
+            helpers.ATTRIB_REMOTE: helpers.REMOTE_NAME,
+            helpers.ATTRIB_NAME: helpers.PATCHSET_NAME,
+            ATTRIB_PARENT_SHA: helpers.COMMIT,
+            ATTRIB_FETCH_BRANCH: helpers.BRANCH,
         }
         del full[missing_attrib]
-        element = make_mock_element(full, tag=ELEMENT_TAG_PATCHSET)
+        element = helpers.make_mock_element(full, tag=ELEMENT_TAG_PATCHSET)
         with pytest.raises(KeyError) as exc_info:
-            _parse_patchset_required_attribs(element)
-        assert REQUIRED_ATTRIB_ERROR_MSG.split(REQUIRED_ATTRIB_SPLIT_CHAR)[0] in exc_info.value.args[0]
+            edk_manifest._parse_patchset_required_attribs(element)
+        assert edk_manifest.REQUIRED_ATTRIB_ERROR_MSG.split(helpers.REQUIRED_ATTRIB_SPLIT_CHAR)[0] in exc_info.value.args[0]
 
     def test_init_sets_all_fields_from_required_attribs(self):
         """When all required attributes are present, __init__ must set all four fields correctly."""
         element = self._make_full_element()
 
-        ps = _PatchSet(element)
+        ps = edk_manifest._PatchSet(element)
 
-        assert ps.remote == REMOTE_NAME
-        assert ps.name == PATCHSET_NAME
-        assert ps.parentSha == COMMIT
-        assert ps.fetchBranch == BRANCH
+        assert ps.remote == helpers.REMOTE_NAME
+        assert ps.name == helpers.PATCHSET_NAME
+        assert ps.parentSha == helpers.COMMIT
+        assert ps.fetchBranch == helpers.BRANCH
 
     def test_eq_returns_true_for_equal_patchsets(self):
-        """Two _PatchSet instances with identical attributes must compare as equal."""
-        ps1 = _PatchSet(self._make_full_element())
-        ps2 = _PatchSet(self._make_full_element())
+        """Two edk_manifest._PatchSet instances with identical attributes must compare as equal."""
+        ps1 = edk_manifest._PatchSet(self._make_full_element())
+        ps2 = edk_manifest._PatchSet(self._make_full_element())
 
         assert ps1 == ps2
 
     def test_eq_returns_false_for_different_patchsets(self):
-        """Two _PatchSet instances with different attributes must not compare as equal."""
-        ps1 = _PatchSet(self._make_full_element())
-        ps2 = _PatchSet(make_mock_element({
-            ATTRIB_REMOTE:       REMOTE_NAME,
-            ATTRIB_NAME:         OTHER_PATCHSET_NAME,
-            ATTRIB_PARENT_SHA:   COMMIT,
-            ATTRIB_FETCH_BRANCH: BRANCH,
+        """Two edk_manifest._PatchSet instances with different attributes must not compare as equal."""
+        ps1 = edk_manifest._PatchSet(self._make_full_element())
+        ps2 = edk_manifest._PatchSet(helpers.make_mock_element({
+            helpers.ATTRIB_REMOTE: helpers.REMOTE_NAME,
+            helpers.ATTRIB_NAME: OTHER_PATCHSET_NAME,
+            ATTRIB_PARENT_SHA: helpers.COMMIT,
+            ATTRIB_FETCH_BRANCH: helpers.BRANCH,
         }, tag=ELEMENT_TAG_PATCHSET))
 
         assert ps1 != ps2
 
     def test_eq_returns_false_for_non_patchset_type(self):
-        """Comparing a _PatchSet to a non-_PatchSet object must return False."""
-        ps = _PatchSet(self._make_full_element())
+        """Comparing a edk_manifest._PatchSet to a non-edk_manifest._PatchSet object must return False."""
+        ps = edk_manifest._PatchSet(self._make_full_element())
 
         assert ps.__eq__(object()) is False
 
     def test_tuple_returns_correct_patchset_namedtuple(self):
-        """The tuple property must return a PatchSet namedtuple with the correct field values."""
-        ps = _PatchSet(self._make_full_element())
+        """The tuple property must return a edk_manifest.PatchSet namedtuple with the correct field values."""
+        ps = edk_manifest._PatchSet(self._make_full_element())
 
         result = ps.tuple
 
-        assert result == PatchSet(
-            remote=REMOTE_NAME,
-            name=PATCHSET_NAME,
-            parent_sha=COMMIT,
-            fetch_branch=BRANCH,
+        assert result == edk_manifest.PatchSet(
+            remote=helpers.REMOTE_NAME,
+            name=helpers.PATCHSET_NAME,
+            parent_sha=helpers.COMMIT,
+            fetch_branch=helpers.BRANCH,
         )
