@@ -13,16 +13,17 @@ import json
 import os
 import sys
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
+import edkrepo.commands.edkrepo_command as edkrepo_command
 import edkrepo.commands.arguments.list_repos_args as arguments
 import edkrepo.commands.humble.list_repos_humble as humble
+import edkrepo.commands.humble.common_humble as common_humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 
-class ListReposCommand(EdkrepoCommand):
+class ListReposCommand(edkrepo_command.EdkrepoCommand):
     def __init__(self):
         super().__init__()
         self.repo_names = None
@@ -44,19 +45,14 @@ class ListReposCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.ARCHIVED_HELP})
-        args.append({'name': 'format',
-                     'positional': False,
-                     'required': False,
-                     'action': 'store',
-                     'nargs': 1,
-                     'help-text': arguments.FORMAT_HELP})
+        args.append(edkrepo_command.FormatArgument)
         return metadata
 
     def run_command(self, args, config):
         json_output = False
         if args.format is not None:
             if args.format[0] not in ['text', 'json']:
-                raise EdkrepoInvalidParametersException(humble.FORMAT_TYPE_INVALID)
+                raise EdkrepoInvalidParametersException(common_humble.FORMAT_TYPE_INVALID)
             if args.format[0] == 'json':
                 json_output = True
         stdout_backup = None

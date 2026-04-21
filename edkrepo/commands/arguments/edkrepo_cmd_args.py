@@ -18,3 +18,4 @@ SUBMODULE_SKIP_HELP = 'Skip the pull or sync of any submodules.'
 COLOR_HELP = 'Force color output (useful with \'less -r\')'
 SOURCE_MANIFEST_REPO_HELP = "The name of the workspace's source global manifest repository"
 PERFORMANCE_HELP = 'Displays performance timing data for successful commands'
+FORMAT_HELP = 'Choose between text or json output format. Default is text.'
