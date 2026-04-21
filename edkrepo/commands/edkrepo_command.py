@@ -59,3 +59,10 @@ PerformanceArgument = {'name': 'performance',
                        'positional': False,
                        'required': False,
                        'help-text': arguments.PERFORMANCE_HELP}
+
+FormatArgument = {'name': 'format',
+                  'positional': False,
+                  'required': False,
+                  'action': 'store',
+                  'nargs': 1,
+                  'help-text': arguments.FORMAT_HELP}
