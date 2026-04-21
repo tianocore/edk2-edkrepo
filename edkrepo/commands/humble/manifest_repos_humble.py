@@ -3,7 +3,7 @@
 ## @file
 # manifest_repos_humble.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020-2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,7 +12,9 @@ Contains user visible strings printed by the manifest_repos command.
 '''
 
 CFG_LIST_ENTRY = 'Config File: edkrepo.cfg Manifest Repository Name: {}'
+CFG_LIST_ENTRY_VERBOSE = 'Config File: edkrepo.cfg Manifest Repository Name: {} Manifest Repository Path: {}'
 USER_CFG_LIST_ENTRY = 'Config File: edkrepo_user.cfg Manifest Repository Name: {}'
+USER_CFG_LIST_ENTRY_VERBOSE = 'Config File: edkrepo_user.cfg Manifest Repository Name: {} Manifest Repository Path: {}'
 NAME_REQUIRED = 'The "name" argument is required to add/remove a manifest repository'
 ADD_REQUIRED = 'The "name", "url", "branch" and "path" arguments are required to add a manifest repository'
 CANNOT_REMOVE_CFG = 'Manifest repositories cannot be removed from the edkrepo.cfg file.'

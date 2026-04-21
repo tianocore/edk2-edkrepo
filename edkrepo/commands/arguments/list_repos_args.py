@@ -14,4 +14,3 @@ list-repos command meta data.
 COMMAND_DESCRIPTION = 'Lists the git repos used by available projects and the branches that are used.'
 ARCHIVED_HELP = 'Include a listing of archived projects.'
 REPOS_HELP = 'Only show the given subset of repos instead of all repos. The name of a repo is determined by the name given by the most manifest files.'
-FORMAT_HELP = 'Choose between text or json output format. Default is text.'
