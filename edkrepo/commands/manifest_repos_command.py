@@ -8,19 +8,22 @@
 #
 
 import configparser
+import json
+import os
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
+import edkrepo.commands.edkrepo_command as edkrepo_command
 import edkrepo.commands.arguments.manifest_repo_args as arguments
 import edkrepo.commands.humble.manifest_repos_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+import edkrepo.commands.humble.common_humble as common_humble
+import edkrepo.common.edkrepo_exception as edkrepo_exception
+import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manifest_repos_maintenance
 import edkrepo.common.ui_functions as ui_functions
 
 
 
 
 
-class ManifestRepos(EdkrepoCommand):
+class ManifestRepos(edkrepo_command.EdkrepoCommand):
     def __init__(self):
         super().__init__()
 
@@ -69,28 +72,31 @@ class ManifestRepos(EdkrepoCommand):
                      'position': 4,
                      'nargs' : 1,
                      'help-text': arguments.LOCAL_PATH_HELP})
+        args.append(edkrepo_command.FormatArgument)
         return metadata
 
     def run_command(self, args, config):
-        cfg_repos, user_cfg_repos, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        cfg_repos, user_cfg_repos, _ = manifest_repos_maintenance.list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
         if args.action == 'list':
-            for repo in cfg_repos:
-                ui_functions.print_info_msg(humble.CFG_LIST_ENTRY.format(repo), header = False)
-            for repo in user_cfg_repos:
-                ui_functions.print_info_msg(humble.USER_CFG_LIST_ENTRY.format(repo), header = False)
-
+            if args.format is not None:
+                if args.format[0] not in ['text', 'json']:
+                    raise edkrepo_exception.EdkrepoInvalidParametersException(common_humble.FORMAT_TYPE_INVALID)
+                if args.format[0] == 'json':
+                    self._list_manifest_repos_json(cfg_repos, user_cfg_repos, config)
+            else:
+                self._list_manifest_repos(cfg_repos, user_cfg_repos, config, args.verbose)
 
         elif (args.action == ('add' or 'remove')) and not args.name:
-            raise EdkrepoInvalidParametersException(humble.NAME_REQUIRED)
+            raise edkrepo_exception.EdkrepoInvalidParametersException(humble.NAME_REQUIRED)
         elif args.action == 'add' and (not args.branch or not args.url or not args.path):
-            raise EdkrepoInvalidParametersException(humble.ADD_REQUIRED)
+            raise edkrepo_exception.EdkrepoInvalidParametersException(humble.ADD_REQUIRED)
         elif args.action == 'remove' and args.name and args.name in cfg_repos:
-            raise EdkrepoInvalidParametersException(humble.CANNOT_REMOVE_CFG)
+            raise edkrepo_exception.EdkrepoInvalidParametersException(humble.CANNOT_REMOVE_CFG)
         elif args.action =='remove' and args.name not in config['user_cfg_file'].manifest_repo_list:
-            raise EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
+            raise edkrepo_exception.EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
         elif args.action == 'add' and (args.name in cfg_repos or args.name in user_cfg_repos):
-            raise EdkrepoInvalidParametersException(humble.ALREADY_EXISTS.format(args.name))
+            raise edkrepo_exception.EdkrepoInvalidParametersException(humble.ALREADY_EXISTS.format(args.name))
 
         user_cfg_file_path = config['user_cfg_file'].cfg_filename
 
@@ -110,12 +116,60 @@ class ManifestRepos(EdkrepoCommand):
                     if user_cfg_file.has_option('manifest-repos', args.name):
                         user_cfg_file.remove_option('manifest-repos', args.name)
                     else:
-                        raise EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
+                        raise edkrepo_exception.EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
                 else:
-                    raise EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
+                    raise edkrepo_exception.EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
                 if user_cfg_file.has_section(args.name):
                     user_cfg_file.remove_section(args.name)
                 else:
-                    raise EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
+                    raise edkrepo_exception.EdkrepoInvalidParametersException(humble.REMOVE_NOT_EXIST)
             with open(user_cfg_file_path, 'w') as cfg_stream:
                 user_cfg_file.write(cfg_stream)
+
+    def _list_manifest_repos(self, cfg_repos, user_cfg_repos, config, verbose):
+        for repo in cfg_repos:
+            if verbose:
+                ui_functions.print_info_msg(humble.CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(manifest_repos_maintenance.get_manifest_repo_path(repo, config))), header = False)
+            else:
+                ui_functions.print_info_msg(humble.CFG_LIST_ENTRY.format(repo), header = False)
+        for repo in user_cfg_repos:
+            if verbose:
+                ui_functions.print_info_msg(humble.USER_CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(manifest_repos_maintenance.get_manifest_repo_path(repo, config))), header = False)
+            else:
+                ui_functions.print_info_msg(humble.USER_CFG_LIST_ENTRY.format(repo), header = False)
+
+    def _list_manifest_repos_json(self, cfg_repos, user_cfg_repos, config):
+        """Generate JSON output of manifest repositories.
+        
+        Args:
+            cfg_repos: List of global config manifest repositories
+            user_cfg_repos: List of user config manifest repositories
+            config: Configuration object
+        """
+        output = {
+            "edkrepo_cfg": {
+                "manifest_repositories": []
+            },
+            "edkrepo_user_cfg": {
+                "manifest_repositories": []
+            }
+        }
+        
+        # Add global config repositories
+        for repo in cfg_repos:
+            repo_path = os.path.normpath(manifest_repos_maintenance.get_manifest_repo_path(repo, config))
+            output["edkrepo_cfg"]["manifest_repositories"].append({
+                "name": repo,
+                "path": repo_path
+            })
+        
+        # Add user config repositories
+        for repo in user_cfg_repos:
+            repo_path = os.path.normpath(manifest_repos_maintenance.get_manifest_repo_path(repo, config))
+            output["edkrepo_user_cfg"]["manifest_repositories"].append({
+                "name": repo,
+                "path": repo_path
+            })
+        
+        # Write JSON to stdout
+        print(json.dumps(output, indent=2))

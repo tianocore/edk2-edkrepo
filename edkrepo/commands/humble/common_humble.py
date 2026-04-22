@@ -19,3 +19,4 @@ MANIFEST_REPO = '{}Manifest Directory:{} {{}}'.format(Style.BRIGHT, Style.RESET_
 MANIFEST_REPO_PATH = '{}Manifest Directory Path:{} {{}}'.format(Style.BRIGHT, Style.RESET_ALL)
 MANIFEST_REPO_URL = '{}Manifest Repository URL:{} {{}}'.format(Style.BRIGHT, Style.RESET_ALL)
 MANIFEST_REPO_BRANCH = '{}Manifest Repository Branch:{} {{}}'.format(Style.BRIGHT, Style.RESET_ALL)
+FORMAT_TYPE_INVALID = 'format must be text or json'
