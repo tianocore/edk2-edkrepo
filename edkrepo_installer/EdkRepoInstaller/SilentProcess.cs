@@ -273,7 +273,7 @@ namespace TianoCore.EdkRepoInstaller
                         SecurityAttributes.nLength = Marshal.SizeOf(SecurityAttributes);
                         SecurityAttributes.bInheritHandle = TRUE;
                         SecurityAttributes.lpSecurityDescriptor = IntPtr.Zero;
-                        
+
                         //Create the pipe
                         CreatePipeNetEx(out StderrReadPipe, out StderrWritePipe, ref SecurityAttributes, 0);
 
@@ -406,7 +406,7 @@ namespace TianoCore.EdkRepoInstaller
                     stdoutWrapper = new DataReceivedEventHandlerWrapper();
                     stdoutWrapper.wrapped = stdoutHandler;
                     DataReceivedEventHandler handler = new DataReceivedEventHandler(stdoutWrapper.Handle);
-                    
+
                     process.OutputDataReceived += handler;
                     if (combineStdoutAndStderr)
                     {

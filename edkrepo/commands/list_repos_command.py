@@ -217,7 +217,7 @@ class ListReposCommand(EdkrepoCommand):
 
                 if ref_type[0]:
                     branch_data = { 'name': ref_type[0], 'projects': [] }
-                else: 
+                else:
                     branch_data = None
                 if ref_type[1]:
                     commit_data = { 'name': ref_type[1], 'projects': [] }
