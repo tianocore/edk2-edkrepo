@@ -361,7 +361,7 @@ class SyncCommand(EdkrepoCommand):
                 ui_functions.print_warning_msg(path_to_source, header = False)
 
             # Clone any new Git repositories
-            clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check, global_manifest_directory)
+            _ = clone_repos(args, workspace_path, sources_to_clone, new_manifest_to_check.repo_hooks, config, new_manifest_to_check, global_manifest_directory)
             # Make a list of and only checkout repos that were newly cloned. Sync keeps repos on their initial active branches
             # cloning the entire combo can prevent existing repos from correctly being returned to their proper branch
             repos_to_checkout = []
