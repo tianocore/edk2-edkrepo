@@ -129,6 +129,7 @@ VERIFY_PROJ = 'Verifying the global manifest repository entry for project: {}\n'
 VERIFY_PROJ_NOT_IN_INDEX = 'Unable to find and entry in the CiIndex for project: {}\n'
 VERIFY_PROJ_FAIL = 'Unable to verify the global manifest repository entry for project: {}\n'
 CLONE_FAIL = 'Unable to clone the {} repository:\n{}\n'
+CLONE_TIME = 'Clone Time [{}]: {}'
 
 # Git Command Error Messages
 GIT_CMD_ERROR = 'The git command: {} failed to complete successfully with the following errors.\n'

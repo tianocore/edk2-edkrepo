@@ -189,7 +189,7 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
         cache_obj = common_cache_functions.get_repo_cache_obj(config)
         if cache_obj is not None:
             common_cache_functions.add_missing_cache_repos(cache_obj, manifest, args.verbose)
-        common_repo_functions.clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, cache_obj)
+        clone_times = common_repo_functions.clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, cache_obj)
 
         # Init submodules
         if not args.skip_submodule:
@@ -214,3 +214,9 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
             ui_functions.print_info_msg(humble.SPARSE_CHECKOUT)
             common_repo_functions.sparse_checkout(workspace_dir, repo_sources_to_clone, manifest)
 
+
+        # Print performance timing if requested
+        if args.performance:
+            print()
+            for repo_root, duration in clone_times:
+                ui_functions.print_info_msg(humble.CLONE_TIME.format(repo_root, duration), header=False)

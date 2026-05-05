@@ -16,6 +16,7 @@ import subprocess
 import traceback
 import hashlib
 import time
+import datetime as dt
 
 import git
 from git import Repo
@@ -88,8 +89,12 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
     global_manifest_directory = clone_utils.calculate_source_manifest_repo_directory(args, config, manifest)
     clone_order = clone_utils.generate_clone_order(manifest, repos_to_clone)
+    clone_times = []
     for repo_to_clone in clone_order:
+        start = time.perf_counter()
         clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj)
+        duration = time.perf_counter() - start
+        clone_times.append((repo_to_clone.root, dt.timedelta(seconds=duration)))
         if repo_to_clone.nested_repo:
             parent_path = os.path.join(workspace_dir, manifest.get_parent_of_nested_repo(clone_order, repo_to_clone.root).root)
             nested_path = os.path.join(workspace_dir, repo_to_clone.root)
@@ -100,6 +105,7 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
             install_hooks(project_client_side_hooks, os.path.join(workspace_dir, repo_to_clone.root), repo_to_clone, config, global_manifest_directory)
             # Add the commit template if it exists.
             update_repo_commit_template(workspace_dir, repo, repo_to_clone, global_manifest_directory)
+    return clone_times
 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
