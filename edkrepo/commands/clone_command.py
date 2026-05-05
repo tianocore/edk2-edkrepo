@@ -11,31 +11,23 @@ import os
 import shutil
 import sys
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.clone_args as arguments
-from edkrepo.common.common_cache_functions import get_repo_cache_obj
-from edkrepo.common.common_cache_functions import add_missing_cache_repos
-from edkrepo.common.common_repo_functions import clone_repos, sparse_checkout, verify_single_manifest
-from edkrepo.common.common_repo_functions import update_editor_config, combinations_in_manifest
-from edkrepo.common.common_repo_functions import write_included_config, write_conditional_include
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
-from edkrepo.common.humble import CLONE_INVALID_WORKSPACE, CLONE_INVALID_PROJECT_ARG, CLONE_INVALID_COMBO_ARG
-from edkrepo.common.humble import SPARSE_CHECKOUT, CLONE_INVALID_LOCAL_ROOTS
-from edkrepo.common.pathfix import get_subst_drive_dict
-from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos, find_project_in_all_indices
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
-from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
+import edkrepo.commands.edkrepo_command as edkrepo_command
+import edkrepo.common.common_cache_functions as common_cache_functions
+import edkrepo.common.common_repo_functions as common_repo_functions
+import edkrepo.common.edkrepo_exception as edkrepo_exception
+import edkrepo.common.humble as humble
+import edkrepo.common.pathfix as pathfix
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo_manifest_parser.edk_manifest import ManifestXml
-from project_utils.submodule import maintain_submodules
-from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
+import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as manifest_repos_maintenance_humble
+import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manifest_repos_maintenance
+import edkrepo.common.workspace_maintenance.workspace_maintenance as workspace_maintenance
+import edkrepo.config.tool_config as tool_config
+import edkrepo_manifest_parser.edk_manifest as edk_manifest
+import project_utils.submodule as submodule_utils
 
 
-class CloneCommand(EdkrepoCommand):
+class CloneCommand(edkrepo_command.EdkrepoCommand):
     def __init__(self):
         super().__init__()
 
@@ -88,13 +80,13 @@ class CloneCommand(EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.NO_TAGS_HELP}))
-        args.append(SubmoduleSkipArgument)
-        args.append(SourceManifestRepoArgument)
+        args.append(edkrepo_command.SubmoduleSkipArgument)
+        args.append(edkrepo_command.SourceManifestRepoArgument)
         return metadata
 
 
     def run_command(self, args, config):
-        pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
+        manifest_repos_maintenance.pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
 
         workspace_dir = args.Workspace
         # Check to see if requested workspace exists. If not create it. If so check for empty
@@ -104,36 +96,36 @@ class CloneCommand(EdkrepoCommand):
         else:
             workspace_dir = os.path.abspath(workspace_dir)
         if sys.platform == "win32":
-            subst = get_subst_drive_dict()
+            subst = pathfix.get_subst_drive_dict()
             drive = os.path.splitdrive(workspace_dir)[0][0].upper()
             if drive in subst:
                 workspace_dir = os.path.join(subst[drive], os.path.splitdrive(workspace_dir)[1][1:])
                 workspace_dir = os.path.normpath(workspace_dir)
         if os.path.isdir(workspace_dir) and os.listdir(workspace_dir):
-            raise EdkrepoInvalidParametersException(CLONE_INVALID_WORKSPACE)
+            raise edkrepo_exception.EdkrepoInvalidParametersException(humble.CLONE_INVALID_WORKSPACE)
         if not os.path.isdir(workspace_dir):
             os.makedirs(workspace_dir)
 
-        cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
+        cfg, user_cfg, conflicts = manifest_repos_maintenance.list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
         try:
-            manifest_repo, source_cfg, global_manifest_path = find_project_in_all_indices(args.ProjectNameOrManifestFile,
+            manifest_repo, source_cfg, global_manifest_path = manifest_repos_maintenance.find_project_in_all_indices(args.ProjectNameOrManifestFile,
                                                                     config['cfg_file'],
                                                                     config['user_cfg_file'],
-                                                                    PROJ_NOT_IN_REPO.format(args.ProjectNameOrManifestFile),
-                                                                    SOURCE_MANIFEST_REPO_NOT_FOUND.format(args.ProjectNameOrManifestFile),
+                                                                    manifest_repos_maintenance_humble.PROJ_NOT_IN_REPO.format(args.ProjectNameOrManifestFile),
+                                                                    manifest_repos_maintenance_humble.SOURCE_MANIFEST_REPO_NOT_FOUND.format(args.ProjectNameOrManifestFile),
                                                                     args.source_manifest_repo)
-        except EdkrepoManifestNotFoundException:
-            raise EdkrepoInvalidParametersException(CLONE_INVALID_PROJECT_ARG)
+        except edkrepo_exception.EdkrepoManifestNotFoundException:
+            raise edkrepo_exception.EdkrepoInvalidParametersException(humble.CLONE_INVALID_PROJECT_ARG)
 
-        manifest_repository_path = get_manifest_repo_path(manifest_repo, config)
+        manifest_repository_path = manifest_repos_maintenance.get_manifest_repo_path(manifest_repo, config)
 
         # If this manifest is in a defined manifest repository validate the manifest within the manifest repo
         if manifest_repo in cfg:
-            verify_single_manifest(config['cfg_file'], manifest_repo, global_manifest_path)
-            update_editor_config(config, config['cfg_file'].manifest_repo_abs_path(manifest_repo))
+            common_repo_functions.verify_single_manifest(config['cfg_file'], manifest_repo, global_manifest_path)
+            common_repo_functions.update_editor_config(config, config['cfg_file'].manifest_repo_abs_path(manifest_repo))
         elif manifest_repo in user_cfg:
-            verify_single_manifest(config['user_cfg_file'], manifest_repo, global_manifest_path)
-            update_editor_config(config, config['user_cfg_file'].manifest_repo_abs_path(manifest_repo))
+            common_repo_functions.verify_single_manifest(config['user_cfg_file'], manifest_repo, global_manifest_path)
+            common_repo_functions.update_editor_config(config, config['user_cfg_file'].manifest_repo_abs_path(manifest_repo))
 
         # Copy project manifest to local manifest dir and rename it Manifest.xml.
         local_manifest_dir = os.path.join(workspace_dir, "repo")
@@ -142,30 +134,30 @@ class CloneCommand(EdkrepoCommand):
         # If JSON, write to XML. Else, simple copy
         file_ext = os.path.splitext(global_manifest_path)[1]
         if file_ext == '.json':
-            json_manifest = ManifestXml(global_manifest_path)
+            json_manifest = edk_manifest.ManifestXml(global_manifest_path)
             json_manifest.write_tree(local_manifest_path)
         else:
             shutil.copy(global_manifest_path, local_manifest_path)
-        manifest = ManifestXml(local_manifest_path)
+        manifest = edk_manifest.ManifestXml(local_manifest_path)
 
         # Update the source manifest repository tag in the local copy of the manifest XML
         try:
             if 'source_manifest_repo' in vars(args).keys():
-                find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+                manifest_repos_maintenance.find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
             else:
-                find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], None)
-        except EdkrepoManifestNotFoundException:
+                manifest_repos_maintenance.find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], None)
+        except edkrepo_exception.EdkrepoManifestNotFoundException:
             pass
 
         # Process the combination name and make sure it can be found in the manifest
         if args.Combination is not None:
             try:
-                combo_name = case_insensitive_single_match(args.Combination, combinations_in_manifest(manifest))
+                combo_name = workspace_maintenance.case_insensitive_single_match(args.Combination, common_repo_functions.combinations_in_manifest(manifest))
             except:
                 #remove the repo directory and Manifest.xml from the workspace so the next time the user trys to clone
                 #they will have an empty workspace and then raise an exception
                 shutil.rmtree(local_manifest_dir)
-                raise EdkrepoInvalidParametersException(CLONE_INVALID_COMBO_ARG)
+                raise edkrepo_exception.EdkrepoInvalidParametersException(humble.CLONE_INVALID_COMBO_ARG)
             manifest.write_current_combo(combo_name)
         elif manifest.is_pin_file():
             # Since pin files are subset of manifest files they do not have a "default combo" it is set to None. In this
@@ -187,24 +179,24 @@ class CloneCommand(EdkrepoCommand):
                 #remove the repo dir and manifest.xml so the next time the user trys to clone they will have an empty
                 #workspace
                 shutil.rmtree(local_manifest_dir)
-                raise EdkrepoManifestInvalidException(CLONE_INVALID_LOCAL_ROOTS)
+                raise edkrepo_exception.EdkrepoManifestInvalidException(humble.CLONE_INVALID_LOCAL_ROOTS)
         project_client_side_hooks = manifest.repo_hooks
         # Set up submodule alt url config settings prior to cloning any repos
-        submodule_included_configs = write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
-        write_conditional_include(workspace_dir, repo_sources_to_clone, submodule_included_configs)
+        submodule_included_configs = common_repo_functions.write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
+        common_repo_functions.write_conditional_include(workspace_dir, repo_sources_to_clone, submodule_included_configs)
 
         # Determine if caching is going to be used and then clone
-        cache_obj = get_repo_cache_obj(config)
+        cache_obj = common_cache_functions.get_repo_cache_obj(config)
         if cache_obj is not None:
-            add_missing_cache_repos(cache_obj, manifest, args.verbose)
-        clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, cache_obj)
+            common_cache_functions.add_missing_cache_repos(cache_obj, manifest, args.verbose)
+        common_repo_functions.clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, cache_obj)
 
         # Init submodules
         if not args.skip_submodule:
             cache_path = None
             if cache_obj is not None:
-                cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
-            maintain_submodules(workspace_dir, manifest, combo_name, args.verbose, cache_path)
+                cache_path = cache_obj.get_cache_path(tool_config.SUBMODULE_CACHE_REPO_NAME)
+            submodule_utils.maintain_submodules(workspace_dir, manifest, combo_name, args.verbose, cache_path)
 
         # Perform a sparse checkout if requested.
         use_sparse = args.sparse
@@ -219,5 +211,6 @@ class CloneCommand(EdkrepoCommand):
             # Command line disables sparse checkout
             use_sparse = False
         if use_sparse:
-            ui_functions.print_info_msg(SPARSE_CHECKOUT)
-            sparse_checkout(workspace_dir, repo_sources_to_clone, manifest)
+            ui_functions.print_info_msg(humble.SPARSE_CHECKOUT)
+            common_repo_functions.sparse_checkout(workspace_dir, repo_sources_to_clone, manifest)
+
