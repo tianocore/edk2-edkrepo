@@ -22,61 +22,21 @@ from git import Repo
 import colorama
 
 import edkrepo.common.clone_utilities as clone_utils
-from edkrepo.common.edkrepo_exception import EdkrepoBranchExistsException, EdkrepoException, EdkrepoLocalBranchExistsException, EdkrepoRevertFailedException, EdkrepoCherryPickFailedException, EdkrepoBranchCollidesWithParentShaException
-from edkrepo.common.edkrepo_exception import EdkrepoFetchBranchNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoPatchNotFoundException, EdkrepoPatchFailedException
-from edkrepo.common.edkrepo_exception import EdkrepoRemoteNotFoundException, EdkrepoRemoteAddException, EdkrepoRemoteRemoveException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException
-from edkrepo.common.edkrepo_exception import EdkrepoUncommitedChangesException, EdkrepoProxyNotSetException
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoNotFoundException
-from edkrepo.common.progress_handler import GitProgressHandler
-from edkrepo.common.humble import APPLYING_CHERRY_PICK_FAILED, APPLYING_PATCH_FAILED, APPLYING_REVERT_FAILED, BRANCH_EXISTS, CHECKING_OUT_DEFAULT, CHECKING_OUT_PATCHSET, LOCAL_BRANCH_EXISTS
-from edkrepo.common.humble import FETCH_BRANCH_DOES_NOT_EXIST, PATCHFILE_DOES_NOT_EXIST, COLLISION_DETECTED
-from edkrepo.common.humble import REMOTE_CREATION_FAILED, REMOTE_NOT_FOUND, REMOVE_REMOTE_FAILED
-from edkrepo.common.humble import MISSING_BRANCH_COMMIT
-from edkrepo.common.humble import UNCOMMITED_CHANGES, CHECKOUT_UNCOMMITED_CHANGES
-from edkrepo.common.humble import CHECKING_OUT_COMMIT, CHECKING_CONNECTION
-from edkrepo.common.humble import CHECKING_OUT_BRANCH
-from edkrepo.common.humble import CHECKOUT_NO_REMOTE
-from edkrepo.common.humble import SPARSE_CHECKOUT
-from edkrepo.common.humble import SPARSE_RESET
-from edkrepo.common.humble import CHECKING_OUT_COMBO
-from edkrepo.common.humble import CHECKOUT_INVALID_COMBO
-from edkrepo.common.humble import CHECKOUT_COMBO_UNSUCCESSFULL
-from edkrepo.common.humble import COMMIT_TEMPLATE_NOT_FOUND, COMMIT_TEMPLATE_CUSTOM_VALUE
-from edkrepo.common.humble import COMMIT_TEMPLATE_RESETTING_VALUE
-from edkrepo.common.humble import TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import HOOK_NOT_FOUND_ERROR
-from edkrepo.common.humble import INCLUDED_URL_LINE, INCLUDED_INSTEAD_OF_LINE, INCLUDED_FILE_NAME
-from edkrepo.common.humble import ERROR_WRITING_INCLUDE, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED
-from edkrepo.common.humble import VERIFY_GLOBAL, VERIFY_ARCHIVED, VERIFY_PROJ, VERIFY_PROJ_FAIL
-from edkrepo.common.humble import VERIFY_GLOBAL_FAIL
-from edkrepo.common.humble import SUBMODULE_DEINIT_FAILED, BRANCH_COLLIDES_WITH_PARENT_SHA
-from edkrepo.common.humble import MISSING_BRANCH_COMMIT, MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED, TAG_AND_BRANCH_SPECIFIED
-from edkrepo.common.humble import CLONE_FAIL, PROXY_STR_NOT_FOUND, NETRC_NOT_FOUND
-from edkrepo.common.humble import AUTOMATIC_REMOTE_PRUNE, AUTOMATIC_REFS_REPACK
-from edkrepo.common.pathfix import get_actual_path, expanduser
-from edkrepo.common.git_version import GitVersion
-from edkrepo.common.repo_case_conflict_solver import scrub_repo_case_conflicts, scrub_stale_remote_reflogs
-from project_utils.sparse import BuildInfo, process_sparse_checkout
-from edkrepo.config.config_factory import get_workspace_path
-from edkrepo.config.config_factory import get_workspace_manifest
-from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
-from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
-from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
-from edkrepo_manifest_parser.edk_manifest import ManifestXml
-from edkrepo.common.edkrepo_exception import EdkrepoHookNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoGitConfigSetupException, EdkrepoManifestInvalidException, EdkrepoManifestNotFoundException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_single_match
+import edkrepo.common.edkrepo_exception as edkrepo_exception
+import edkrepo.common.progress_handler as progress_handler
+import edkrepo.common.humble as humble
+import edkrepo.common.pathfix as pathfix
+import edkrepo.common.git_version as git_version
+import edkrepo.common.repo_case_conflict_solver as repo_case_conflict_solver
+import project_utils.sparse as sparse
+import edkrepo.config.config_factory as config_factory
+import edkrepo.config.tool_config as tool_config
+import edkrepo_manifest_parser.edk_manifest as edk_manifest
+import edkrepo.common.workspace_maintenance.workspace_maintenance as workspace_maintenance
 import edkrepo.common.workspace_maintenance.git_exclude_maintenance as git_exclude_maintenance
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo_manifest_parser import edk_manifest
-from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestrepo
-from edkrepo_manifest_parser.edk_manifest_validation import get_manifest_validation_status
-from edkrepo_manifest_parser.edk_manifest_validation import print_manifest_errors
-from edkrepo_manifest_parser.edk_manifest_validation import validate_manifestfiles
-from project_utils.submodule import deinit_full, maintain_submodules
+import edkrepo_manifest_parser.edk_manifest_validation as edk_manifest_validation
+import project_utils.submodule as submodule_utils
 
 CLEAR_LINE = '\x1b[K'
 DEFAULT_REMOTE_NAME = 'origin'
@@ -99,7 +59,7 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
     if repo_to_clone.patch_set:
         patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
     elif not repo_to_clone.branch and not repo_to_clone.tag and not repo_to_clone.commit:
-        raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+        raise edkrepo_exception.EdkrepoManifestInvalidException(humble.MISSING_BRANCH_COMMIT)
 
     if cache_obj:
         cache_path = cache_obj.get_cache_path(repo_to_clone.remote_url)
@@ -111,18 +71,18 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
     clone_cmd = clone_utils.generate_clone_cmd(repo_to_clone, workspace_dir, args, cache_path)
     clone_cmd_output = subprocess.run(clone_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
     if not os.path.isdir(os.path.join(workspace_dir, repo_to_clone.root)):
-        raise EdkrepoNotFoundException(CLONE_FAIL.format(repo_to_clone.root, clone_cmd_output))
+        raise edkrepo_exception.EdkrepoNotFoundException(humble.CLONE_FAIL.format(repo_to_clone.root, clone_cmd_output))
     repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
 
     if repo_to_clone.patch_set:
         create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
     elif repo_to_clone.commit:
         if args.verbose and (repo_to_clone.branch or repo_to_clone.tag):
-                ui_functions.print_info_msg(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
+                ui_functions.print_info_msg(humble.MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_clone.root))
         repo.git.checkout(repo_to_clone.commit)
     elif repo_to_clone.tag and repo_to_clone.commit is None:
             if args.verbose and repo_to_clone.branch:
-                ui_functions.print_info_msg(TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
+                ui_functions.print_info_msg(humble.TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
             repo.git.checkout(repo_to_clone.tag)
 
 def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
@@ -144,23 +104,23 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
 def write_included_config(remotes, submodule_alt_remotes, repo_directory):
     included_configs = []
     for remote in remotes:
-        included_config_name = os.path.join(repo_directory, INCLUDED_FILE_NAME.format(remote.name))
-        included_config_name = get_actual_path(included_config_name)
+        included_config_name = os.path.join(repo_directory, humble.INCLUDED_FILE_NAME.format(remote.name))
+        included_config_name = pathfix.get_actual_path(included_config_name)
         remote_alts = [submodule for submodule in submodule_alt_remotes if submodule.remote_name == remote.name]
         if remote_alts:
             with open(included_config_name, mode='w') as f:
                 for alt in remote_alts:
-                    url = f.write(INCLUDED_URL_LINE.format(alt.alternate_url))
-                    instead_of = f.write(INCLUDED_INSTEAD_OF_LINE.format(alt.original_url))
+                    url = f.write(humble.INCLUDED_URL_LINE.format(alt.alternate_url))
+                    instead_of = f.write(humble.INCLUDED_INSTEAD_OF_LINE.format(alt.original_url))
                     if url == 0 or instead_of == 0:
-                        raise EdkrepoGitConfigSetupException(ERROR_WRITING_INCLUDE.format(remote.name))
+                        raise edkrepo_exception.EdkrepoGitConfigSetupException(humble.ERROR_WRITING_INCLUDE.format(remote.name))
             included_configs.append((remote.name, included_config_name))
     return included_configs
 
 def remove_included_config(remotes, submodule_alt_remotes, repo_directory):
     includes_to_remove = []
     for remote in remotes:
-        include_to_remove = os.path.join(repo_directory, INCLUDED_FILE_NAME.format(remote.name))
+        include_to_remove = os.path.join(repo_directory, humble.INCLUDED_FILE_NAME.format(remote.name))
         remote_alts = [submodule for submodule in submodule_alt_remotes if submodule.remote_name == remote.name]
         if remote_alts:
             includes_to_remove.append(include_to_remove)
@@ -169,13 +129,13 @@ def remove_included_config(remotes, submodule_alt_remotes, repo_directory):
             os.remove(include_to_remove)
 
 def write_conditional_include(workspace_path, repo_sources, included_configs):
-    gitconfigpath = os.path.normpath(expanduser("~/.gitconfig"))
-    prefix_required = find_git_version() >= GitVersion('2.34.0')
+    gitconfigpath = os.path.normpath(pathfix.expanduser("~/.gitconfig"))
+    prefix_required = find_git_version() >= git_version.GitVersion('2.34.0')
     for source in repo_sources:
         for included_config in included_configs:
             if included_config[0] == source.remote_name:
                 gitdir = str(os.path.normpath(os.path.join(workspace_path, source.root)))
-                gitdir = get_actual_path(gitdir)
+                gitdir = pathfix.get_actual_path(gitdir)
                 gitdir = gitdir.replace('\\', '/')
                 if sys.platform == "win32":
                     gitdir = '/{}'.format(gitdir)
@@ -222,7 +182,7 @@ def install_hooks(hooks, local_repo_path, repo_for_install, config, global_manif
     for hook in hooks_path:
         man_dir_rel_hook_path = os.path.join(global_manifest_directory, hook.source)
         if not os.path.exists(man_dir_rel_hook_path):
-            raise EdkrepoHookNotFoundException(HOOK_NOT_FOUND_ERROR.format(hook.source, repo_for_install.root))
+            raise edkrepo_exception.EdkrepoHookNotFoundException(humble.HOOK_NOT_FOUND_ERROR.format(hook.source, repo_for_install.root))
         if hook.dest_file:
             destination_path = os.path.join(local_repo_path, os.path.dirname(str(hook.dest_path)))
             hook_file_name = os.path.join(destination_path, str(hook.dest_file))
@@ -266,7 +226,7 @@ def update_hooks (hooks_add, hooks_update, hooks_uninstall, local_repo_path, rep
 def sparse_checkout_enabled(workspace_dir, repo_list):
     repo_dirs = [os.path.join(workspace_dir, os.path.normpath(x.root)) for x in repo_list]
     if repo_dirs:
-        build_info = BuildInfo(repo_dirs)
+        build_info = sparse.BuildInfo(repo_dirs)
         if build_info.find_sparse_checkout():
             return True
     return False
@@ -301,14 +261,14 @@ def reset_sparse_checkout(workspace_dir, repo_list, disable=False):
     repo_dirs.extend([os.path.join(workspace_dir, os.path.normpath(x.root)) for x in repo_list])
     if repo_dirs:
         # Create sparse checkout object without DSC information and reset
-        build_info = BuildInfo(repo_dirs)
+        build_info = sparse.BuildInfo(repo_dirs)
         build_info.reset_sparse_checkout(disable)
 
 
 def sparse_checkout(workspace_dir, repo_list, manifest):
     current_combo = manifest.general_config.current_combo
     try:
-        process_sparse_checkout(workspace_dir, repo_list, current_combo, manifest)
+        sparse.process_sparse_checkout(workspace_dir, repo_list, current_combo, manifest)
     except RuntimeError as msg:
         print(msg)
 
@@ -320,7 +280,7 @@ def check_dirty_repos(manifest, workspace_path):
         local_repo_path = os.path.join(workspace_path, repo_to_check.root)
         repo = Repo(local_repo_path)
         if repo.is_dirty(untracked_files=True, submodules=False):
-            raise EdkrepoUncommitedChangesException(UNCOMMITED_CHANGES.format(repo_to_check.root))
+            raise edkrepo_exception.EdkrepoUncommitedChangesException(humble.UNCOMMITED_CHANGES.format(repo_to_check.root))
 
 
 def check_branches(sources, workspace_path):
@@ -331,25 +291,25 @@ def check_branches(sources, workspace_path):
             continue
         if repo_to_check.branch not in repo.remotes['origin'].refs:
             try:
-               fetch_from_remote(repo, repo.remotes.origin, "refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_check.branch), progress=GitProgressHandler())
+               fetch_from_remote(repo, repo.remotes.origin, "refs/heads/{0}:refs/remotes/origin/{0}".format(repo_to_check.branch), progress=progress_handler.GitProgressHandler())
             except:
-                raise EdkrepoManifestInvalidException(CHECKOUT_NO_REMOTE.format(repo_to_check.root))
+                raise edkrepo_exception.EdkrepoManifestInvalidException(humble.CHECKOUT_NO_REMOTE.format(repo_to_check.root))
 
 def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifest, global_manifest_path):
     if not override:
         try:
             check_dirty_repos(manifest, workspace_path)
-        except EdkrepoUncommitedChangesException:
-            raise EdkrepoUncommitedChangesException(CHECKOUT_UNCOMMITED_CHANGES)
+        except edkrepo_exception.EdkrepoUncommitedChangesException:
+            raise edkrepo_exception.EdkrepoUncommitedChangesException(humble.CHECKOUT_UNCOMMITED_CHANGES)
     #check_branches(repos_to_checkout, workspace_path)
     for repo_to_checkout in repos_to_checkout:
         if verbose:
             if repo_to_checkout.patch_set:
-                print(CHECKING_OUT_PATCHSET.format(repo_to_checkout.patch_set, repo_to_checkout.root))
+                print(humble.CHECKING_OUT_PATCHSET.format(repo_to_checkout.patch_set, repo_to_checkout.root))
             elif repo_to_checkout.branch is not None and repo_to_checkout.commit is None:
-                print(CHECKING_OUT_BRANCH.format(repo_to_checkout.branch, repo_to_checkout.root))
+                print(humble.CHECKING_OUT_BRANCH.format(repo_to_checkout.branch, repo_to_checkout.root))
             elif repo_to_checkout.commit is not None:
-                print(CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
+                print(humble.CHECKING_OUT_COMMIT.format(repo_to_checkout.commit, repo_to_checkout.root))
         local_repo_path = os.path.join(workspace_path, repo_to_checkout.root)
         repo = Repo(local_repo_path)
 
@@ -359,19 +319,19 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
         if repo_to_checkout.patch_set:
             try:
                 patchset_branch_creation_flow(repo_to_checkout, repo, workspace_path, manifest, global_manifest_path, override)
-            except EdkrepoLocalBranchExistsException:
+            except edkrepo_exception.EdkrepoLocalBranchExistsException:
                 raise
         else:
             if repo_to_checkout.commit:
                 if verbose and (repo_to_checkout.branch or repo_to_checkout.tag):
-                    print(MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root))
+                    print(humble.MULTIPLE_SOURCE_ATTRIBUTES_SPECIFIED.format(repo_to_checkout.root))
                 if override:
                     repo.git.checkout(repo_to_checkout.commit, '--force')
                 else:
                     repo.git.checkout(repo_to_checkout.commit)
             elif repo_to_checkout.tag and repo_to_checkout.commit is None:
                 if verbose and (repo_to_checkout.branch):
-                    print(TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root))
+                    print(humble.TAG_AND_BRANCH_SPECIFIED.format(repo_to_checkout.root))
                 if override:
                     repo.git.checkout(repo_to_checkout.tag, '--force')
                 else:
@@ -390,7 +350,7 @@ def checkout_repos(verbose, override, repos_to_checkout, workspace_path, manifes
                 else:
                     repo.heads[local_branch.name].checkout()
             else:
-                raise EdkrepoManifestInvalidException(MISSING_BRANCH_COMMIT)
+                raise edkrepo_exception.EdkrepoManifestInvalidException(humble.MISSING_BRANCH_COMMIT)
 
 def patchset_branch_creation_flow(repo, repo_obj, workspace_path, manifest, global_manifest_path, override):
     json_path = os.path.join(workspace_path, "repo")
@@ -405,10 +365,10 @@ def patchset_branch_creation_flow(repo, repo_obj, workspace_path, manifest, glob
     if repo.patch_set in repo_obj.branches:
         try:
             COLLISION = is_branch_name_collision(json_path, patchset, repo_obj, global_manifest_path, ops, override)
-        except EdkrepoLocalBranchExistsException:
+        except edkrepo_exception.EdkrepoLocalBranchExistsException:
             raise
         if COLLISION:
-            ui_functions.print_info_msg(COLLISION_DETECTED.format(repo.patch_set))
+            ui_functions.print_info_msg(humble.COLLISION_DETECTED.format(repo.patch_set))
             create_local_branch(repo.patch_set, patchset, global_manifest_path, manifest, repo_obj)
         else:
             repo_obj.git.checkout(repo.patch_set)
@@ -460,7 +420,7 @@ def is_branch_name_collision(json_path, patchset_obj, repo, global_manifest_path
                             return True
     if not BRANCH_IN_JSON:
         if not override:
-            raise EdkrepoLocalBranchExistsException(LOCAL_BRANCH_EXISTS.format(patchset_name))
+            raise edkrepo_exception.EdkrepoLocalBranchExistsException(humble.LOCAL_BRANCH_EXISTS.format(patchset_name))
         else:
             return False
     else:
@@ -497,26 +457,26 @@ def create_repos(repos_to_create, workspace_path, manifest, global_manifest_path
                     create_local_branch(patch_set, patchset, global_manifest_path, manifest, repo)
 
 def validate_manifest_repo(manifest_repo, verbose=False, archived=False):
-    print(VERIFY_GLOBAL)
+    print(humble.VERIFY_GLOBAL)
     if archived:
-        print(VERIFY_ARCHIVED)
-    manifest_validation_data = validate_manifestrepo(manifest_repo, archived)
-    manifest_repo_error = get_manifest_validation_status(manifest_validation_data)
+        print(humble.VERIFY_ARCHIVED)
+    manifest_validation_data = edk_manifest_validation.validate_manifestrepo(manifest_repo, archived)
+    manifest_repo_error = edk_manifest_validation.get_manifest_validation_status(manifest_validation_data)
     if manifest_repo_error:
-        print(VERIFY_GLOBAL_FAIL)
+        print(humble.VERIFY_GLOBAL_FAIL)
         if verbose:
-            print_manifest_errors(manifest_validation_data)
+            edk_manifest_validation.print_manifest_errors(manifest_validation_data)
 
 def verify_single_manifest(cfg_file, manifest_repo, manifest_path, verbose=False):
-    manifest = ManifestXml(manifest_path)
-    print(VERIFY_PROJ.format(manifest.project_info.codename))
-    index_path = os.path.join(cfg_file.manifest_repo_abs_path(manifest_repo), CI_INDEX_FILE_NAME)
-    proj_val_data = validate_manifestfiles([manifest_path])
-    proj_val_error = get_manifest_validation_status(proj_val_data)
+    manifest = edk_manifest.ManifestXml(manifest_path)
+    print(humble.VERIFY_PROJ.format(manifest.project_info.codename))
+    index_path = os.path.join(cfg_file.manifest_repo_abs_path(manifest_repo), tool_config.CI_INDEX_FILE_NAME)
+    proj_val_data = edk_manifest_validation.validate_manifestfiles([manifest_path])
+    proj_val_error = edk_manifest_validation.get_manifest_validation_status(proj_val_data)
     if proj_val_error:
         if verbose:
-            print_manifest_errors(proj_val_data)
-        raise EdkrepoManifestInvalidException(VERIFY_PROJ_FAIL.format(manifest.project_info.codename))
+            edk_manifest_validation.print_manifest_errors(proj_val_data)
+        raise edkrepo_exception.EdkrepoManifestInvalidException(humble.VERIFY_PROJ_FAIL.format(manifest.project_info.codename))
 
 def sort_commits(manifest, workspace_path, max_commits=None):
     colorama.init()
@@ -553,8 +513,8 @@ def combination_is_in_manifest(combination, manifest):
 
 
 def checkout(combination, global_manifest_path, verbose=False, override=False, log=None, cache_obj=None):
-    workspace_path = get_workspace_path()
-    manifest = get_workspace_manifest()
+    workspace_path = config_factory.get_workspace_path()
+    manifest = config_factory.get_workspace_manifest()
 
     # Create combo so we have original input and do not introduce any
     # unintended behavior by messing with parameters.
@@ -563,10 +523,10 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
     submodule_combo = manifest.general_config.current_combo
     try:
         # Try to handle normalize combo name to match the manifest file.
-        combo = case_insensitive_single_match(combo, combinations_in_manifest(manifest))
+        combo = workspace_maintenance.case_insensitive_single_match(combo, combinations_in_manifest(manifest))
         submodule_combo = combo
     except:
-        raise EdkrepoInvalidParametersException(CHECKOUT_INVALID_COMBO)
+        raise edkrepo_exception.EdkrepoInvalidParametersException(humble.CHECKOUT_INVALID_COMBO)
 
     repo_sources = manifest.get_repo_sources(combo)
     initial_repo_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
@@ -597,20 +557,20 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
         if sparse_settings is not None:
             sparse_enabled = False
     if sparse_enabled or sparse_diff:
-        print(SPARSE_RESET)
+        print(humble.SPARSE_RESET)
         reset_sparse_checkout(workspace_path, current_repos)
 
     # Deinit all submodules due to the potential for issues when switching
     # branches.
     if combo != manifest.general_config.current_combo:
         try:
-            deinit_full(workspace_path, manifest, verbose)
+            submodule_utils.deinit_full(workspace_path, manifest, verbose)
         except Exception as e:
-            print(SUBMODULE_DEINIT_FAILED)
+            print(humble.SUBMODULE_DEINIT_FAILED)
             if verbose:
                 print(e)
 
-    print(CHECKING_OUT_COMBO.format(combo))
+    print(humble.CHECKING_OUT_COMBO.format(combo))
 
     try:
         checkout_repos(verbose, override, repo_sources, workspace_path, manifest, global_manifest_path)
@@ -619,20 +579,20 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
         # combination exists in the manifest
         if combination_is_in_manifest(combo, manifest):
             manifest.write_current_combo(combo)
-    except EdkrepoException as e:
+    except edkrepo_exception.EdkrepoException as e:
         if verbose:
             traceback.print_exc()
         ui_functions.print_error_msg(e)
-        print (CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
+        print (humble.CHECKOUT_COMBO_UNSUCCESSFULL.format(combo))
         # Return to the initial combo, since there was an issue with cheking out the selected combo
         checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest, global_manifest_path)
     finally:
         cache_path = None
         if cache_obj is not None:
-            cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
-        maintain_submodules(workspace_path, manifest, submodule_combo, verbose, cache_path)
+            cache_path = cache_obj.get_cache_path(tool_config.SUBMODULE_CACHE_REPO_NAME)
+        submodule_utils.maintain_submodules(workspace_path, manifest, submodule_combo, verbose, cache_path)
         if sparse_enabled or sparse_diff:
-            print(SPARSE_CHECKOUT)
+            print(humble.SPARSE_CHECKOUT)
             sparse_checkout(workspace_path, current_repos, manifest)
 
 def get_latest_sha(repo, branch, remote_or_url='origin'):
@@ -676,12 +636,12 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, global_manifest_
 
     #Check for the presence of a globally defined commit template
     global_template_in_use = False
-    global_gitconfig_path = os.path.normpath(expanduser("~/.gitconfig"))
+    global_gitconfig_path = os.path.normpath(pathfix.expanduser("~/.gitconfig"))
     with git.GitConfigParser(global_gitconfig_path, read_only=False) as gitglobalconfig:
         if gitglobalconfig.has_option(section='commit', option='template'):
             gitglobalconfig.get_value(section='commit', option='template')
             global_template_in_use = True
-            print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
+            print(humble.COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
 
     # Apply the template based on current manifest
     with repo.config_writer() as cw:
@@ -690,16 +650,16 @@ def update_repo_commit_template(workspace_dir, repo, repo_info, global_manifest_
                 current_template = cw.get_value(section='commit', option='template').replace('"', '')
                 if not current_template.startswith(os.path.normpath(global_manifest_directory).replace('\\', '/')):
                     if os.path.isfile(current_template):
-                        print(COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
+                        print(humble.COMMIT_TEMPLATE_CUSTOM_VALUE.format(repo_info.remote_name))
                         return
                     else:
-                        print(COMMIT_TEMPLATE_NOT_FOUND.format(current_template))
-                        print(COMMIT_TEMPLATE_RESETTING_VALUE)
+                        print(humble.COMMIT_TEMPLATE_NOT_FOUND.format(current_template))
+                        print(humble.COMMIT_TEMPLATE_RESETTING_VALUE)
 
             if repo_info.remote_name in templates:
                 template_path = os.path.normpath(os.path.join(global_manifest_directory, templates[repo_info.remote_name]))
                 if not os.path.isfile(template_path):
-                    print(COMMIT_TEMPLATE_NOT_FOUND.format(template_path))
+                    print(humble.COMMIT_TEMPLATE_NOT_FOUND.format(template_path))
                     return
                 template_path = template_path.replace('\\', '/')    # Convert to git approved path
                 cw.set_value(section='commit', option='template', value='"{}"'.format(template_path))
@@ -719,7 +679,7 @@ def check_single_remote_connection(remote_url):
     Checks the connection to a single remote using git ls-remote remote_url -q invoked via subprocess
     instead of gitpython to ensure that ssh errors are caught and handled properly on both git bash
     and windows command line"""
-    print(CHECKING_CONNECTION.format(remote_url))
+    print(humble.CHECKING_CONNECTION.format(remote_url))
     check_output = subprocess.Popen('git ls-remote {} -q'.format(remote_url), shell=True)
     check_output.communicate()
 
@@ -728,7 +688,7 @@ def find_project_in_index(project, ci_index_file, global_manifest_dir, except_me
     Finds a project in the CiIndexFile and returns the path to it within the global manifest repository.
     Raises and EdkrepoInvalidParametersException if not found"""
     try:
-        proj_name = case_insensitive_single_match(project, ci_index_file.project_list)
+        proj_name = workspace_maintenance.case_insensitive_single_match(project, ci_index_file.project_list)
     except:
         proj_name = None
     if proj_name:
@@ -747,9 +707,9 @@ def find_project_in_index(project, ci_index_file, global_manifest_dir, except_me
                     global_manifest_path = os.path.join(dirpath, project)
                     break
             else:
-                raise EdkrepoInvalidParametersException(except_message)
+                raise edkrepo_exception.EdkrepoInvalidParametersException(except_message)
         else:
-            raise EdkrepoInvalidParametersException(except_message)
+            raise edkrepo_exception.EdkrepoInvalidParametersException(except_message)
 
     return global_manifest_path
 
@@ -793,7 +753,7 @@ def find_curl():
 def find_git_version():
     git_version_output = subprocess.run('git --version', stdout=subprocess.PIPE, universal_newlines=True, shell=True)
     cur_git_ver_string = git_version_output.stdout
-    cur_git_version = GitVersion(cur_git_ver_string)
+    cur_git_version = git_version.GitVersion(cur_git_ver_string)
 
     return cur_git_version
 
@@ -822,7 +782,7 @@ def get_hash_of_file(file):
 def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo):
     for branch in repo.branches:
         if name == str(branch):
-            raise EdkrepoBranchExistsException(BRANCH_EXISTS.format(name))
+            raise edkrepo_exception.EdkrepoBranchExistsException(humble.BRANCH_EXISTS.format(name))
 
     path = repo.working_tree_dir
     repo_path = os.path.dirname(path)
@@ -835,23 +795,23 @@ def create_local_branch(name, patchset, global_manifest_path, manifest_obj, repo
         if patchset.remote == remote.name:
             REMOTE_IN_REMOTE_LIST = True
             try:
-                fetch_from_remote(repo, repo.remotes.origin, patchset.fetch_branch, progress=GitProgressHandler())
+                fetch_from_remote(repo, repo.remotes.origin, patchset.fetch_branch, progress=progress_handler.GitProgressHandler())
             except:
-                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
+                raise edkrepo_exception.EdkrepoFetchBranchNotFoundException(humble.FETCH_BRANCH_DOES_NOT_EXIST.format(patchset.fetch_branch))
             parent_patchsets = _list_patchset_ancestors(manifest_obj, patchset)
             _checkout_parent(patchset, name, repo, parent_patchsets)
             try:
                 apply_patchset_operations(repo, operations_list, global_manifest_path, remote_list)
                 head_sha = repo.git.execute(['git', 'rev-parse', 'HEAD'])
-            except (EdkrepoPatchFailedException, EdkrepoRevertFailedException, git.GitCommandError, EdkrepoCherryPickFailedException, EdkrepoFetchBranchNotFoundException) as exception:
+            except (edkrepo_exception.EdkrepoPatchFailedException, edkrepo_exception.EdkrepoRevertFailedException, git.GitCommandError, edkrepo_exception.EdkrepoCherryPickFailedException, edkrepo_exception.EdkrepoFetchBranchNotFoundException) as exception:
                 print(exception)
-                print(CHECKING_OUT_DEFAULT)
+                print(humble.CHECKING_OUT_DEFAULT)
                 repo.git.checkout(os.path.basename(repo.git.execute(['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'])))
                 repo.git.execute(['git', 'branch', '-D', '{}'.format(name)])
                 raise exception
 
     if not REMOTE_IN_REMOTE_LIST:
-        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(patchset.remote))
+        raise edkrepo_exception.EdkrepoRemoteNotFoundException(humble.REMOTE_NOT_FOUND.format(patchset.remote))
 
     ops_list = []
     for operations in operations_list:
@@ -912,7 +872,7 @@ def _checkout_parent(patchset, name, repo, parent_patchsets):
         repo.git.checkout("refs/tags/{}".format(base_parent_sha), b=name)
     elif base_parent_sha in repo.heads:
         # PatchSet should not use a branch name as the base parent_sha.
-        raise EdkrepoBranchCollidesWithParentShaException(BRANCH_COLLIDES_WITH_PARENT_SHA)
+        raise edkrepo_exception.EdkrepoBranchCollidesWithParentShaException(humble.BRANCH_COLLIDES_WITH_PARENT_SHA)
     else:
         repo.git.checkout(base_parent_sha, b=name)
 
@@ -930,9 +890,9 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                         repo.git.execute(['git', 'am', path, '--ignore-whitespace'])
                     except:
                         repo.git.execute(['git', 'am', '--abort'])
-                        raise EdkrepoPatchFailedException(APPLYING_PATCH_FAILED.format(operation.file))
+                        raise edkrepo_exception.EdkrepoPatchFailedException(humble.APPLYING_PATCH_FAILED.format(operation.file))
                 else:
-                    raise EdkrepoPatchNotFoundException(PATCHFILE_DOES_NOT_EXIST.format(operation.file))
+                    raise edkrepo_exception.EdkrepoPatchNotFoundException(humble.PATCHFILE_DOES_NOT_EXIST.format(operation.file))
             elif operation.type == REVERT:
                 revert_command = ['git', 'revert', operation.sha, '--no-edit']
                 if operation.merge_strategy == "ort_ignore-all-space":
@@ -946,7 +906,7 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                 except:
                     if is_merge_conflict(repo):
                         repo.git.execute(['git', 'revert', '--abort'])
-                    raise EdkrepoRevertFailedException(APPLYING_REVERT_FAILED.format(operation.sha))
+                    raise edkrepo_exception.EdkrepoRevertFailedException(humble.APPLYING_REVERT_FAILED.format(operation.sha))
             else:
                 cherrypick_command = ['git', 'cherry-pick', operation.sha, '-x']
                 if operation.merge_strategy == "ort_ignore-all-space":
@@ -963,7 +923,7 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                             try:
                                 repo.git.execute(['git', 'remote', 'add', operation.source_remote, remote.url])
                             except :
-                                raise EdkrepoRemoteAddException(REMOTE_CREATION_FAILED.format(operation.source_remote))
+                                raise edkrepo_exception.EdkrepoRemoteAddException(humble.REMOTE_CREATION_FAILED.format(operation.source_remote))
                             try:
                                 repo.git.execute(['git', 'fetch', operation.source_remote, operation.source_branch])
                             except:
@@ -971,31 +931,31 @@ def apply_patchset_operations(repo, operations_list, global_manifest_path, remot
                                     repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
                                 except:
                                     pass
-                                raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                                raise edkrepo_exception.EdkrepoFetchBranchNotFoundException(humble.FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                             try:
                                 repo.git.execute(cherrypick_command)
                             except:
                                 if is_merge_conflict(repo):
                                     repo.git.execute(['git', 'cherry-pick', '--abort'])
-                                raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
+                                raise edkrepo_exception.EdkrepoCherryPickFailedException(humble.APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
                             finally:
                                 try:
                                     repo.git.execute(['git', 'remote', 'remove', operation.source_remote])
                                 except:
-                                    raise EdkrepoRemoteRemoveException(REMOVE_REMOTE_FAILED.format(operation.source_remote))
+                                    raise edkrepo_exception.EdkrepoRemoteRemoveException(humble.REMOVE_REMOTE_FAILED.format(operation.source_remote))
                     if not REMOTE_FOUND:
-                        raise EdkrepoRemoteNotFoundException(REMOTE_NOT_FOUND.format(operation.source_remote))
+                        raise edkrepo_exception.EdkrepoRemoteNotFoundException(humble.REMOTE_NOT_FOUND.format(operation.source_remote))
                 else:
                     try:
                         fetch_from_remote(repo, repo.remotes.origin, operation.source_branch)
                     except:
-                        raise EdkrepoFetchBranchNotFoundException(FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
+                        raise edkrepo_exception.EdkrepoFetchBranchNotFoundException(humble.FETCH_BRANCH_DOES_NOT_EXIST.format(operation.source_branch))
                     try:
                         repo.git.execute(cherrypick_command)
                     except:
                         if is_merge_conflict(repo):
                             repo.git.execute(['git', 'cherry-pick', '--abort'])
-                        raise EdkrepoCherryPickFailedException(APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
+                        raise edkrepo_exception.EdkrepoCherryPickFailedException(humble.APPLYING_CHERRY_PICK_FAILED.format(operation.sha))
 
 
 def get_git_config_email():
@@ -1005,13 +965,13 @@ def get_git_config_email():
 
 def get_netrc_path():
     netrc_path = None
-    home_dir = expanduser('~')
+    home_dir = pathfix.expanduser('~')
     if os.path.isfile(os.path.join(home_dir, '.netrc')):
         netrc_path = os.path.join(home_dir, '.netrc')
     elif os.path.isfile(os.path.join(home_dir, '_netrc')):
         netrc_path = os.path.join(home_dir, '_netrc')
     if not netrc_path:
-        raise EdkrepoWarningException(NETRC_NOT_FOUND)
+        raise edkrepo_exception.EdkrepoWarningException(humble.NETRC_NOT_FOUND)
     return netrc_path
 
 def get_touched_files(repo, rev1, rev2):
@@ -1073,7 +1033,7 @@ def fetch_from_remote(repo, remote, *args, _repack_attempted=False, _prune_attem
             # Pack all refs to consolidate them, then retry via a recursive call
             # so that a potential subsequent prune error is also handled
             # automatically.
-            ui_functions.print_info_msg(AUTOMATIC_REFS_REPACK, header=False)
+            ui_functions.print_info_msg(humble.AUTOMATIC_REFS_REPACK, header=False)
             # Give the OS time to release file handles Git has open
             time.sleep(1.0)
             repo.git.pack_refs('--all')
@@ -1082,7 +1042,7 @@ def fetch_from_remote(repo, remote, *args, _repack_attempted=False, _prune_attem
         elif _fetch_error_needs_prune(fetch_error):
             if _prune_attempted:
                 raise
-            ui_functions.print_info_msg(AUTOMATIC_REMOTE_PRUNE, header=False)
+            ui_functions.print_info_msg(humble.AUTOMATIC_REMOTE_PRUNE, header=False)
             # Give the OS time to release file handles Git has open
             time.sleep(1.0)
             try:
@@ -1090,15 +1050,15 @@ def fetch_from_remote(repo, remote, *args, _repack_attempted=False, _prune_attem
             except git.GitCommandError:
                 if _is_case_insensitive_fs():
                     time.sleep(1.0)
-                    scrub_repo_case_conflicts(repo, verbose=True)
+                    repo_case_conflict_solver.scrub_repo_case_conflicts(repo, verbose=True)
                     time.sleep(1.0)
-                    ui_functions.print_info_msg(AUTOMATIC_REMOTE_PRUNE, header=False)
+                    ui_functions.print_info_msg(humble.AUTOMATIC_REMOTE_PRUNE, header=False)
                     repo.git.remote('prune', remote.name)
                 else:
                     raise
             time.sleep(1.0)
             if _is_case_insensitive_fs():
-                scrub_stale_remote_reflogs(repo, verbose=True)
+                repo_case_conflict_solver.scrub_stale_remote_reflogs(repo, verbose=True)
                 time.sleep(1.0)
             return fetch_from_remote(repo, remote, *args, _repack_attempted=_repack_attempted, _prune_attempted=True, **kwargs)
         else:
@@ -1111,5 +1071,5 @@ def get_proxy_str():
     try:
         proxy_str = proxy_dict['http.proxy']
     except KeyError:
-        raise EdkrepoProxyNotSetException(PROXY_STR_NOT_FOUND)
+        raise edkrepo_exception.EdkrepoProxyNotSetException(humble.PROXY_STR_NOT_FOUND)
     return proxy_str
