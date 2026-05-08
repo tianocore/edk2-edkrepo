@@ -85,6 +85,28 @@ Tests `get_parent_of_nested_repo` which returns the parent `RepoSource` for a ne
 - **Description**: When no source matches any ancestor directory.
 - **Expected Outcome**: `ValueError` is raised containing `NO_PARENT_REPO_ERROR`.
 
+### TestIsRepoNested
+Tests `is_repo_nested` which returns True/False for whether a repo path has a parent in the given source list, delegating to `get_parent_of_nested_repo`.
+
+#### 1. Returns True When Parent Found
+- **Description**: When `get_parent_of_nested_repo` finds a parent source for the given path.
+- **Expected Outcome**: Returns `True`.
+
+#### 2. Returns False When No Parent Found
+- **Description**: When `get_parent_of_nested_repo` raises `ValueError` (no parent found, or path invalid).
+- **Expected Outcome**: Returns `False`.
+
+### TestListNestedRepos
+Tests `list_nested_repos` which returns the subset of a list of `RepoSource` tuples that are nested (have a parent elsewhere in the same list).
+
+#### 1. Returns Only Nested Sources
+- **Description**: When the list contains a mix of root-level and nested sources.
+- **Expected Outcome**: A list containing only the nested source(s) is returned.
+
+#### 2. Returns Empty List When None Nested
+- **Description**: When no source in the list has a parent within the list.
+- **Expected Outcome**: An empty list is returned.
+
 ### TestGetComboElement
 Tests `get_combo_element` which returns a deep copy of the named `<Combination>` element, or raises `ValueError` if absent.
 

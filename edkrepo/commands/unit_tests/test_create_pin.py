@@ -37,8 +37,7 @@ class TestGeneratePinData:
             venv_cfg=None,
             patch_set=None,
             blobless=False,
-            treeless=False,
-            nested_repo=False
+            treeless=False
         ),
         RepoSource(
             root="repo2",
@@ -52,8 +51,7 @@ class TestGeneratePinData:
             venv_cfg=None,
             patch_set=None,
             blobless=False,
-            treeless=False,
-            nested_repo=False
+            treeless=False
         )
     ]
 
@@ -71,8 +69,7 @@ class TestGeneratePinData:
             venv_cfg=None,
             patch_set="patchset1",
             blobless=False,
-            treeless=False,
-            nested_repo=False
+            treeless=False
         ),
         RepoSource(
             root="repo2",
@@ -86,8 +83,7 @@ class TestGeneratePinData:
             venv_cfg=None,
             patch_set="patchset2",
             blobless=False,
-            treeless=False,
-            nested_repo=False
+            treeless=False
         )
     ]
 
@@ -105,8 +101,7 @@ class TestGeneratePinData:
             venv_cfg=None,
             patch_set="patchset1",
             blobless=False,
-            treeless=False,
-            nested_repo=False
+            treeless=False
         ),
         RepoSource(
             root="repo2",
@@ -120,8 +115,7 @@ class TestGeneratePinData:
             venv_cfg=None,
             patch_set=None,
             blobless=False,
-            treeless=False,
-            nested_repo=False
+            treeless=False
         ),
         RepoSource(
             root="repo3",
@@ -135,8 +129,7 @@ class TestGeneratePinData:
             venv_cfg=None,
             patch_set=None,
             blobless=False,
-            treeless=False,
-            nested_repo=False
+            treeless=False
         )
     ]
 
