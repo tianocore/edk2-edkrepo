@@ -199,15 +199,18 @@ def _parse_project_required_attribs(element):
         raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
     return name, xml_path
 
+
 #
 #  This class will parse and the manifest XML file and populate the named
 #  tuples defined above to provide abstracted access to the manifest data
 #
 class ManifestXml(BaseXmlHelper):
     def __init__(self, fileref):
-        # Most of the attributes of this class are intended to be private as they are used for
-        # internally gathering and storing the manifest data. As such, all access to them should be
-        # done through the provided methods to ensure future compatibility if the xml schema changes
+        """
+        Most of the attributes of this class are intended to be private as they are used for
+        internally gathering and storing the manifest data. As such, all access to them should be
+        done through the provided methods to ensure future compatibility if the xml schema changes
+        """
         super().__init__(fileref, ['Pin', 'Manifest'])
         self._project_info = None
         self._general_config = None
@@ -384,8 +387,7 @@ class ManifestXml(BaseXmlHelper):
         self._add_combo_source(element, combo)
 
     def _add_combo_source(self, subroot, combo):
-        # create a list of _RepoSource objs from the <Source> tags in subroot
-        # and add it to the __combo_sources dictionary
+        """Create a list of _RepoSource objs from the <Source> tags in subroot and add it to the _combo_sources dictionary."""
         self._add_unique_item(combo, self._combinations, subroot.tag)
         temp_sources = []
         for element in subroot.iter(tag='Source'):
@@ -559,11 +561,7 @@ class ManifestXml(BaseXmlHelper):
         return submodule_list
 
     def write_current_combo(self, combo_name, filename=None):
-        #
-        # Updates the CurrentClonedCombo tag of _tree attribute and writes the entire tree out to the
-        # file specified. If no file is given, then the file used to instantiate this object will be used.
-        # Note: It will also strip all the comments from the file
-        #
+        """Update CurrentClonedCombo in the tree and write it out; if no filename is given, the source file is overwritten."""
         if self._xml_type == 'Pin':
             # raise Warning("This method is not supported for Pin xmls")
             return
@@ -607,9 +605,7 @@ class ManifestXml(BaseXmlHelper):
         self._tree.write(filename)
 
     def _dfs_traverse_etree(self, node):
-        '''
-        Traverse ElementTree to construct JSON equivalent.
-        '''
+        """Traverse ElementTree to construct JSON equivalent."""
         current_dict = {}
         current_dict['name'] = node.tag
 
@@ -867,9 +863,7 @@ class ManifestXml(BaseXmlHelper):
 
     @property
     def get_all_patchsets(self):
-        '''
-        Returns a list of all the patchsets defined in the manifest file
-        '''
+        '''Returns a list of all the patchsets defined in the manifest file'''
         patchsets = []
         for patch in self._patch_sets.keys():
             patchsets.append(self._patch_sets[patch])
@@ -1234,6 +1228,7 @@ def _parse_repo_source_required_attribs(element, remotes):
     except KeyError as k:
         raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
     return root, remote_name, remote_url
+
 
 class _SparseSettings():
     def __init__(self, element):
