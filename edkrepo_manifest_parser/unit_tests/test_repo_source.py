@@ -39,7 +39,6 @@ PATCH_SET = 'ps-debug'
 VENV_CFG = 'venv.cfg'
 FIELD_SPARSE = 'sparse'
 FIELD_ENABLE_SUB = 'enableSub'
-FIELD_NESTED_REPO = 'nested_repo'
 FIELD_PATCH_SET = 'patch_set'
 PARAM_BOOL_FIELD = 'extra, field_name, expected'
 PARAM_PATCH_SET_COMBO = 'ref_attrib_key, ref_attrib_val'
@@ -56,8 +55,6 @@ ID_BLOBLESS_FALSE = 'blobless_false'
 ID_TREELESS_MISSING = 'treeless_missing'
 ID_TREELESS_TRUE = 'treeless_true'
 ID_TREELESS_FALSE = 'treeless_false'
-ID_NESTED_REPO_TRUE = 'nested_repo_true'
-ID_NESTED_REPO_FALSE = 'nested_repo_false'
 ID_PATCH_SET_WITH_BRANCH = 'patch_set_with_branch'
 ID_PATCH_SET_WITH_COMMIT = 'patch_set_with_commit'
 ID_PATCH_SET_WITH_TAG = 'patch_set_with_tag'
@@ -195,8 +192,6 @@ class TestRepoSource:
         pytest.param({}, ATTRIB_TREELESS, False, id=ID_TREELESS_MISSING),
         pytest.param({ATTRIB_TREELESS: helpers.ATTRIB_BOOL_TRUE}, ATTRIB_TREELESS, True, id=ID_TREELESS_TRUE),
         pytest.param({ATTRIB_TREELESS: helpers.ATTRIB_BOOL_FALSE}, ATTRIB_TREELESS, False, id=ID_TREELESS_FALSE),
-        pytest.param({ATTRIB_LOCAL_ROOT: NESTED_LOCAL_ROOT}, FIELD_NESTED_REPO, True, id=ID_NESTED_REPO_TRUE),
-        pytest.param({}, FIELD_NESTED_REPO, False, id=ID_NESTED_REPO_FALSE),
     ])
     def test_init_sets_bool_field(self, base_attrib, extra, field_name, expected):
         """Each boolean attribute must default to False when absent and map 'true'/'false' to True/False correctly."""
@@ -260,6 +255,5 @@ class TestRepoSource:
             venv_cfg=VENV_CFG,
             patch_set=None,
             blobless=False,
-            treeless=False,
-            nested_repo=False,
+            treeless=False
         )

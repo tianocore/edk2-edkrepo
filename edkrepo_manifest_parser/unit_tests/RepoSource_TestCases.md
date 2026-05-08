@@ -120,27 +120,19 @@ Tests `_RepoSource.__init__` which parses a `<Source>` XML element including req
 - **Description**: When the element has a `treeless` attribute with value `"false"`.
 - **Expected Outcome**: `self.treeless` is `False`.
 
-#### 25. Sets nested_repo to True When localRoot Contains a Path Separator
-- **Description**: When the `localRoot` value contains a `/` path separator (nested directory).
-- **Expected Outcome**: `self.nested_repo` is `True`.
-
-#### 26. Sets nested_repo to False When localRoot Is a Simple Name
-- **Description**: When the `localRoot` value is a plain name with no path separator.
-- **Expected Outcome**: `self.nested_repo` is `False`.
-
-#### 27. Raises KeyError When No Reference Attribute Provided
+#### 25. Raises KeyError When No Reference Attribute Provided
 - **Description**: When the element has no `branch`, `commit`, `tag`, or `patchSet` attribute.
 - **Expected Outcome**: Raises `KeyError` indicating that a reference attribute is required.
 
-#### 28. Raises ValueError When patchSet and branch Are Both Present
+#### 26. Raises ValueError When patchSet and branch Are Both Present
 - **Description**: When the element has both a `patchSet` attribute and a `branch` attribute.
 - **Expected Outcome**: Raises `ValueError` indicating mutual exclusivity violation.
 
-#### 29. Raises ValueError When patchSet and commit Are Both Present
+#### 27. Raises ValueError When patchSet and commit Are Both Present
 - **Description**: When the element has both a `patchSet` attribute and a `commit` attribute.
 - **Expected Outcome**: Raises `ValueError` indicating mutual exclusivity violation.
 
-#### 30. Raises ValueError When patchSet and tag Are Both Present
+#### 28. Raises ValueError When patchSet and tag Are Both Present
 - **Description**: When the element has both a `patchSet` attribute and a `tag` attribute.
 - **Expected Outcome**: Raises `ValueError` indicating mutual exclusivity violation.
 
