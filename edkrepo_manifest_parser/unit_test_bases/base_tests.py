@@ -1308,6 +1308,34 @@ class BaseTestManifestXml:
             manifest_instance.get_parent_of_nested_repo(sources, path)
         assert str(exc_info.value) == expected_msg
 
+    def test_is_repo_nested_returns_true_when_parent_found(self, manifest_instance):
+        """When get_parent_of_nested_repo finds a parent source, must return True."""
+        mock_src = MagicMock()
+        mock_src.root = PARENT_REPO
+        assert manifest_instance.is_repo_nested([mock_src], NESTED_REPO) is True
+
+    def test_is_repo_nested_returns_false_when_no_parent_found(self, manifest_instance):
+        """When get_parent_of_nested_repo raises ValueError, must return False."""
+        assert manifest_instance.is_repo_nested([], NESTED_REPO) is False
+
+    def test_list_nested_repos_returns_only_nested_sources(self, manifest_instance):
+        """Given a mix of root-level and nested sources, must return only the nested ones."""
+        mock_parent = MagicMock()
+        mock_parent.root = PARENT_REPO
+        mock_nested = MagicMock()
+        mock_nested.root = NESTED_REPO
+        result = manifest_instance.list_nested_repos([mock_parent, mock_nested])
+        assert result == [mock_nested]
+
+    def test_list_nested_repos_returns_empty_list_when_none_nested(self, manifest_instance):
+        """When no source in the list has a parent within the list, must return an empty list."""
+        mock_src1 = MagicMock()
+        mock_src1.root = 'repo1'
+        mock_src2 = MagicMock()
+        mock_src2.root = 'repo2'
+        result = manifest_instance.list_nested_repos([mock_src1, mock_src2])
+        assert result == []
+
     @pytest.mark.parametrize(PARAM_SUBMODULE_ALTS, [
         pytest.param(REMOTE_NAME, REMOTE_NAME, True, id=ID_ALT_MATCHING),
         pytest.param(UPSTREAM, REMOTE_NAME, False, id=ID_NO_MATCH),
@@ -2145,9 +2173,7 @@ ATTRIB_SPARSE = 'sparseCheckout'
 ATTRIB_ENABLE_SUB = 'enableSubmodule'
 ATTRIB_BLOBLESS = 'blobless'
 ATTRIB_TREELESS = 'treeless'
-NESTED_LOCAL_ROOT = 'parent/{}'.format(LOCAL_ROOT)
 FIELD_SPARSE = 'sparse'
-FIELD_NESTED_REPO = 'nested_repo'
 PARAM_BOOL_FIELD = 'extra, field_name, expected'
 ID_SPARSE_MISSING = 'sparse_missing'
 ID_SPARSE_TRUE = 'sparse_true'
@@ -2161,8 +2187,6 @@ ID_BLOBLESS_FALSE = 'blobless_false'
 ID_TREELESS_MISSING = 'treeless_missing'
 ID_TREELESS_TRUE = 'treeless_true'
 ID_TREELESS_FALSE = 'treeless_false'
-ID_NESTED_REPO_TRUE = 'nested_repo_true'
-ID_NESTED_REPO_FALSE = 'nested_repo_false'
 
 
 class BaseTestRepoSource:
@@ -2274,7 +2298,6 @@ class BaseTestRepoSource:
             patch_set=None,
             blobless=False,
             treeless=False,
-            nested_repo=False,
         )
 
     @pytest.mark.parametrize(PARAM_PARSE_RAISES, [
@@ -2356,8 +2379,6 @@ class BaseTestRepoSource:
         pytest.param({}, ATTRIB_TREELESS, False, id=ID_TREELESS_MISSING),
         pytest.param({ATTRIB_TREELESS: ATTRIB_BOOL_TRUE}, ATTRIB_TREELESS, True, id=ID_TREELESS_TRUE),
         pytest.param({ATTRIB_TREELESS: ATTRIB_BOOL_FALSE}, ATTRIB_TREELESS, False, id=ID_TREELESS_FALSE),
-        pytest.param({ATTRIB_LOCAL_ROOT: NESTED_LOCAL_ROOT}, FIELD_NESTED_REPO, True, id=ID_NESTED_REPO_TRUE),
-        pytest.param({}, FIELD_NESTED_REPO, False, id=ID_NESTED_REPO_FALSE),
     ])
     def test_init_sets_bool_field(self, base_attrib, extra, field_name, expected):
         """Each boolean attribute must default to False when absent and map 'true'/'false' to True/False correctly."""
