@@ -22,8 +22,9 @@ from edkrepo.common.humble import VERIFY_ERROR_HEADER
 class ValidateManifest:
     # Note: manifest_file must be a path to the manifest file not the file itself
     def __init__(self, manifest_file):
-        """Store the path to the manifest file for later validation."""
+        """Initialize the validator with the manifest file path; pre-set _manifest_xmldata to None so guard checks in other methods behave gracefully before validate_parsing() is called."""
         self._manifestfile = manifest_file
+        self._manifest_xmldata = None
 
     def validate_parsing(self):
         """Attempt to parse the manifest XML file; return a (type, status, message) result tuple."""
@@ -105,7 +106,10 @@ def validate_manifestrepo(global_manifest_directory, verify_archived=False):
     """Validate all manifest files referenced by CiIndex.xml; return a dict mapping filepath to result lists."""
     manifestfile_validation = {}
     ci_index_filename = os.path.join(global_manifest_directory, 'CiIndex.xml')
-    ci_index_xml = CiIndexXml(ci_index_filename)
+    try:
+        ci_index_xml = CiIndexXml(ci_index_filename)
+    except Exception:
+        raise EdkrepoVerificationException('Error parsing CI Index file')
     project_list = ci_index_xml.project_list
     if verify_archived:
         project_list.extend(ci_index_xml.archived_project_list)
@@ -131,8 +135,8 @@ def print_manifest_errors(manifestfile_validation):
     for manifestfile in manifestfile_validation.keys():
         for result in manifestfile_validation[manifestfile]:
             if not result[1]:
-                print ("File name: {} ".format(manifestfile))
-                print ("Error type: {} ".format(result[0]))
+                print("File name: {} ".format(manifestfile))
+                print("Error type: {} ".format(result[0]))
                 print("Error message: {} \n".format(result[2]))
 
 def main():
