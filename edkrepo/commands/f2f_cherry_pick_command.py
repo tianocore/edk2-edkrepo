@@ -287,10 +287,7 @@ def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cher
                     git_automation_dir = os.path.join(git_automation_dir, 'edkrepo', 'git_automation')
                     if not os.path.isfile(os.path.join(git_automation_dir, "commit_msg.py")):
                         raise EdkrepoNotFoundException(humble.F2F_CHERRY_PICK_COMMIT_MSG_PY_NOT_FOUND)
-                if sys.platform == "win32":
-                    os.environ['GIT_EDITOR'] = 'py "{}"'.format(os.path.join(git_automation_dir, "commit_msg.py"))
-                else:
-                    os.environ['GIT_EDITOR'] = os.path.join(git_automation_dir, "commit_msg.py")
+                os.environ['GIT_EDITOR'] = '"{}" "{}"'.format(sys.executable, os.path.join(git_automation_dir, "commit_msg.py"))
                 os.environ['COMMIT_MESSAGE_NO_EDIT'] = '1'
                 try:
                     repo.git.commit('--allow-empty')
@@ -474,14 +471,13 @@ def strip_commit_message(commit, repo, source_commit=None, append_sha=False):
         git_automation_dir = os.path.join(git_automation_dir, 'edkrepo', 'git_automation')
         if not os.path.isfile(os.path.join(git_automation_dir, "commit_msg.py")):
             raise EdkrepoNotFoundException(humble.F2F_CHERRY_PICK_COMMIT_MSG_PY_NOT_FOUND)
-    if sys.platform == "win32":
-        os.environ['GIT_EDITOR'] = 'py "{}"'.format(os.path.join(git_automation_dir, "commit_msg.py"))
-    else:
-        os.environ['GIT_EDITOR'] = os.path.join(git_automation_dir, "commit_msg.py")
+    os.environ['GIT_EDITOR'] = '"{}" "{}"'.format(sys.executable, os.path.join(git_automation_dir, "commit_msg.py"))
     os.environ['COMMIT_MESSAGE'] = commit_message
-    check_call(['git', 'commit', '--amend'])
-    del os.environ['GIT_EDITOR']
-    del os.environ['COMMIT_MESSAGE']
+    try:
+        check_call(['git', 'commit', '--amend'])
+    finally:
+        del os.environ['GIT_EDITOR']
+        del os.environ['COMMIT_MESSAGE']
 
 def _perform_cherry_pick(commit, repo, verbose):
     merge_conflict = False

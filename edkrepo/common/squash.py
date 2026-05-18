@@ -77,17 +77,15 @@ def squash_commits(start_commit, end_commit, branch_name, commit_message, repo, 
     repo.heads[local_branch.name].checkout()
     #Set up environment variables for automating the interactive rebase
     git_automation_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'git_automation')
-    if sys.platform == "win32":
-        os.environ['GIT_SEQUENCE_EDITOR'] = 'py "{}"'.format(os.path.join(git_automation_dir, "rebase_squash.py"))
-        os.environ['GIT_EDITOR'] = 'py "{}"'.format(os.path.join(git_automation_dir, "commit_msg.py"))
-    else:
-        os.environ['GIT_SEQUENCE_EDITOR'] = os.path.join(git_automation_dir, "rebase_squash.py")
-        os.environ['GIT_EDITOR'] = os.path.join(git_automation_dir, "commit_msg.py")
+    os.environ['GIT_SEQUENCE_EDITOR'] = '"{}" "{}"'.format(sys.executable, os.path.join(git_automation_dir, "rebase_squash.py"))
+    os.environ['GIT_EDITOR'] = '"{}" "{}"'.format(sys.executable, os.path.join(git_automation_dir, "commit_msg.py"))
     os.environ['COMMIT_MESSAGE'] = commit_message
-    #Do an interactive rebase back to the oldest commit, squashing all commits between then and now
-    check_call(['git', 'rebase', '-i', '{}'.format(start_commit)])
-    if reset_author:
-        repo.git.commit('--amend', '--no-edit', '--reset-author', '--signoff')
-    del os.environ['GIT_SEQUENCE_EDITOR']
-    del os.environ['GIT_EDITOR']
-    del os.environ['COMMIT_MESSAGE']
+    try:
+        #Do an interactive rebase back to the oldest commit, squashing all commits between then and now
+        check_call(['git', 'rebase', '-i', '{}'.format(start_commit)])
+        if reset_author:
+            repo.git.commit('--amend', '--no-edit', '--reset-author', '--signoff')
+    finally:
+        del os.environ['GIT_SEQUENCE_EDITOR']
+        del os.environ['GIT_EDITOR']
+        del os.environ['COMMIT_MESSAGE']
