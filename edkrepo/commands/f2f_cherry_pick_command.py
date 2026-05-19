@@ -12,7 +12,7 @@ from difflib import SequenceMatcher
 import json
 import os
 import re
-from subprocess import check_call, Popen, PIPE, STDOUT
+from subprocess import run, Popen, PIPE, STDOUT
 import sys
 import time
 import uuid
@@ -474,7 +474,7 @@ def strip_commit_message(commit, repo, source_commit=None, append_sha=False):
     os.environ['GIT_EDITOR'] = '"{}" "{}"'.format(sys.executable, os.path.join(git_automation_dir, "commit_msg.py"))
     os.environ['COMMIT_MESSAGE'] = commit_message
     try:
-        check_call(['git', 'commit', '--amend'])
+        run(['git', 'commit', '--amend'], check=True)
     finally:
         del os.environ['GIT_EDITOR']
         del os.environ['COMMIT_MESSAGE']
@@ -595,9 +595,9 @@ def run_filter_branch(command, repo):
             if bash_path is None:
                 raise EdkrepoNotFoundException(humble.F2F_CHERRY_PICK_BASH_NOT_FOUND)
             command = command.replace('"', '""')
-            check_call('"{}" -c "{}"'.format(bash_path, command), shell=True)
+            run('"{}" -c "{}"'.format(bash_path, command), shell=True, check=True)
         else:
-            check_call(command, shell=True)
+            run(command, shell=True, check=True)
     finally:
         if reset_environ:
             del os.environ['FILTER_BRANCH_SQUELCH_WARNING']
