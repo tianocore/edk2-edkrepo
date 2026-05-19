@@ -9,7 +9,7 @@
 
 import os
 import sys
-from subprocess import check_call
+from subprocess import run
 
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
 from edkrepo.common.humble import COMMIT_NOT_FOUND, NOT_GIT_REPO, SQUASH_COMMON_ANCESTOR_REQUIRED
@@ -82,7 +82,7 @@ def squash_commits(start_commit, end_commit, branch_name, commit_message, repo, 
     os.environ['COMMIT_MESSAGE'] = commit_message
     try:
         #Do an interactive rebase back to the oldest commit, squashing all commits between then and now
-        check_call(['git', 'rebase', '-i', '{}'.format(start_commit)])
+        run(['git', 'rebase', '-i', '{}'.format(start_commit)], check=True)
         if reset_author:
             repo.git.commit('--amend', '--no-edit', '--reset-author', '--signoff')
     finally:
