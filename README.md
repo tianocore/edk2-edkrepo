@@ -196,6 +196,51 @@ Open a command prompt and type the following:
 1. `cd build-scripts`
 2. `build_windows_installer.bat`
 
+## Running Tests
+
+EdkRepo uses pytest for running unit tests. The test configuration automatically handles Python path setup through `conftest.py`.
+
+### Default Behavior (No Configuration Needed)
+
+By default, tests use the local repository directory where the tests are located. For most developers, **no configuration is needed** - just run:
+
+```bash
+pytest
+```
+
+### Using EDKREPO_ROOT (Optional)
+
+If you need to test against a different EdkRepo installation or specific path, set the `EDKREPO_ROOT` environment variable to override the default behavior:
+
+**Windows PowerShell:**
+```powershell
+$env:EDKREPO_ROOT = "C:\path\to\edk2-edkrepo"
+pytest
+```
+
+**Windows Command Prompt:**
+```cmd
+set EDKREPO_ROOT=C:\path\to\edk2-edkrepo
+pytest
+```
+
+**Linux/macOS:**
+```bash
+export EDKREPO_ROOT=/path/to/edk2-edkrepo
+pytest
+```
+
+### How It Works
+
+The `conftest.py` file automatically:
+- Checks if `EDKREPO_ROOT` environment variable is set
+- If set and valid, uses that path with highest priority
+- If not set or invalid, uses the local repository directory (where `conftest.py` is located)
+- Only adds paths to `sys.path` if they are not already present
+- Shows informative messages when paths are added or when warnings occur
+
+This ensures tests always run with the correct EdkRepo modules loaded in any environment
+
 ## Timeline
 
 | Time | Event |

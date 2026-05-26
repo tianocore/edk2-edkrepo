@@ -6,10 +6,12 @@
 Tests `_FolderToFolderMappingFolderExclude.__init__` which parses the optional `path` attribute from an `<Exclude>` element.
 
 #### 1. path Defaults to None When Absent
+- **Test Name**: `test_path_defaults_to_none_when_absent`
 - **Description**: When the `path` attribute is absent.
 - **Expected Outcome**: `self.path` is `None`.
 
 #### 2. path Set When Present
+- **Test Name**: `test_path_when_present`
 - **Description**: When the `path` attribute is present.
 - **Expected Outcome**: `self.path` equals the attribute value.
 
@@ -17,6 +19,7 @@ Tests `_FolderToFolderMappingFolderExclude.__init__` which parses the optional `
 Tests `_FolderToFolderMappingFolderExclude.tuple` which returns a `FolderToFolderMappingFolderExclude` namedtuple.
 
 #### 1. Returns Correct FolderToFolderMappingFolderExclude Namedtuple
+- **Test Name**: `test_tuple_returns_correct_folder_to_folder_mapping_folder_exclude_namedtuple`
 - **Description**: When the `path` attribute is present.
 - **Expected Outcome**: `tuple` returns `FolderToFolderMappingFolderExclude(path=<value>)`.
 
