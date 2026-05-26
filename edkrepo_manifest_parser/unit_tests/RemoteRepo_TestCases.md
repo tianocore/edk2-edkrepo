@@ -6,10 +6,12 @@
 Tests `_parse_remote_repo_required_attribs(element)` which validates that the required `name` attribute is present and returns `(name, url)`.
 
 #### 1. Returns name and url When Both Attributes Present
+- **Test Name**: `test_parse_required_attribs_returns_name_and_url_when_name_present`
 - **Description**: When the element contains both a `name` attribute and text content as the URL.
 - **Expected Outcome**: Returns `(name, url)` matching the element's `name` attribute and text.
 
 #### 2. Raises KeyError When name Attribute Absent
+- **Test Name**: `test_parse_required_attribs_raises_key_error_when_name_missing`
 - **Description**: When the element has no `name` attribute.
 - **Expected Outcome**: Raises `KeyError` whose string representation contains the expected `REQUIRED_ATTRIB_ERROR_MSG` prefix.
 
@@ -17,30 +19,37 @@ Tests `_parse_remote_repo_required_attribs(element)` which validates that the re
 Tests `_RemoteRepo.__init__` which parses a `<RemoteRepo>` XML element for required and optional attributes.
 
 #### 1. Sets name and url From Required Attributes
+- **Test Name**: `test_init_sets_name_and_url_from_required_attribs`
 - **Description**: When the element has a `name` attribute and text content for the URL.
 - **Expected Outcome**: `self.name` equals the `name` attribute value; `self.url` equals the element's text.
 
 #### 2. Sets owner When owner Attribute Present
+- **Test Name**: `test_init_sets_optional_attrib_when_present[owner_present]`
 - **Description**: When the element has an `owner` attribute.
 - **Expected Outcome**: `self.owner` is set to the `owner` attribute value.
 
 #### 3. Sets owner to None When owner Attribute Absent
+- **Test Name**: `test_init_optional_attrib_defaults_to_none_when_absent[owner_absent]`
 - **Description**: When the element has no `owner` attribute.
 - **Expected Outcome**: `self.owner` is `None`.
 
 #### 4. Sets review_type When reviewType Attribute Present
+- **Test Name**: `test_init_sets_optional_attrib_when_present[review_type_present]`
 - **Description**: When the element has a `reviewType` attribute.
 - **Expected Outcome**: `self.review_type` is set to the `reviewType` attribute value.
 
 #### 5. Sets review_type to None When reviewType Attribute Absent
+- **Test Name**: `test_init_optional_attrib_defaults_to_none_when_absent[review_type_absent]`
 - **Description**: When the element has no `reviewType` attribute.
 - **Expected Outcome**: `self.review_type` is `None`.
 
 #### 6. Sets pr_strategy When prStrategy Attribute Present
+- **Test Name**: `test_init_sets_optional_attrib_when_present[pr_strategy_present]`
 - **Description**: When the element has a `prStrategy` attribute.
 - **Expected Outcome**: `self.pr_strategy` is set to the `prStrategy` attribute value.
 
 #### 7. Sets pr_strategy to None When prStrategy Attribute Absent
+- **Test Name**: `test_init_optional_attrib_defaults_to_none_when_absent[pr_strategy_absent]`
 - **Description**: When the element has no `prStrategy` attribute.
 - **Expected Outcome**: `self.pr_strategy` is `None`.
 
@@ -48,6 +57,7 @@ Tests `_RemoteRepo.__init__` which parses a `<RemoteRepo>` XML element for requi
 Tests `_RemoteRepo.tuple` which returns a `RemoteRepo` namedtuple.
 
 #### 1. Returns Correct RemoteRepo Namedtuple
+- **Test Name**: `test_tuple_returns_correct_remote_repo_namedtuple`
 - **Description**: When all attributes are present.
 - **Expected Outcome**: `tuple` returns a `RemoteRepo` namedtuple with all fields correctly populated.
 

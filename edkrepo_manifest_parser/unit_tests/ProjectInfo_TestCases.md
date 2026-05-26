@@ -6,49 +6,65 @@
 Tests `_parse_project_info_required_fields` which reads the `CodeName` and `Description` child elements from a `<ProjectInfo>` XML element.
 
 #### 1. Returns Codename and Descript When Both Present
+- **Test Name**: `test_parse_required_fields_returns_codename_and_descript_when_both_present`
 - **Description**: When `CodeName` and `Description` child elements are present with text content.
 - **Expected Outcome**: Returns the tuple `(codename, descript)` with the correct text values.
 
-#### 2. Raises AttributeError When Required Child Absent
-- **Description**: When either the `CodeName` or `Description` child element is absent (i.e., `find()` returns `None`).
+#### 2. Raises AttributeError When CodeName Child Absent
+- **Test Name**: `test_parse_required_fields_raises_when_required_child_absent[code_name_absent]`
+- **Description**: When the `CodeName` child element is absent (i.e., `find()` returns `None`).
+- **Expected Outcome**: Raises `AttributeError` because accessing `.text` on `None` propagates uncaught past the `except KeyError` block.
+
+#### 3. Raises AttributeError When Description Child Absent
+- **Test Name**: `test_parse_required_fields_raises_when_required_child_absent[descript_absent]`
+- **Description**: When the `Description` child element is absent (i.e., `find()` returns `None`).
 - **Expected Outcome**: Raises `AttributeError` because accessing `.text` on `None` propagates uncaught past the `except KeyError` block.
 
 ### TestProjectInfoInit
 Tests `_ProjectInfo.__init__` which delegates required-field parsing to `_parse_project_info_required_fields` and treats all other child elements as optional, defaulting to `None` or an empty list when absent.
 
 #### 1. Sets Codename and Descript
+- **Test Name**: `test_init_sets_codename_and_descript`
 - **Description**: When `CodeName` and `Description` children are present.
 - **Expected Outcome**: `self.codename` and `self.descript` are set to their respective text values.
 
 #### 2. Builds Lead List From DevLead Children
+- **Test Name**: `test_init_builds_lead_list_from_dev_lead_children`
 - **Description**: When one or more `DevLead` children are present.
 - **Expected Outcome**: `self.lead_list` contains the text value of each `DevLead` element.
 
 #### 3. Sets Lead List to Empty When No DevLead Children
+- **Test Name**: `test_init_sets_lead_list_to_empty_when_no_dev_lead_children`
 - **Description**: When `findall('DevLead')` returns an empty list.
 - **Expected Outcome**: `self.lead_list` is an empty list `[]`.
 
 #### 4. Sets `org` When Present
+- **Test Name**: `test_init_sets_optional_field_when_present[org_present]`
 - **Description**: When the `Org` child element is present with text content.
 - **Expected Outcome**: `self.org` is set to the element's text value.
 
 #### 5. Sets `org` to None When Absent
+- **Test Name**: `test_init_sets_optional_field_to_none_when_absent[org_absent]`
 - **Description**: When the `Org` child element is absent (i.e., `find('Org')` returns `None`).
 - **Expected Outcome**: `self.org` is `None`.
 
 #### 6. Sets `short_name` When Present
+- **Test Name**: `test_init_sets_optional_field_when_present[short_name_present]`
 - **Description**: When the `ShortName` child element is present with text content.
 - **Expected Outcome**: `self.short_name` is set to the element's text value.
 
 #### 7. Sets `short_name` to None When Absent
+- **Test Name**: `test_init_sets_optional_field_to_none_when_absent[short_name_absent]`
 - **Description**: When the `ShortName` child element is absent.
 - **Expected Outcome**: `self.short_name` is `None`.
 
 #### 8. Sets Reviewer List From LeadReviewers Children
+- **Test Name**: `test_init_sets_reviewer_list_from_lead_reviewers`
 - **Description**: When the `LeadReviewers` child element is present and contains `Reviewer` sub-elements.
 - **Expected Outcome**: `self.reviewer_list` contains the text value of each `Reviewer` element.
 
 #### 9. Sets Reviewer List to None When LeadReviewers Absent
+- **Test Name**: `test_init_sets_reviewer_list_to_none_when_lead_reviewers_absent`
 - **Description**: When `find('LeadReviewers')` returns `None`.
 - **Expected Outcome**: `self.reviewer_list` is `None`.
 
@@ -56,6 +72,7 @@ Tests `_ProjectInfo.__init__` which delegates required-field parsing to `_parse_
 Tests `_ProjectInfo.tuple` which returns a `ProjectInfo` namedtuple with all six field values.
 
 #### 1. Returns Correct ProjectInfo Namedtuple
+- **Test Name**: `test_tuple_returns_correct_project_info_namedtuple`
 - **Description**: When all child elements are present.
 - **Expected Outcome**: `tuple` returns a `ProjectInfo(codename, description, dev_leads, reviewers, org, short_name)` with the correct values.
 

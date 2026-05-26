@@ -6,30 +6,37 @@
 Tests `_FolderToFolderMapping.__init__` which parses optional `project1`, `project2`, and `remote` attributes and builds a folders list from `<Folder>` and `<File>` children.
 
 #### 1. All Fields Default When All Attributes and Children Absent
+- **Test Name**: `test_all_fields_default_when_absent`
 - **Description**: When all optional attributes (`project1`, `project2`, `remote`) and all child elements (`Folder`, `File`) are absent.
 - **Expected Outcome**: `self.project1` is `None`, `self.project2` is `None`, `self.remote_name` is `None`, and `self.folders` is `[]`.
 
 #### 2. Sets project1 When project1 Attribute Present
+- **Test Name**: `test_init_sets_optional_attrib_when_present[project1_present]`
 - **Description**: When the `project1` attribute is present.
 - **Expected Outcome**: `self.project1` equals the attribute value.
 
 #### 3. Sets project2 When project2 Attribute Present
+- **Test Name**: `test_init_sets_optional_attrib_when_present[project2_present]`
 - **Description**: When the `project2` attribute is present.
 - **Expected Outcome**: `self.project2` equals the attribute value.
 
 #### 4. Sets remote_name When remote Attribute Present
+- **Test Name**: `test_init_sets_optional_attrib_when_present[remote_name_present]`
 - **Description**: When the `remote` attribute is present.
 - **Expected Outcome**: `self.remote_name` equals the attribute value.
 
 #### 5. Populates folders From Folder Children
+- **Test Name**: `test_init_populates_folders_from_single_child_tag[folder_child]`
 - **Description**: When one `<Folder>` child is present.
 - **Expected Outcome**: `self.folders` contains one `_FolderToFolderMappingFolder` with the correct project folder values.
 
 #### 6. Populates folders From File Children
+- **Test Name**: `test_init_populates_folders_from_single_child_tag[file_child]`
 - **Description**: When one `<File>` child is present and no `<Folder>` children exist.
 - **Expected Outcome**: `self.folders` contains one `_FolderToFolderMappingFolder` with the correct project folder values.
 
 #### 7. Combines Folder and File Children
+- **Test Name**: `test_init_combines_folder_and_file_children`
 - **Description**: When both a `<Folder>` child and a `<File>` child are present.
 - **Expected Outcome**: `self.folders` contains one entry for each, totalling two items.
 
@@ -37,6 +44,7 @@ Tests `_FolderToFolderMapping.__init__` which parses optional `project1`, `proje
 Tests `_FolderToFolderMapping.tuple` which returns a `FolderToFolderMapping` namedtuple.
 
 #### 1. Returns Correct FolderToFolderMapping Namedtuple
+- **Test Name**: `test_tuple_returns_correct_folder_to_folder_mapping_namedtuple`
 - **Description**: When all attributes and one `<Folder>` child are present.
 - **Expected Outcome**: `tuple` returns a `FolderToFolderMapping` namedtuple with all fields correctly populated.
 
@@ -54,4 +62,3 @@ Tests `_FolderToFolderMapping.tuple` which returns a `FolderToFolderMapping` nam
    python3 -m pytest
    ```
    See the official `pytest` documentation at: https://docs.pytest.org/en/latest/how-to/usage.html for additional command line options.
-

@@ -6,14 +6,17 @@
 Tests `_SparseSettings.__init__` which parses the optional `sparseByDefault` attribute from a `<SparseSettings>` element, defaulting to `False` when absent.
 
 #### 1. Sets sparse_by_default to False When sparseByDefault Absent
+- **Test Name**: `test_init_sets_sparse_by_default[sparse_by_default_absent]`
 - **Description**: When the `sparseByDefault` attribute is absent.
 - **Expected Outcome**: `self.sparse_by_default` is `False`.
 
 #### 2. Sets sparse_by_default to True When sparseByDefault is "true"
+- **Test Name**: `test_init_sets_sparse_by_default[sparse_by_default_true]`
 - **Description**: When the `sparseByDefault` attribute is `"true"`.
 - **Expected Outcome**: `self.sparse_by_default` is `True`.
 
 #### 3. Sets sparse_by_default to False When sparseByDefault is "false"
+- **Test Name**: `test_init_sets_sparse_by_default[sparse_by_default_false]`
 - **Description**: When the `sparseByDefault` attribute is `"false"`.
 - **Expected Outcome**: `self.sparse_by_default` is `False`.
 
@@ -21,6 +24,7 @@ Tests `_SparseSettings.__init__` which parses the optional `sparseByDefault` att
 Tests `_SparseSettings.tuple` which returns a `SparseSettings` namedtuple.
 
 #### 1. Returns Correct SparseSettings Namedtuple
+- **Test Name**: `test_tuple_returns_correct_sparse_settings_namedtuple`
 - **Description**: When `sparseByDefault` is `"true"`.
 - **Expected Outcome**: `tuple` returns `SparseSettings(sparse_by_default=True)`.
 

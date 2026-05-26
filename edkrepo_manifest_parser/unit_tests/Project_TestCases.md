@@ -6,14 +6,17 @@
 Tests `_parse_project_required_attribs` which extracts the required `name` and `xmlPath` attributes from a `<Project>` XML element, raising `KeyError` if either is missing.
 
 #### 1. Returns Name and XmlPath When Both Present
+- **Test Name**: `test_parse_required_attribs_returns_name_and_xml_path_when_both_present`
 - **Description**: When `name` and `xmlPath` are both present in the element's attributes.
 - **Expected Outcome**: Returns a tuple `(name, xmlPath)` with the correct values and no exception is raised.
 
 #### 2. Raises KeyError When Name Is Missing
+- **Test Name**: `test_parse_required_attribs_raises_key_error_when_name_missing`
 - **Description**: When the `name` attribute is absent from the element.
 - **Expected Outcome**: Raises `KeyError` containing the required-attribute error message.
 
 #### 3. Raises KeyError When XmlPath Is Missing
+- **Test Name**: `test_parse_required_attribs_raises_key_error_when_xml_path_missing`
 - **Description**: When the `xmlPath` attribute is absent from the element.
 - **Expected Outcome**: Raises `KeyError` containing the required-attribute error message.
 
@@ -21,22 +24,27 @@ Tests `_parse_project_required_attribs` which extracts the required `name` and `
 Tests `_Project.__init__` which parses required (`name`, `xmlPath`) and optional (`archived`) attributes from a `<Project>` XML element.
 
 #### 1. Sets Name and XmlPath from Required Attributes
+- **Test Name**: `test_init_sets_name_and_xml_path_from_required_attribs`
 - **Description**: When all required attributes are present in the element.
 - **Expected Outcome**: `self.name` and `self.xmlPath` are set to the values from the element's attributes.
 
 #### 2. Sets Archived to True When Flag Is Lowercase True
+- **Test Name**: `test_init_archived_flag[true_lower]`
 - **Description**: When the `archived` attribute is set to the string `'true'`.
 - **Expected Outcome**: `self.archived` is `True`.
 
 #### 3. Sets Archived to False When Flag Is Lowercase False
+- **Test Name**: `test_init_archived_flag[false_lower]`
 - **Description**: When the `archived` attribute is set to the string `'false'`.
 - **Expected Outcome**: `self.archived` is `False`.
 
 #### 4. Defaults Archived to False When Attribute Is Missing
+- **Test Name**: `test_init_archived_flag[missing]`
 - **Description**: When the `archived` attribute is absent from the element.
 - **Expected Outcome**: `self.archived` defaults to `False`.
 
 #### 5. Sets Archived to True When Flag Is Uppercase (Case Insensitive)
+- **Test Name**: `test_init_archived_flag[true_upper]`
 - **Description**: When the `archived` attribute is set to `'TRUE'` (uppercase).
 - **Expected Outcome**: `self.archived` is `True`, confirming case-insensitive comparison.
 
