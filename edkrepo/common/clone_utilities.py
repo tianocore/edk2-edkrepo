@@ -107,22 +107,13 @@ def generate_clone_order(manifest, repo_sources):
     repo_sources - a list of repo_source tuples representing all repositories to be cloned.
     manifest - the ManifestXml object representing the workspace to be created.
     '''
-    nested_repos_present = any(repo.nested_repo for repo in repo_sources)
-    if not nested_repos_present:
-        return repo_sources
-
-    ordered_repos = [repo for repo in repo_sources if not repo.nested_repo]
-    remaining_repos = [repo for repo in repo_sources if repo.nested_repo]
-
-    # Keep looping until no more repos can be added
+    ordered_repos = []
+    remaining_repos = repo_sources
     while remaining_repos:
-        added_in_this_iteration = [] # Reset to empty list each iteration
-        added_in_this_iteration = [repo for repo in remaining_repos if manifest.get_parent_of_nested_repo(repo_sources, repo.root) in ordered_repos]
-        ordered_repos.extend(added_in_this_iteration)
-        remaining_repos = [repo for repo in remaining_repos if repo not in added_in_this_iteration]
-        if not added_in_this_iteration:
-            break
-
+        # repos with no parents first priority, repos with one parent second priority, etc.
+        nested_repos = manifest.list_nested_repos(remaining_repos)
+        ordered_repos.extend([repo for repo in remaining_repos if repo not in nested_repos])
+        remaining_repos = nested_repos
     return ordered_repos
 
 def calculate_source_manifest_repo_directory(args, config, manifest):

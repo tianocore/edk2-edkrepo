@@ -10,33 +10,35 @@ from edkrepo.common.clone_utilities import generate_clone_order, calculate_sourc
 class TestGenerateCloneOrder:
 
     NO_NESTED_MOCK_REPO_SOURCES = [
-        RepoSource(root="repo1", remote_name="origin", remote_url="https://example.com/repo1.git", branch="main", commit=None, sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False, nested_repo=False),
-        RepoSource(root="repo2", remote_name="origin", remote_url="https://example.com/repo2.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False, nested_repo=False)
+        RepoSource(root="repo1", remote_name="origin", remote_url="https://example.com/repo1.git", branch="main", commit=None, sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False),
+        RepoSource(root="repo2", remote_name="origin", remote_url="https://example.com/repo2.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False)
     ]
 
     NESTED_MOCK_REPO_SOURCES = [
-        RepoSource(root="repo2/repo1", remote_name="origin", remote_url="https://example.com/repo1.git", branch="main", commit=None, sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False, nested_repo=True),
-        RepoSource(root="repo2", remote_name="origin", remote_url="https://example.com/repo2.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False, nested_repo=False),
-        RepoSource(root="repo2/repo1/repo3", remote_name="origin", remote_url="https://example.com/repo3.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False, nested_repo=True)
+        RepoSource(root="repo2/repo1", remote_name="origin", remote_url="https://example.com/repo1.git", branch="main", commit=None, sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False),
+        RepoSource(root="repo2", remote_name="origin", remote_url="https://example.com/repo2.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False),
+        RepoSource(root="repo2/repo1/repo3", remote_name="origin", remote_url="https://example.com/repo3.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False)
     ]
 
     EXPECTED_NESTED_CLONE_ORDER = [
-        RepoSource(root="repo2", remote_name="origin", remote_url="https://example.com/repo2.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False, nested_repo=False),
-        RepoSource(root="repo2/repo1", remote_name="origin", remote_url="https://example.com/repo1.git", branch="main", commit=None, sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False, nested_repo=True),
-        RepoSource(root="repo2/repo1/repo3", remote_name="origin", remote_url="https://example.com/repo3.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False, nested_repo=True)
+        RepoSource(root="repo2", remote_name="origin", remote_url="https://example.com/repo2.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False),
+        RepoSource(root="repo2/repo1", remote_name="origin", remote_url="https://example.com/repo1.git", branch="main", commit=None, sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False),
+        RepoSource(root="repo2/repo1/repo3", remote_name="origin", remote_url="https://example.com/repo3.git", branch=None, commit="def456", sparse=False, enable_submodule=False, tag=None, venv_cfg=None, patch_set=None, blobless=False, treeless=False)
     ]
 
     MOCK_MANIFEST = MagicMock(spec=ManifestXml)
     @staticmethod
-    def mock_get_parent_of_nested_repo(repo_sources_to_search, repo_local_root):
-        for repo in repo_sources_to_search:
-            if repo.root == "repo2":
-                raise ValueError("Not a nested repo")
-            if repo.root == "repo2/repo1":
-                return TestGenerateCloneOrder.NESTED_MOCK_REPO_SOURCES[1]
-            if repo.root == "repo2/repo1/repo3":
-                return TestGenerateCloneOrder.NESTED_MOCK_REPO_SOURCES[2]
-    MOCK_MANIFEST.get_parent_of_nested_repo = MagicMock(side_effect=mock_get_parent_of_nested_repo)
+    def mock_list_nested_repos(repo_sources_to_search):
+        nested = []
+        for source in repo_sources_to_search:
+            for repo in repo_sources_to_search:
+                if repo.root == source.root:
+                    continue
+                if source.root.startswith(repo.root + "/"):
+                    nested.append(source)
+                    break
+        return nested
+    MOCK_MANIFEST.list_nested_repos = MagicMock(side_effect=mock_list_nested_repos)
 
     def test_generate_clone_order_no_nesting(self):
         clone_order = generate_clone_order(self.MOCK_MANIFEST, self.NO_NESTED_MOCK_REPO_SOURCES)
@@ -84,7 +86,7 @@ class TestCalculateSourceManifestRepoDirectory:
         global_manifest_directory = calculate_source_manifest_repo_directory(self.MOCK_ARGS_SOURCE_MANIFEST_REPO_FLAG_CFG, self.MOCK_CONFIG, self.MOCK_MANIFEST)
         print(global_manifest_directory)
         assert global_manifest_directory == '/path/to/manifest/repo1'
-  
+
     @patch('edkrepo.common.workspace_maintenance.manifest_repos_maintenance.list_available_manifest_repos')
     @patch('edkrepo.common.workspace_maintenance.manifest_repos_maintenance.find_source_manifest_repo')
     def test_source_manifest_repo_found_in_user_cfg_no_flag(self, mock_find_source_manifest_repo, mock_list_available_manifest_repos):
@@ -120,7 +122,7 @@ class TestCalculateSourceManifestRepoDirectory:
 
         global_manifest_directory = calculate_source_manifest_repo_directory(self.MOCK_ARGS_SOURCE_MANIFEST_REPO_FLAG, self.MOCK_CONFIG, self.MOCK_MANIFEST)
         assert global_manifest_directory is None
-    
+
     def test_source_manifest_repo_not_found(self):
         mock_find_source_manifest_repo = MagicMock()
         mock_find_source_manifest_repo.return_value = None

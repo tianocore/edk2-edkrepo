@@ -130,8 +130,12 @@ def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, 
     clone_order = clone_utils.generate_clone_order(manifest, repos_to_clone)
     for repo_to_clone in clone_order:
         clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj)
-        if repo_to_clone.nested_repo:
-            parent_path = os.path.join(workspace_dir, manifest.get_parent_of_nested_repo(clone_order, repo_to_clone.root).root)
+        try:
+            parent = manifest.get_parent_of_nested_repo(clone_order, repo_to_clone.root)
+        except ValueError:
+            parent = None
+        if parent:
+            parent_path = os.path.join(workspace_dir, parent.root)
             nested_path = os.path.join(workspace_dir, repo_to_clone.root)
             git_exclude_maintenance.write_git_exclude(parent_path, git_exclude_maintenance.generate_exclude_pattern(parent_path, nested_path))
         if global_manifest_directory:

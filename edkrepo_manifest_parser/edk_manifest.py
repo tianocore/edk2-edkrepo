@@ -27,8 +27,7 @@ RemoteRepo = namedtuple('RemoteRepo', ['name', 'url', 'owner', 'review_type', 'p
 RepoHook = namedtuple('RepoHook', ['source', 'dest_path', 'dest_file', 'remote_url'])
 Combination = namedtuple('Combination', ['name', 'description', 'venv_enable'])
 RepoSource = namedtuple('RepoSource', ['root', 'remote_name', 'remote_url', 'branch', 'commit', 'sparse',
-                                       'enable_submodule', 'tag', 'venv_cfg', 'patch_set', 'blobless', 'treeless',
-                                       'nested_repo'])
+                                       'enable_submodule', 'tag', 'venv_cfg', 'patch_set', 'blobless', 'treeless'])
 PatchSet = namedtuple('PatchSet', ['remote', 'name', 'parent_sha', 'fetch_branch'])
 PatchOperation = namedtuple('PatchOperation',['type', 'file', 'sha', 'source_remote', 'source_branch', 'merge_strategy'])
 SparseSettings = namedtuple('SparseSettings', ['sparse_by_default'])
@@ -466,13 +465,27 @@ class ManifestXml(BaseXmlHelper):
         while True:
             parent_local_root = os.path.dirname(current_path)
             for source in repo_sources_to_search:
-                if source.root == parent_local_root:
+                if os.path.normpath(source.root) == parent_local_root:
                     return source
             if parent_local_root == current_path:  # Reached the root directory
                 break
             current_path = parent_local_root
 
         raise ValueError(NO_PARENT_REPO_ERROR.format(repo_local_root))
+
+    def is_repo_nested(self, repo_sources_to_search, repo_local_root):
+        try:
+            self.get_parent_of_nested_repo(repo_sources_to_search, repo_local_root)
+        except ValueError:
+            return False
+        return True
+
+    def list_nested_repos(self, repo_sources_to_search):
+        nested_repos = []
+        for source in repo_sources_to_search:
+            if self.is_repo_nested(repo_sources_to_search, source.root):
+                nested_repos.append(source)
+        return nested_repos
 
     @property
     def repo_hooks(self):
@@ -1207,17 +1220,11 @@ class _RepoSource():
         if self.patch_set is not None and (self.branch is not None or self.commit is not None or self.tag is not None):
             raise ValueError(INVALID_COMBO_DEFINITION_ERROR)
 
-        if len(os.path.normpath(self.root).split(os.path.sep)) > 1:
-            self.nested_repo = True
-        else:
-            self.nested_repo = False
-
     @property
     def tuple(self):
         """Return a :class:`RepoSource` namedtuple representation of this repository source."""
         return RepoSource(self.root, self.remote_name, self.remote_url, self.branch,
-                          self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set, self.blobless, self.treeless,
-                          self.nested_repo)
+                          self.commit, self.sparse, self.enableSub, self.tag, self.venv_cfg, self.patch_set, self.blobless, self.treeless)
 
 def _parse_repo_source_required_attribs(element, remotes):
     """Return ``(root, remote_name, remote_url)`` from a ``<Source>`` element, or raise ``KeyError`` if any required attribute or remote lookup fails."""
