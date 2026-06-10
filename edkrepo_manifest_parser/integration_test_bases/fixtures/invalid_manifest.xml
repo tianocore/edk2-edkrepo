@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Manifest>
+  <ProjectInfo>
+    <CodeName>InvalidProject</CodeName>
+    <!-- Missing closing tag here to make XML malformed -->
+  <ProjectInfo>
+  <GeneralConfig>
+    <PinPath>pins</PinPath>
+  </GeneralConfig>
+</Manifest>

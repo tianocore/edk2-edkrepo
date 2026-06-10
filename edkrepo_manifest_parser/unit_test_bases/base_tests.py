@@ -7,11 +7,12 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from unittest.mock import MagicMock, patch, mock_open
 import importlib
-import pytest
 import json
 import os
+from unittest.mock import MagicMock, patch, mock_open
+
+import pytest
 
 MANIFEST_PATH = '/fake/manifest.xml'
 MANIFEST_FILE_PATH = '/fake/path/manifest.xml'

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ManifestPart>
+  <RemoteList>
+    <Remote name="included-remote">https://github.com/test/included-repo.git</Remote>
+  </RemoteList>
+  <CombinationList>
+    <Combination name="included-combo" description="Combo from included file">
+      <Source localRoot="IncludedRepo" remote="included-remote" branch="main"/>
+    </Combination>
+  </CombinationList>
+</ManifestPart>

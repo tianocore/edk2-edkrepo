@@ -7,9 +7,10 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from unittest.mock import MagicMock
-from edkrepo_manifest_parser.unit_test_bases import base_tests as bt
 import importlib
+from unittest.mock import MagicMock
+
+from edkrepo_manifest_parser.unit_test_bases import base_tests as bt
 
 
 class TestValidateManifest(bt.BaseTestValidateManifest):

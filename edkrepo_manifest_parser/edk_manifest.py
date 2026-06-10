@@ -8,11 +8,11 @@
 #
 
 # Standard imports
-import xml.etree.ElementTree as ET
 from collections import namedtuple
-import os
 import copy
 import json
+import os
+import xml.etree.ElementTree as ET
 
 # 3rd party imports
 #   None planned at this time
@@ -67,6 +67,7 @@ NO_PARENT_REPO_ERROR = "No parent repository found for the nested repository at 
 INVALID_REPO_PATH_ERROR = "The provided repo_local_root '{0}' is not a valid path with multiple sections."
 UNSUPPORTED_EXTENSION_ERROR = "Unsupported file extension: {}"
 
+
 class BaseXmlHelper():
     def __init__(self, fileref, xml_types):
         """Load and validate the file (XML or JSON), raising TypeError if the file is invalid or its root tag is not in xml_types."""
@@ -90,7 +91,6 @@ class BaseXmlHelper():
 
         self._pretty_format(tree.getroot())
         return tree
-
 
     def _build_etree_node(self, current_dict, parent):
         """Build an ElementTree SubElement from current_dict and attach it as a child of parent; recurse into children."""
@@ -119,7 +119,6 @@ class BaseXmlHelper():
                 # append child to this node
                 self._build_etree_node(child_dict, node)
 
-
     def _pretty_format(self, current, parent=None, index=-1, depth=0):
         """Recursively add indentation whitespace to all nodes in the ElementTree for human-readable formatting."""
         for i, node in enumerate(current):
@@ -142,6 +141,7 @@ class BaseXmlHelper():
             raise
         except Exception as et_error:
             raise TypeError(INVALID_XML_ERROR.format(fileref, et_error))
+
 
 #
 #  This class will parse and the Index XML file and provide the data to the caller
@@ -180,6 +180,7 @@ class CiIndexXml(BaseXmlHelper):
             return self._projects[project_name].xmlPath
         else:
             raise ValueError(INVALID_PROJECTNAME_ERROR.format(project_name))
+
 
 class _Project():
     def __init__(self, element):
@@ -658,15 +659,15 @@ class ManifestXml(BaseXmlHelper):
         hook_root = ET.SubElement(pin_root, 'ClientGitHookList')
 
         submodule_alt_url_root = None
-        if self._tree.find('SubmoduleAlternateRemotes'):
+        if self._tree.find('SubmoduleAlternateRemotes') is not None:
             submodule_alt_url_root = ET.SubElement(pin_root, 'SubmoduleAlternateRemotes')
 
         selective_submodules_root = None
-        if self._tree.find('SelectiveSubmoduleInitList'):
+        if self._tree.find('SelectiveSubmoduleInitList') is not None:
             selective_submodules_root = ET.SubElement(pin_root, 'SelectiveSubmoduleInitList')
 
         patch_sets = None
-        if self._tree.find('PatchSets'):
+        if self._tree.find('PatchSets') is not None:
             patch_sets = ET.SubElement(pin_root, 'PatchSets')
 
         remote_root = ET.SubElement(pin_root, 'RemoteList')
@@ -755,15 +756,15 @@ class ManifestXml(BaseXmlHelper):
         list(config_root)[-1].tail = '\n  '
         hook_root.text = '\n    '
         hook_root.tail = '\n\n  '
-        if submodule_alt_url_root:
+        if submodule_alt_url_root is not None:
             submodule_alt_url_root.text = '\n    '
             submodule_alt_url_root.tail = '\n\n  '
             list(submodule_alt_url_root)[-1].tail = '\n  '
-        if selective_submodules_root:
+        if selective_submodules_root is not None:
             selective_submodules_root.text = '\n    '
             selective_submodules_root.tail = '\n\n  '
             list(selective_submodules_root)[-1].tail = '\n  '
-        if patch_sets:
+        if patch_sets is not None:
             patch_sets.text = '\n    '
             patch_sets.tail = '\n\n  '
             list(patch_sets)[-1].tail = '\n  '
@@ -899,7 +900,6 @@ class ManifestXml(BaseXmlHelper):
             else:
                 raise KeyError(NO_PATCHSET_IN_COMBO.format(combo))
 
-
     def get_parent_patchset_operations(self, name, remote, patch_set_operations):
         '''
         This method takes the input name and a list for storing the operations as its parameters. It recursively
@@ -937,6 +937,7 @@ def _validate_repo_local_root_or_raise(repo_local_root):
     if len(os.path.normpath(repo_local_root).split(os.sep)) <= 1:
         raise ValueError(INVALID_REPO_PATH_ERROR.format(repo_local_root))
 
+
 class _PatchSet():
     def __init__(self, element):
         """Parse required attributes from a ``<PatchSet>`` XML element."""
@@ -965,6 +966,7 @@ def _parse_patchset_required_attribs(element):
     except KeyError as k:
         raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
     return remote, name, parentSha, fetchBranch
+
 
 class _PatchSetOperations():
     def __init__(self, element):
@@ -995,6 +997,7 @@ class _PatchSetOperations():
     def tuple(self):
         """Return a :class:`PatchOperation` namedtuple representation of this operation."""
         return PatchOperation(self.type, self.file, self.sha, self.source_remote, self.source_branch, self.merge_strategy)
+
 
 class _ProjectInfo():
     def __init__(self, element):
@@ -1031,7 +1034,6 @@ class _ProjectInfo():
         """Return a :class:`ProjectInfo` namedtuple representation of this project info."""
         return ProjectInfo(self.codename, self.descript, self.lead_list, self.reviewer_list, self.org, self.short_name)
 
-
 def _parse_project_info_required_fields(element):
     """Return ``(codename, descript)`` from a ``<ProjectInfo>`` element, or raise ``KeyError`` if either child is absent."""
     try:
@@ -1040,6 +1042,7 @@ def _parse_project_info_required_fields(element):
     except KeyError as k:
         raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
     return codename, descript
+
 
 class _GeneralConfig():
     def __init__(self, element):
@@ -1065,6 +1068,7 @@ class _GeneralConfig():
     def tuple(self):
         """Return a :class:`GeneralConfig` namedtuple representation of this general configuration."""
         return GeneralConfig(self.default_combo, self.curr_combo, self.pin_path, self.source_manifest_repo)
+
 
 class _RemoteRepo():
     def __init__(self, element):
@@ -1097,6 +1101,7 @@ def _parse_remote_repo_required_attribs(element):
         raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
     return name, url
 
+
 class _RepoHook():
     def __init__(self, element, remotes):
         """Parse required and optional attributes from a ``<ClientGitHook>`` element, resolving the remote URL from ``remotes``."""
@@ -1123,6 +1128,7 @@ def _parse_repo_hook_required_attribs(element):
     except KeyError as k:
         raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
     return source, dest_path
+
 
 class _Combination():
     def __init__(self, element):
@@ -1153,6 +1159,7 @@ def _parse_combination_required_attribs(element):
     except KeyError as k:
         raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, element.tag))
     return name
+
 
 class _RepoSource():
     def __init__(self, element, remotes):
@@ -1338,6 +1345,7 @@ class _FolderToFolderMapping():
         """Return a :class:`FolderToFolderMapping` namedtuple representation of this folder-to-folder mapping."""
         return FolderToFolderMapping(self.project1, self.project2, self.remote_name, self.folders)
 
+
 class _SubmoduleAlternateRemote():
     def __init__(self, element, remotes):
         """Parse required attributes and validate the remote from a ``<SubmoduleAlternateRemote>`` element."""
@@ -1359,6 +1367,7 @@ def _parse_submodule_alternate_remote_attribs(element, remotes):
     if remote_name not in remotes:
         raise KeyError(NO_REMOTE_EXISTS_WITH_NAME.format(remote_name))
     return remote_name, original_url, alt_url
+
 
 class _SubmoduleInitEntry():
     def __init__(self, element):
@@ -1537,7 +1546,6 @@ def main():
         print('{} is an invalid Manifest or Pin file or an invalid xml file.'.format(args.InputFile))
         if args.verbose:
             traceback.print_exc()
-
 
 if __name__ == "__main__":
     main()

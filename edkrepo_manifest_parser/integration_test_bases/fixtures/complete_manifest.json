@@ -1,0 +1,60 @@
+{
+  "name": "Manifest",
+  "children": [
+    {
+      "name": "ProjectInfo",
+      "children": [
+        {"name": "CodeName", "text": "CompleteTestProject"},
+        {"name": "Description", "text": "Complete test project with all features for integration testing"},
+        {"name": "DevLead", "text": "dev1@example.com"},
+        {"name": "DevLead", "text": "dev2@example.com"},
+        {
+          "name": "LeadReviewers",
+          "children": [
+            {"name": "Reviewer", "text": "reviewer1@example.com"},
+            {"name": "Reviewer", "text": "reviewer2@example.com"}
+          ]
+        },
+        {"name": "Org", "text": "TestOrg"},
+        {"name": "ShortName", "text": "CTP"}
+      ]
+    },
+    {
+      "name": "GeneralConfig",
+      "children": [
+        {"name": "DefaultCombo", "attrib": {"combination": "main"}},
+        {"name": "CurrentClonedCombo", "attrib": {"combination": "dev"}},
+        {"name": "PinPath", "text": "pins"},
+        {"name": "SourceManifestRepository", "attrib": {"manifest_repo": "test-manifest-repo"}}
+      ]
+    },
+    {
+      "name": "RemoteList",
+      "children": [
+        {"name": "Remote", "attrib": {"name": "origin"}, "text": "https://github.com/test/main-repo.git"},
+        {"name": "Remote", "attrib": {"name": "upstream"}, "text": "https://github.com/test/upstream-repo.git"}
+      ]
+    },
+    {
+      "name": "CombinationList",
+      "children": [
+        {
+          "name": "Combination",
+          "attrib": {"name": "main", "description": "Main combination"},
+          "children": [
+            {"name": "Source", "attrib": {"localRoot": "MainRepo", "remote": "origin", "branch": "main"}},
+            {"name": "Source", "attrib": {"localRoot": "SubRepo", "remote": "upstream", "branch": "stable"}}
+          ]
+        },
+        {
+          "name": "Combination",
+          "attrib": {"name": "dev", "description": "Development combination"},
+          "children": [
+            {"name": "Source", "attrib": {"localRoot": "MainRepo", "remote": "origin", "branch": "develop"}},
+            {"name": "Source", "attrib": {"localRoot": "SubRepo", "remote": "upstream", "branch": "develop"}}
+          ]
+        }
+      ]
+    }
+  ]
+}

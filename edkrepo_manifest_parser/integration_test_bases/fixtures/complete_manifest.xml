@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Manifest>
+  <ProjectInfo>
+    <CodeName>CompleteTestProject</CodeName>
+    <Description>Complete test project with all features for integration testing</Description>
+    <DevLead>dev1@example.com</DevLead>
+    <DevLead>dev2@example.com</DevLead>
+    <LeadReviewers>
+      <Reviewer>reviewer1@example.com</Reviewer>
+      <Reviewer>reviewer2@example.com</Reviewer>
+    </LeadReviewers>
+    <Org>TestOrg</Org>
+    <ShortName>CTP</ShortName>
+  </ProjectInfo>
+  <GeneralConfig>
+    <DefaultCombo combination="main" />
+    <CurrentClonedCombo combination="dev" />
+    <PinPath>pins</PinPath>
+    <SourceManifestRepository manifest_repo="test-manifest-repo" />
+  </GeneralConfig>
+  <RemoteList>
+    <Remote name="origin">https://github.com/test/main-repo.git</Remote>
+    <Remote name="upstream">https://github.com/test/upstream-repo.git</Remote>
+  </RemoteList>
+  <ClientGitHookList>
+    <ClientGitHook source="hooks/pre-commit" destination=".git/hooks" destination_file="pre-commit" remote="origin" />
+  </ClientGitHookList>
+  <CombinationList>
+    <Combination name="main" description="Main combination">
+      <Source localRoot="MainRepo" remote="origin" branch="main"/>
+      <Source localRoot="SubRepo" remote="upstream" branch="stable"/>
+    </Combination>
+    <Combination name="dev" description="Development combination">
+      <Source localRoot="MainRepo" remote="origin" branch="develop"/>
+      <Source localRoot="SubRepo" remote="upstream" branch="develop"/>
+    </Combination>
+    <Combination name="archived" description="Archived combination" archived="true">
+      <Source localRoot="MainRepo" remote="origin" branch="old-main"/>
+    </Combination>
+  </CombinationList>
+  <SparseCheckout>
+    <SparseSettings sparseByDefault="false"/>
+    <SparseData combination="main" remote="origin">
+      <AlwaysInclude>src/core</AlwaysInclude>
+      <AlwaysInclude>docs</AlwaysInclude>
+    </SparseData>
+  </SparseCheckout>
+  <PatchSets>
+    <PatchSet name="test-patch" remote="origin" fetchBranch="refs/changes/01/1001/1" parentSha="abc123">
+      <MergeCommit sha="def456"/>
+    </PatchSet>
+  </PatchSets>
+  <FolderToFolderMappingList>
+    <FolderToFolderMapping project1="MainRepo" project2="SubRepo" remote="origin">
+      <Folder project1="shared/lib" project2="vendor/lib">
+        <Exclude path="*.tmp"/>
+      </Folder>
+    </FolderToFolderMapping>
+  </FolderToFolderMappingList>
+  <SubmoduleAlternateRemotes>
+    <SubmoduleAlternateRemote remote="origin" originalUrl="https://github.com/original/repo.git">https://mirror.example.com/repo.git</SubmoduleAlternateRemote>
+  </SubmoduleAlternateRemotes>
+  <SelectiveSubmoduleInitList>
+    <Submodule remote="origin" combo="main" recursive="true">submodules/core</Submodule>
+    <Submodule remote="origin" combo="main">submodules/utils</Submodule>
+    <Submodule remote="upstream" combo="dev" recursive="false">submodules/platform</Submodule>
+    <Submodule remote="origin">submodules/shared</Submodule>
+  </SelectiveSubmoduleInitList>
+  <CommitTemplates>
+    <Template remoteName="origin">
+[Component] Brief description
+
+Detailed description here
+    </Template>
+  </CommitTemplates>
+</Manifest>
