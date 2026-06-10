@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Manifest>
+  <ProjectInfo>
+    <CodeName>NoSubmodulesProject</CodeName>
+    <Description>Manifest without submodules configured</Description>
+    <DevLead>dev@example.com</DevLead>
+    <Org>TestOrg</Org>
+    <ShortName>NSP</ShortName>
+  </ProjectInfo>
+  <GeneralConfig>
+    <DefaultCombo combination="main" />
+    <CurrentClonedCombo combination="main" />
+    <PinPath>pins</PinPath>
+  </GeneralConfig>
+  <RemoteList>
+    <Remote name="origin">https://github.com/test/repo.git</Remote>
+  </RemoteList>
+  <CombinationList>
+    <Combination name="main" description="Main combination">
+      <Source localRoot="MainRepo" remote="origin" branch="main"/>
+    </Combination>
+  </CombinationList>
+</Manifest>

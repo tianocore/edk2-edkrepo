@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProjectList>
+    <Project name="ProjectA" xmlPath="manifests/projecta.xml"/>
+    <Project name="ProjectB" xmlPath="manifests/projectb.xml"/>
+</ProjectList>

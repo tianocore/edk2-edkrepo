@@ -7,17 +7,16 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import os
 import argparse
-import unicodedata
+import os
 import sys
 import traceback
+import unicodedata
 
-from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
-from edkrepo.common.humble import MANIFEST_NAME_INCONSISTENT
-from edkrepo.common.humble import INDEX_DUPLICATE_NAMES
 from edkrepo.common.edkrepo_exception import EdkrepoVerificationException
-from edkrepo.common.humble import VERIFY_ERROR_HEADER
+from edkrepo.common.humble import INDEX_DUPLICATE_NAMES, MANIFEST_NAME_INCONSISTENT, VERIFY_ERROR_HEADER
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+
 
 class ValidateManifest:
     # Note: manifest_file must be a path to the manifest file not the file itself
@@ -167,4 +166,3 @@ if __name__ == '__main__':
     except Exception as e:
         traceback.print_exc()
         sys.exit(1)
-

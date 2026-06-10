@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Manifest>
+  <ProjectInfo>
+    <CodeName>IncludeTestProject</CodeName>
+    <Description>Test project with includes to verify Include directive handling</Description>
+    <DevLead>dev1@example.com</DevLead>
+    <LeadReviewers>
+      <Reviewer>reviewer1@example.com</Reviewer>
+    </LeadReviewers>
+    <Org>TestOrg</Org>
+    <ShortName>ITP</ShortName>
+  </ProjectInfo>
+  <GeneralConfig>
+    <DefaultCombo combination="main" />
+    <CurrentClonedCombo combination="main" />
+    <PinPath>pins</PinPath>
+    <SourceManifestRepository manifest_repo="test-repo" />
+  </GeneralConfig>
+  <RemoteList>
+    <Remote name="origin">https://github.com/test/repo.git</Remote>
+  </RemoteList>
+  <Include xml="included_manifest.xml"/>
+  <CombinationList>
+    <Combination name="main" description="Main combination">
+      <Source localRoot="MainRepo" remote="origin" branch="main"/>
+    </Combination>
+  </CombinationList>
+</Manifest>
