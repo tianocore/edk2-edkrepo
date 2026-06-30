@@ -3,7 +3,7 @@
 ## @file
 # install.py
 #
-# Copyright (c) 2018 - 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -39,7 +39,107 @@ elif os.name == "posix":
 else:
     raise EnvironmentError("Unsupported OS")
 
-tool_sign_on = 'Installer for edkrepo version {}\nCopyright(c) Intel Corporation, 2025'
+tool_sign_on = 'Installer for {} version {}\nCopyright(c) {}, {}'
+_default_product_name = 'edkrepo'
+_default_publisher_name = 'The TianoCore Contributors'
+_copyright_year = '2026'  # patched at build time by build_linux_installer.py
+
+#
+# Vendor customizer support
+#
+# Vendors that extend this installer may place a file named
+# `vendor_customizer.py` alongside install.py. That file must define a
+# class named `VendorCustomizer` which may implement any subset of the
+# following methods. Unimplemented methods are skipped.
+#
+# class VendorCustomizer:
+#     def configure_install_args(self, args, ostype):
+#         '''
+#         Called immediately after the installer's command line arguments are
+#         parsed, before argument validation and before any interactive
+#         prompts. Receives the argparse.Namespace produced by the installer's
+#         argument parser and returns an argparse.Namespace, either the same
+#         object mutated in place, or a replacement.
+#
+#         Setting a field on `args` (Ex: args.local, args.system, args.user,
+#         args.py, args.prompt, args.no_prompt, etc.) has the same effect as
+#         if the corresponding command line flag had been passed directly, so
+#         this hook can pre-empt any of the installer's interactive prompts.
+#         '''
+#
+#     def pre_install(self, context):
+#         '''
+#         Called after system information is collected and all dependencies
+#         are verified, but BEFORE configuration files are copied or any
+#         wheels are installed.
+#         '''
+#
+#     def get_wheels(self, context, base_wheels):
+#         '''
+#         Called just before the wheel install loop. Receives "base_wheels",
+#         an OrderedDict that get_required_wheels() produces. The base_wheels
+#         dict is keyed by package name; values are dicts with the following
+#         keys: wheel, uninstall, version, install. Must return an OrderedDict
+#         in the same format. The return value replaces the wheel list.
+#         '''
+#
+#     def get_product_name(self):
+#         '''
+#         Returns the product name used in the sign-on message.
+#         '''
+#
+#     def get_publisher(self):
+#         '''
+#         Returns the publisher name used in the sign-on message.
+#         '''
+#
+#     def configure_command_completion(self, context):
+#         '''
+#         Called right before the installer generates shell command completion
+#         scripts. Returning a truthy value skips command completion setup. Use
+#         this when the vendor customizer sets up command completion itself
+#         using a different mechanism.  Returning a falsy value (or not
+#         implementing this method) leaves the installer's default behavior
+#         unchanged.
+#         '''
+#
+#     def post_install(self, context):
+#         '''
+#         Called after all wheels are installed and shell integration is
+#         configured, immediately before the installer exits with success.
+#         '''
+class InstallerContext:
+    '''
+    Provides the install environment to the vendor customizer plugin.
+    All attributes are read-only from the plugin's perspective.
+    '''
+    def __init__(self, ostype, python, install_to_local, log,
+                 whl_src_dir, username, user_home_dir):
+        self.ostype = ostype                     # MAC or LINUX
+        self.python = python                     # Python executable
+        self.install_to_local = install_to_local # True for --user installs
+        self.log = log                           # standard logging.Logger
+        self.whl_src_dir = whl_src_dir           # absolute path to wheels/ directory
+        self.username = username                 # target user name
+        self.user_home_dir = user_home_dir       # absolute path to target user's home directory
+        self.run = run_with_externally_managed_check  # pip helper (handles --break-system-packages)
+
+def _load_vendor_customizer():
+    '''
+    Discovers and loads vendor_customizer.py.
+    Returns an instance of VendorCustomizer, or None if the file is absent.
+    '''
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vendor_customizer.py')
+    if not os.path.isfile(path):
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location('vendor_customizer', path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        cls = getattr(mod, 'VendorCustomizer', None)
+        return cls() if cls is not None else None
+    except Exception:
+        return None
 
 # Data here should be maintained in a configuration file
 cfg_dir = '.edkrepo'
@@ -748,12 +848,26 @@ def do_install():
 
     # Parse command line
     args = get_args()
-    if args.py is not None:
-        org_python = def_python
-        def_python = args.py
 
     # Enable logging output
     log = init_logger(args.verbose)
+
+    _customizer = _load_vendor_customizer()
+    if _customizer is not None and hasattr(_customizer, 'configure_install_args'):
+        try:
+            args = _customizer.configure_install_args(args, ostype)
+        except Exception as e:
+            log.error('ERROR: Vendor configure_install_args failed: {}'.format(e))
+            if args.verbose:
+                traceback.print_exc()
+            return 1
+        if args is None:
+            log.error('ERROR: Vendor configure_install_args must return the args object, but returned None.')
+            return 1
+
+    if args.py is not None:
+        org_python = def_python
+        def_python = args.py
 
     arg_check_error = check_args(args)
     if arg_check_error is not None:
@@ -777,7 +891,19 @@ def do_install():
         return 1
 
     # Display sign on
-    log.log(logging.PRINT, tool_sign_on.format(cfg['version']['installer_version']))
+    product_name = _default_product_name
+    if _customizer is not None and hasattr(_customizer, 'get_product_name'):
+        try:
+            product_name = _customizer.get_product_name()
+        except Exception:
+            pass
+    publisher_name = _default_publisher_name
+    if _customizer is not None and hasattr(_customizer, 'get_publisher'):
+        try:
+            publisher_name = _customizer.get_publisher()
+        except Exception:
+            pass
+    log.log(logging.PRINT, tool_sign_on.format(product_name, cfg['version']['installer_version'], publisher_name, _copyright_year))
 
     # Initialize information based on command line input
     username = args.user
@@ -806,7 +932,7 @@ def do_install():
         try:
             try:
                 username = os.getlogin()
-            except:
+            except OSError:
                 if not is_current_user_root():
                     username = getpass.getuser()
                 else:
@@ -834,6 +960,10 @@ def do_install():
     default_cfg_dir = os.path.join(user_home_dir, cfg_dir)
     get_add_prompt_customization(args, username, user_home_dir)
     log.info('+ System information collected')
+
+    # Build the shared context object for the vendor customizer.
+    _context = InstallerContext(ostype, def_python, install_to_local, log,
+                                whl_src_dir, username, user_home_dir)
 
     # Display current system information.
     python_version = platform.python_version()
@@ -903,6 +1033,16 @@ def do_install():
             return 1
         log.info('+ Created configuration directory: {}'.format(default_cfg_dir))
 
+    # Vendor customizer pre_install() initialization
+    if _customizer is not None and hasattr(_customizer, 'pre_install'):
+        try:
+            _customizer.pre_install(_context)
+        except Exception as e:
+            log.info('- Vendor pre_install failed: {}'.format(e))
+            if args.verbose:
+                traceback.print_exc()
+            return 1
+
     # Update configuration files
     log.info('\nCopy configuration files:')
     if not os.path.isdir(cfg_src_dir):
@@ -947,6 +1087,16 @@ def do_install():
     except:
         log.info('- Failed to determine installed python modules and versions')
         return 1
+
+    # Vendor customizer get_wheels() can change the wheel list.
+    if _customizer is not None and hasattr(_customizer, 'get_wheels'):
+        try:
+            wheels_to_install = _customizer.get_wheels(_context, wheels_to_install)
+        except Exception as e:
+            log.info('- Vendor get_wheels failed: {}'.format(e))
+            if args.verbose:
+                traceback.print_exc()
+            return 1
     if wheels_to_install:
         log.info('+ Complete')
     else:
@@ -976,7 +1126,7 @@ def do_install():
         #Delete obsolete dependencies
         if updating_edkrepo:
             installed_packages = get_installed_packages(def_python)
-            for whl_name in ['smmap2', 'gitdb2', 'edkrepo-internal']:
+            for whl_name in ['smmap2', 'gitdb2']:
                 if whl_name in installed_packages:
                     try:
                         run_with_externally_managed_check([def_python, '-m', 'pip', 'uninstall', '--yes', whl_name])
@@ -1022,7 +1172,15 @@ def do_install():
             log.info('        If you don\'t want to reboot right now, run "export PATH=$PATH:~/.local/bin"')
 
     #Install the command completion script
-    if shutil.which('edkrepo') is not None:
+    completion_configured_by_vendor = False
+    if _customizer is not None and hasattr(_customizer, 'configure_command_completion'):
+        try:
+            completion_configured_by_vendor = bool(_customizer.configure_command_completion(_context))
+        except Exception as e:
+            log.info('- Vendor configure_command_completion failed: {}'.format(e))
+            if args.verbose:
+                traceback.print_exc()
+    if not completion_configured_by_vendor and shutil.which('edkrepo') is not None:
         (command_completion_script, source_command_completion) = \
             get_command_completion_script_path(default_cfg_dir, user_home_dir, install_to_local)
         try:
@@ -1056,7 +1214,17 @@ def do_install():
             if args.verbose:
                 traceback.print_exc()
     else:
-        log.info('- Failed to configure edkrepo command completion')
+        if not completion_configured_by_vendor:
+            log.info('- Failed to configure edkrepo command completion')
+
+    # Vendor customizer post_install() optional extras after the core install is done.
+    if _customizer is not None and hasattr(_customizer, 'post_install'):
+        try:
+            _customizer.post_install(_context)
+        except Exception as e:
+            log.info('- Vendor post_install failed: {}'.format(e))
+            if args.verbose:
+                traceback.print_exc()
 
     log.log(logging.PRINT, '\nInstallation complete\n')
 

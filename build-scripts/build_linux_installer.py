@@ -9,8 +9,10 @@
 
 from argparse import ArgumentParser
 import configparser
+import datetime
 import fnmatch
 import os
+import re
 import shutil
 import sys
 import tarfile
@@ -52,6 +54,18 @@ def patch_installer_config(dist_root, version):
     install_cfg['version']['installer_version'] = version
     with open(install_cfg_path, 'w') as f:
         install_cfg.write(f)
+
+def patch_copyright_year(dist_root):
+    year = str(datetime.date.today().year)
+    install_py_path = os.path.join(dist_root, 'install.py')
+    with open(install_py_path, 'r') as f:
+        content = f.read()
+    content = re.sub(
+        r"^(_copyright_year\s*=\s*')[0-9]+(.*)",
+        r"\g<1>{}\2".format(year),
+        content, flags=re.MULTILINE)
+    with open(install_py_path, 'w') as f:
+        f.write(content)
 
 edkrepo_version=None
 def mode_change(tarinfo):
@@ -119,6 +133,14 @@ def main():
         print('Installer version number updated successfully')
     except Exception:
         print('Failed to update installer version to {}'.format(version))
+        return 1
+
+    # Patch copyright year
+    try:
+        patch_copyright_year(dist_root)
+        print('Copyright year updated successfully')
+    except Exception:
+        print('Failed to update copyright year')
         return 1
 
     # Package installer files
