@@ -92,6 +92,24 @@ def create_archive(version):
         out_targz.add('.', filter=mode_change)
     os.chdir(cwd)
 
+def create_self_extractor(version):
+    global edkrepo_version
+    dist_dir = os.path.abspath(os.path.join('..', 'dist'))
+    tar_path = os.path.join(dist_dir, '{}.tar.gz'.format(edkrepo_version))
+    run_path = os.path.join(dist_dir, '{}.run'.format(edkrepo_version))
+    linux_root = os.path.abspath(os.path.join('..', 'edkrepo_installer', 'linux-scripts'))
+    header_path = os.path.join(linux_root, 'self_extract_header.sh')
+    with open(header_path, 'rb') as f:
+        header_data = f.read()
+    if not header_data.endswith(b'\n'):
+        header_data += b'\n'
+    with open(tar_path, 'rb') as f:
+        archive_data = f.read()
+    with open(run_path, 'wb') as f:
+        f.write(header_data)
+        f.write(archive_data)
+    os.chmod(run_path, 0o755)
+
 def main():
     parser = ArgumentParser()
     parser.add_argument('-b', '--build', action='store', default=None, help='Specifies the build number to use for the installer package.')
@@ -149,6 +167,14 @@ def main():
         print('Generated installer archive file successfully')
     except:
         print('Failed to generate installer package')
+        return 1
+
+    # Generate self-extracting installer
+    try:
+        create_self_extractor(version)
+        print('Generated self-extracting installer successfully')
+    except:
+        print('Failed to generate self-extracting installer')
         return 1
 
     # Clean up temporary files
