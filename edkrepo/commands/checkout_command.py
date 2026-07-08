@@ -11,7 +11,6 @@
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
 import edkrepo.commands.arguments.checkout_args as arguments
 import edkrepo.commands.humble.checkout_humble as humble
-from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import checkout, combination_is_in_manifest
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException
 from edkrepo.config.config_factory import get_workspace_manifest
@@ -42,6 +41,6 @@ class CheckoutCommand(EdkrepoCommand):
         manifest_repo = manifest.general_config.source_manifest_repo
         global_manifest_path = get_manifest_repo_path(manifest_repo, config)
         if combination_is_in_manifest(args.Combination, manifest):
-            checkout(args.Combination, global_manifest_path, args.verbose, args.override, get_repo_cache_obj(config))
+            checkout(args.Combination, global_manifest_path, args.verbose, args.override)
         else:
             raise EdkrepoInvalidParametersException(humble.NO_COMBO.format(args.Combination))

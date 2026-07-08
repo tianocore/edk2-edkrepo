@@ -223,34 +223,10 @@ class GlobalUserConfig(BaseConfig):
         self.filename = os.path.join(get_edkrepo_global_data_directory(), "edkrepo_user.cfg")
         self.prop_list = [
             CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False),
-            CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False),
-            CfgProp('caching', 'cache-path', 'cache_path_text', 'default', False),
             CfgProp('reference-repos', 'enable-by-default', 'ref_repos_enable_by_default', 'false', False),
             CfgProp('reference-repos', 'dissociate-by-default', 'ref_repos_dissociate_by_default', 'true', False),
             CfgProp('reference-repos', 'reference-enabled-for', 'ref_repos_enabled_for', '', False)]
         super().__init__(self.filename, get_edkrepo_global_data_directory(), False)
-
-    @property
-    def caching_state(self):
-        return self.enable_caching_text.lower() == 'true'
-
-    def set_caching_state(self, enable):
-        if enable:
-            self.enable_caching_text = 'true'
-        else:
-            self.enable_caching_text = 'false'
-
-    def set_cache_path(self, cache_path=None, default=True):
-        if default:
-            self.cache_path_text = 'default'
-        elif not default and cache_path is not None:
-            self.cache_path_text = cache_path
-        else:
-            raise EdkrepoConfigFileInvalidException(humble.INVALID_CACHE_PATH)
-
-    @property
-    def cache_path(self):
-        return self.cache_path_text
 
     @property
     def reference_repos_enabled_by_default(self):

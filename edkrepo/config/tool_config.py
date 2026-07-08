@@ -8,4 +8,3 @@
 #
 
 CI_INDEX_FILE_NAME = 'CiIndex.xml'
-SUBMODULE_CACHE_REPO_NAME = 'submodule-cache'

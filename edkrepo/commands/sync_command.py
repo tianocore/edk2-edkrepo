@@ -28,7 +28,6 @@ from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
 from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, INCLUDED_FILE_NAME
 from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
 from edkrepo.common.pathfix import get_actual_path, expanduser
-from edkrepo.common.common_cache_functions import get_repo_cache_obj
 from edkrepo.common.common_repo_functions import clone_repos, create_repos, patchset_branch_creation_flow, patchset_operations_similarity, sparse_checkout_enabled
 from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_single_manifest
 from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
@@ -46,7 +45,6 @@ from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find
 from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos, get_manifest_repo_path
 from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 from edkrepo.config.config_factory import get_workspace_manifest_file
-from edkrepo.config.tool_config import SUBMODULE_CACHE_REPO_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from project_utils.submodule import deinit_submodules, maintain_submodules
 import edkrepo.common.ui_functions as ui_functions
@@ -227,11 +225,7 @@ class SyncCommand(EdkrepoCommand):
 
         # Initialize submodules
         if not args.skip_submodule:
-            cache_path = None
-            cache_obj = get_repo_cache_obj(config)
-            if cache_obj is not None:
-                cache_path = cache_obj.get_cache_path(SUBMODULE_CACHE_REPO_NAME)
-            maintain_submodules(workspace_path, manifest, current_combo, args.verbose, cache_path)
+            maintain_submodules(workspace_path, manifest, current_combo, args.verbose)
 
         # Restore sparse checkout state
         if sparse_enabled:

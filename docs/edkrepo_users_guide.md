@@ -34,7 +34,6 @@ For detailed information about each command, see the Command References section 
 
 The commands provided by EdkRepo are documented below. These commands provide functionality for downloading and setting up local workspaces, syncing workspaces, and moving between predefined groups of branches. Additional commands and command line arguments may be added over time to enhance functionality and improve user experience. EdkRepo is designed to work in conjunction with Git—tasks not automated by EdkRepo are meant to be performed using standard Git commands.
 
-- [cache](command_references/cache.md) - Manages local caching support for project repos
 - [checkout](command_references/checkout.md) - Enables checking out a specific branch combination
 - [checkout-pin](command_references/checkout-pin.md) - Checks out the revisions described in a PIN file
 - [clean](command_references/clean.md) - Deletes untracked files from all repositories in the workspace

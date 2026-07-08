@@ -13,7 +13,6 @@ import sys
 
 import edkrepo.commands.arguments.clone_args as arguments
 import edkrepo.commands.edkrepo_command as edkrepo_command
-import edkrepo.common.common_cache_functions as common_cache_functions
 import edkrepo.common.common_repo_functions as common_repo_functions
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.humble as humble
@@ -22,7 +21,6 @@ import edkrepo.common.ui_functions as ui_functions
 import edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble as manifest_repos_maintenance_humble
 import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manifest_repos_maintenance
 import edkrepo.common.workspace_maintenance.workspace_maintenance as workspace_maintenance
-import edkrepo.config.tool_config as tool_config
 import edkrepo_manifest_parser.edk_manifest as edk_manifest
 import project_utils.submodule as submodule_utils
 from colorama import Fore
@@ -203,11 +201,6 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
         submodule_included_configs = common_repo_functions.write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
         common_repo_functions.write_conditional_include(workspace_dir, repo_sources_to_clone, submodule_included_configs)
 
-        # Determine if caching is going to be used and then clone
-        cache_obj = common_cache_functions.get_repo_cache_obj(config)
-        if cache_obj is not None:
-            common_cache_functions.add_missing_cache_repos(cache_obj, manifest, args.verbose)
-
         # Resolve reference repository settings
         use_reference = config['user_cfg_file'].reference_repos_enabled_by_default
         use_dissociate = config['user_cfg_file'].reference_repos_dissociate_by_default
@@ -229,14 +222,11 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
                 if ref_url and ref_path:
                     reference_path_map[ref_url.lower()] = ref_path
 
-        clone_times = common_repo_functions.clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, cache_obj, reference_path_map=reference_path_map, dissociate=use_dissociate)
+        clone_times = common_repo_functions.clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, reference_path_map=reference_path_map, dissociate=use_dissociate)
 
         # Init submodules
         if not args.skip_submodule:
-            cache_path = None
-            if cache_obj is not None:
-                cache_path = cache_obj.get_cache_path(tool_config.SUBMODULE_CACHE_REPO_NAME)
-            submodule_utils.maintain_submodules(workspace_dir, manifest, combo_name, args.verbose, cache_path)
+            submodule_utils.maintain_submodules(workspace_dir, manifest, combo_name, args.verbose)
 
         # Perform a sparse checkout if requested.
         use_sparse = args.sparse

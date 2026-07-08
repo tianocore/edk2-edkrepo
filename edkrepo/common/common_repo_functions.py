@@ -46,7 +46,7 @@ PATCH = "Patch"
 REVERT = "Revert"
 PATCHSET_CIRCULAR_DEPENDENCY_ERROR = "The PatchSet {} has a circular dependency with another PatchSet"
 
-def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args=None, cache_obj=None, reference_path_map=None, dissociate=False):
+def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args=None, reference_path_map=None, dissociate=False):
     '''Clones a single repository and checks it out onto the ref defined in the project manifest file.
 
     Arguments:
@@ -55,22 +55,16 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
     workspace_dir - the workspace directory into which the repository will be cloned
     global_manifest_path - the path to the global manifest dir
     args - all command line arguments
-    cache_obj - An EdkRepo cache object
     '''
     if repo_to_clone.patch_set:
         patchset = manifest.get_patchset(repo_to_clone.patch_set, repo_to_clone.remote_name)
     elif not repo_to_clone.branch and not repo_to_clone.tag and not repo_to_clone.commit:
         raise edkrepo_exception.EdkrepoManifestInvalidException(humble.MISSING_BRANCH_COMMIT)
 
-    if cache_obj:
-        cache_path = cache_obj.get_cache_path(repo_to_clone.remote_url)
-        ui_functions.print_info_msg('Cloning {} Repository from local cache: {}'.format(repo_to_clone.root, cache_path), header=False)
-    else:
-        cache_path = None
-        ui_functions.print_info_msg('Cloning {} Repository from: {}'.format(repo_to_clone.root, str(repo_to_clone.remote_url)), header=False)
+    ui_functions.print_info_msg('Cloning {} Repository from: {}'.format(repo_to_clone.root, str(repo_to_clone.remote_url)), header=False)
 
     reference_path = reference_path_map.get(repo_to_clone.remote_url.lower()) if reference_path_map else None
-    clone_cmd = clone_utils.generate_clone_cmd(repo_to_clone, workspace_dir, args, cache_path, reference_path=reference_path, dissociate=dissociate)
+    clone_cmd = clone_utils.generate_clone_cmd(repo_to_clone, workspace_dir, args, reference_path=reference_path, dissociate=dissociate)
     clone_cmd_output = subprocess.run(clone_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
     if not os.path.isdir(os.path.join(workspace_dir, repo_to_clone.root)):
         raise edkrepo_exception.EdkrepoNotFoundException(humble.CLONE_FAIL.format(repo_to_clone.root, clone_cmd_output))
@@ -87,13 +81,13 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
                 ui_functions.print_info_msg(humble.TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
             repo.git.checkout(repo_to_clone.tag)
 
-def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None, reference_path_map=None, dissociate=False):
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, reference_path_map=None, dissociate=False):
     global_manifest_directory = clone_utils.calculate_source_manifest_repo_directory(args, config, manifest)
     clone_order = clone_utils.generate_clone_order(manifest, repos_to_clone)
     clone_times = []
     for repo_to_clone in clone_order:
         start = time.perf_counter()
-        clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj, reference_path_map=reference_path_map, dissociate=dissociate)
+        clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, reference_path_map=reference_path_map, dissociate=dissociate)
         duration = time.perf_counter() - start
         clone_times.append((repo_to_clone.root, dt.timedelta(seconds=duration)))
         if repo_to_clone.nested_repo:
@@ -519,7 +513,7 @@ def combination_is_in_manifest(combination, manifest):
     return combination in combination_names
 
 
-def checkout(combination, global_manifest_path, verbose=False, override=False, log=None, cache_obj=None):
+def checkout(combination, global_manifest_path, verbose=False, override=False, log=None):
     workspace_path = config_factory.get_workspace_path()
     manifest = config_factory.get_workspace_manifest()
 
@@ -594,10 +588,7 @@ def checkout(combination, global_manifest_path, verbose=False, override=False, l
         # Return to the initial combo, since there was an issue with cheking out the selected combo
         checkout_repos(verbose, override, initial_repo_sources, workspace_path, manifest, global_manifest_path)
     finally:
-        cache_path = None
-        if cache_obj is not None:
-            cache_path = cache_obj.get_cache_path(tool_config.SUBMODULE_CACHE_REPO_NAME)
-        submodule_utils.maintain_submodules(workspace_path, manifest, submodule_combo, verbose, cache_path)
+        submodule_utils.maintain_submodules(workspace_path, manifest, submodule_combo, verbose)
         if sparse_enabled or sparse_diff:
             print(humble.SPARSE_CHECKOUT)
             sparse_checkout(workspace_path, current_repos, manifest)
