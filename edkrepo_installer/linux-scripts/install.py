@@ -10,6 +10,7 @@
 from argparse import ArgumentParser
 import collections
 import configparser
+import getpass
 import hashlib
 import importlib.util
 import logging
@@ -409,8 +410,7 @@ def get_site_packages_directory():
     return res.stdout.strip()
 
 def is_current_user_root():
-    res = default_run(['id', '-u'])
-    if res.stdout.strip() == '0':
+    if os.geteuid() == 0:
         return True
     return False
 
@@ -804,8 +804,13 @@ def do_install():
             return 1
     if username is None:
         try:
-            res = default_run(['logname'])
-            username = res.stdout.strip()
+            try:
+                username = os.getlogin()
+            except:
+                if not is_current_user_root():
+                    username = getpass.getuser()
+                else:
+                    raise
         except Exception:
             log.info('- Unable to determine current user.  Run installer using the --user flag and specify the correct user name.')
             return 1
