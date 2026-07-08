@@ -25,6 +25,8 @@ import edkrepo.common.workspace_maintenance.workspace_maintenance as workspace_m
 import edkrepo.config.tool_config as tool_config
 import edkrepo_manifest_parser.edk_manifest as edk_manifest
 import project_utils.submodule as submodule_utils
+from colorama import Fore
+from edkrepo.commands.humble.reference_repos_humble import NO_DISSOCIATE_WARNING
 
 
 class CloneCommand(edkrepo_command.EdkrepoCommand):
@@ -80,6 +82,22 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
                      'positional': False,
                      'required': False,
                      'help-text': arguments.NO_TAGS_HELP}))
+        args.append({'name': 'reference-if-able',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.REFERENCE_IF_ABLE_HELP})
+        args.append({'name': 'no-reference-if-able',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.NO_REFERENCE_IF_ABLE_HELP})
+        args.append({'name': 'dissociate',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.DISSOCIATE_HELP})
+        args.append({'name': 'no-dissociate',
+                     'positional': False,
+                     'required': False,
+                     'help-text': arguments.NO_DISSOCIATE_HELP})
         args.append(edkrepo_command.SubmoduleSkipArgument)
         args.append(edkrepo_command.SourceManifestRepoArgument)
         return metadata
@@ -189,7 +207,29 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
         cache_obj = common_cache_functions.get_repo_cache_obj(config)
         if cache_obj is not None:
             common_cache_functions.add_missing_cache_repos(cache_obj, manifest, args.verbose)
-        clone_times = common_repo_functions.clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, cache_obj)
+
+        # Resolve reference repository settings
+        use_reference = config['user_cfg_file'].reference_repos_enabled_by_default
+        use_dissociate = config['user_cfg_file'].reference_repos_dissociate_by_default
+        if args.reference_if_able:
+            use_reference = True
+        if args.no_reference_if_able:
+            use_reference = False
+        if args.dissociate:
+            use_dissociate = True
+        if args.no_dissociate:
+            use_dissociate = False
+        if use_reference and not use_dissociate:
+            ui_functions.print_info_msg('{}{}{}'.format(Fore.YELLOW, NO_DISSOCIATE_WARNING, Fore.RESET), header=False)
+        reference_path_map = {}
+        if use_reference:
+            for ref_name in config['user_cfg_file'].reference_repos_enabled_for:
+                ref_url = config['user_cfg_file'].get_reference_repo_url(ref_name)
+                ref_path = config['user_cfg_file'].get_reference_repo_path(ref_name)
+                if ref_url and ref_path:
+                    reference_path_map[ref_url.lower()] = ref_path
+
+        clone_times = common_repo_functions.clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, cache_obj, reference_path_map=reference_path_map, dissociate=use_dissociate)
 
         # Init submodules
         if not args.skip_submodule:

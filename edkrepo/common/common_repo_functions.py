@@ -47,7 +47,7 @@ PATCH = "Patch"
 REVERT = "Revert"
 PATCHSET_CIRCULAR_DEPENDENCY_ERROR = "The PatchSet {} has a circular dependency with another PatchSet"
 
-def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args=None, cache_obj=None):
+def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args=None, cache_obj=None, reference_path_map=None, dissociate=False):
     '''Clones a single repository and checks it out onto the ref defined in the project manifest file.
 
     Arguments:
@@ -70,7 +70,8 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
         cache_path = None
         ui_functions.print_info_msg('Cloning {} Repository from: {}'.format(repo_to_clone.root, str(repo_to_clone.remote_url)), header=False)
 
-    clone_cmd = clone_utils.generate_clone_cmd(repo_to_clone, workspace_dir, args, cache_path)
+    reference_path = reference_path_map.get(repo_to_clone.remote_url.lower()) if reference_path_map else None
+    clone_cmd = clone_utils.generate_clone_cmd(repo_to_clone, workspace_dir, args, cache_path, reference_path=reference_path, dissociate=dissociate)
     clone_cmd_output = subprocess.run(clone_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
     if not os.path.isdir(os.path.join(workspace_dir, repo_to_clone.root)):
         raise edkrepo_exception.EdkrepoNotFoundException(humble.CLONE_FAIL.format(repo_to_clone.root, clone_cmd_output))
@@ -87,13 +88,13 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
                 ui_functions.print_info_msg(humble.TAG_AND_BRANCH_SPECIFIED.format(repo_to_clone.root))
             repo.git.checkout(repo_to_clone.tag)
 
-def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None):
+def clone_repos(args, workspace_dir, repos_to_clone, project_client_side_hooks, config, manifest, global_manifest_path, cache_obj=None, reference_path_map=None, dissociate=False):
     global_manifest_directory = clone_utils.calculate_source_manifest_repo_directory(args, config, manifest)
     clone_order = clone_utils.generate_clone_order(manifest, repos_to_clone)
     clone_times = []
     for repo_to_clone in clone_order:
         start = time.perf_counter()
-        clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj)
+        clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manifest_path, args, cache_obj, reference_path_map=reference_path_map, dissociate=dissociate)
         duration = time.perf_counter() - start
         clone_times.append((repo_to_clone.root, dt.timedelta(seconds=duration)))
         if repo_to_clone.nested_repo:
