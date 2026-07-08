@@ -18,7 +18,7 @@ import edkrepo.common.humble as humble
 import edkrepo.common.ui_functions as ui_functions
 import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manifest_repos_maintenance
 
-def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None):
+def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None, reference_path=None, dissociate=False):
     '''Generates and returns a string representing a git clone command which can be passed to subprocess for execution.
 
     Arguments:
@@ -26,10 +26,17 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
     repo_to_clone - a repo_source tuple describing the repository to be cloned
     workspace_dir - the workspace directory into which the repository will be cloned.
     cache_path - The path to an EdkRepo managed cache
+    reference_path - The path to a user-configured reference repository mirror matching this repo's URL
+    dissociate - When True, append --dissociate to borrow from the reference only during cloning
     '''
     local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
     base_clone_cmd = 'git clone {} {} --progress'.format(repo_to_clone.remote_url, local_repo_path)
-    base_clone_cmd_cache = 'git clone {} {} --reference-if-able {} --progress'.format(repo_to_clone.remote_url, local_repo_path, cache_path)
+    # cache_path takes priority over reference_path when both are present
+    effective_reference_path = cache_path if cache_path is not None else reference_path
+    base_clone_cmd_with_ref = ('git clone {} {} --reference-if-able {} --progress'.format(
+        repo_to_clone.remote_url, local_repo_path, effective_reference_path)
+        if effective_reference_path is not None else None)
+    dissociate_arg = ' --dissociate' if (dissociate and effective_reference_path is not None) else ''
     clone_arg_string = None
     clone_cmd_args = {}
     active_filters = []
@@ -90,15 +97,15 @@ def generate_clone_cmd(repo_to_clone, workspace_dir, args=None, cache_path=None)
         clone_arg_string = ' '.join([clone_cmd_args[arg] for arg in clone_cmd_args.keys()])
 
     if clone_arg_string is None:
-        if cache_path is None:
-            return base_clone_cmd
+        if effective_reference_path is None:
+            return base_clone_cmd + dissociate_arg
         else:
-            return base_clone_cmd_cache
+            return base_clone_cmd_with_ref + dissociate_arg
     else:
-        if cache_path is None:
-            return ' '.join([base_clone_cmd, clone_arg_string])
+        if effective_reference_path is None:
+            return ' '.join([base_clone_cmd, clone_arg_string]) + dissociate_arg
         else:
-            return ' '.join([base_clone_cmd_cache, clone_arg_string])
+            return ' '.join([base_clone_cmd_with_ref, clone_arg_string]) + dissociate_arg
 
 def generate_clone_order(manifest, repo_sources):
     '''Generates and returns a list of repo_source tuples representing the order in which repositories should be cloned.

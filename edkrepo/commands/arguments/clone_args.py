@@ -37,3 +37,12 @@ SINGLE_BRANCH_HELP = ('Clone only the history leading to the tip of a single bra
                       'The branch is determined by the default combination or by the Combination parameter.')
 NO_TAGS_HELP = ('Skips download of tags and updates config settings to ensure that future pull and fetch operations do not follow tags.\n'
                 'Future explicit tag fetches will continue to work as expected.')
+REFERENCE_IF_ABLE_HELP = ('Use configured reference repositories regardless of default settings. '
+                          'For each repository being cloned, if a reference repository is configured whose URL matches '
+                          'the remote URL (case-insensitive), it will be passed to git clone via --reference-if-able.')
+NO_REFERENCE_IF_ABLE_HELP = 'Do not use configured reference repositories regardless of default settings.'
+DISSOCIATE_HELP = ('Use configured reference repositories only for cloning regardless of default settings, '
+                   'resulting in a fully independent clone.')
+NO_DISSOCIATE_HELP = ('Set up the repository as shared regardless of default configuration settings. '
+                      'NOTE: This is a potentially dangerous configuration. '
+                      'See https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---shared')
