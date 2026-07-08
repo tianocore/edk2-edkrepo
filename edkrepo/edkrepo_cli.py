@@ -118,7 +118,16 @@ command_completion_script_header='''#!/usr/bin/env bash
 #
 
 '''
-def generate_command_completion_script(script_filename, parser):
+
+tcsh_command_completion_script_header='''#
+## @file edkrepo_completions.csh
+#
+# Automatically generated please DO NOT modify !!!
+#
+
+'''
+
+def _get_command_completion_commands(parser):
     import edkrepo.command_completion_edkrepo as completion
     commands = []
     for action in parser._positionals._group_actions:
@@ -128,6 +137,38 @@ def generate_command_completion_script(script_filename, parser):
     commands = sorted(commands)
     commands_with_3rd_param_completion = [c for c in completion.command_completions if c in commands]
     commands_with_3rd_param_completion = sorted(commands_with_3rd_param_completion)
+    return commands, commands_with_3rd_param_completion
+
+def _write_tcsh_command_completion_script(f, commands, commands_with_3rd_param_completion):
+    # Completion rules MUST be single quoted so that the `...` command
+    # substitution used for dynamic (3rd parameter) completion is stored
+    # literally and evaluated by tcsh at completion (TAB) time.  Double quotes
+    # would evaluate it once when the script is sourced, freezing the results.
+    f.write(tcsh_command_completion_script_header)
+    first_param_rule = "'p/1/({})/'".format(' '.join(commands))
+    dynamic_rules = ["'n/{0}/`command_completion_edkrepo {0}`/'".format(command)
+                     for command in commands_with_3rd_param_completion]
+    f.write('which edkrepo >& /dev/null\n')
+    f.write('if ($status == 0) then\n')
+    if dynamic_rules:
+        # The dynamic rules require command_completion_edkrepo. If it is not
+        # available, fall back to first parameter completion only.
+        f.write('  which command_completion_edkrepo >& /dev/null\n')
+        f.write('  if ($status == 0) then\n')
+        f.write('    complete edkrepo {}\n'.format(' '.join([first_param_rule] + dynamic_rules)))
+        f.write('  else\n')
+        f.write('    complete edkrepo {}\n'.format(first_param_rule))
+        f.write('  endif\n')
+    else:
+        f.write('  complete edkrepo {}\n'.format(first_param_rule))
+    f.write('endif\n')
+
+def generate_command_completion_script(script_filename, parser, shell='bash'):
+    commands, commands_with_3rd_param_completion = _get_command_completion_commands(parser)
+    if shell == 'tcsh':
+        with open(script_filename, 'w') as f:
+            _write_tcsh_command_completion_script(f, commands, commands_with_3rd_param_completion)
+        return
     with open(script_filename, 'w') as f:
         f.write(command_completion_script_header)
         if sys.platform == "win32":
@@ -184,7 +225,22 @@ def main():
         parser.print_help()
         return 1
     if sys.argv[1] == 'generate-command-completion-script' and len(sys.argv) >= 3:
-        generate_command_completion_script(sys.argv[2], parser)
+        rest = sys.argv[2:]
+        shell = 'bash'
+        if '--shell' in rest:
+            i = rest.index('--shell')
+            if i + 1 < len(rest):
+                shell = rest[i + 1]
+                del rest[i:i + 2]
+            else:
+                del rest[i:i + 1]
+        if not rest:
+            print('Error: no output path specified for generate-command-completion-script')
+            return 1
+        if shell not in ('bash', 'tcsh'):
+            print("Error: unsupported shell '{}' for generate-command-completion-script (expected 'bash' or 'tcsh')".format(shell))
+            return 1
+        generate_command_completion_script(rest[0], parser, shell)
         return 0
     parsed_args = parser.parse_args()
     command_name = parsed_args.subparser_name

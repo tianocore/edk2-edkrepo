@@ -164,6 +164,9 @@ zsh_colors = 'colors'
 zsh_compinit = 'compinit -u'
 zsh_bashcompinit = 'bashcompinit'
 
+# TCSH Configuration options
+tcsh_completion_regex = re.compile(r"if\s*\(\s*\$\?tcsh\s*&&\s*-r\s+\"\S*edkrepo_completions\.csh\"\s*\)\s*source\s+\"\S*edkrepo_completions\.csh\"")
+
 def default_run(cmd):
     return subprocess.run(cmd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
 
@@ -785,6 +788,20 @@ def get_command_completion_script_path(default_cfg_dir, user_home_dir, install_t
     else:
         return (os.path.join('/', 'etc', 'profile.d', 'edkrepo_completions.sh'), True)
 
+def get_tcsh_command_completion_script_path(default_cfg_dir):
+    # Unlike bash-completion, there is no widely adopted convention for a
+    # system-wide tcsh completions directory, so the script always lives
+    # alongside EdkRepo's other configuration files.
+    return os.path.join(default_cfg_dir, 'edkrepo_completions.csh')
+
+def get_tcsh_startup_file(user_home_dir):
+    # tcsh reads ~/.tcshrc in preference to ~/.cshrc if it exists; fall back
+    # to ~/.cshrc otherwise, which will be created if neither file exists
+    tcshrc_file = os.path.join(user_home_dir, '.tcshrc')
+    if os.path.isfile(tcshrc_file):
+        return tcshrc_file
+    return os.path.join(user_home_dir, '.cshrc')
+
 def add_command_to_startup_script(script_file, regex, command, username):
     script = ''
     if os.path.isfile(script_file):
@@ -872,6 +889,17 @@ def add_command_completions_to_shell(command_completion_script, args, username, 
             add_command_comment_to_startup_script(zsh_rc_file, regex, new_source_line, comment, username)
         if get_add_prompt_customization(args, username, user_home_dir):
             add_command_to_startup_script(zsh_rc_file, prompt_regex, zsh_prompt_customization, username)
+
+def add_tcsh_completion_to_shell(command_completion_csh_script, username, user_home_dir):
+    # tcsh is configured independently of bash/zsh. It has different syntax for
+    # command completions, so a different command completion script must be
+    # generated for it.
+    if shutil.which('tcsh') is None and shutil.which('csh') is None:
+        return
+    tcsh_rc_file = get_tcsh_startup_file(user_home_dir)
+    new_source_line = 'if ($?tcsh && -r "{0}") source "{0}"'.format(command_completion_csh_script)
+    comment = '\n# Add EdkRepo command completions'
+    add_command_comment_to_startup_script(tcsh_rc_file, tcsh_completion_regex, new_source_line, comment, username)
 
 def do_install():
     global def_python
@@ -1239,12 +1267,12 @@ def do_install():
     if not completion_configured_by_vendor and shutil.which('edkrepo') is not None:
         (command_completion_script, source_command_completion) = \
             get_command_completion_script_path(default_cfg_dir, user_home_dir, install_to_local)
+        user_is_root = False
         try:
-            user_is_root = False
-            try:
-                user_is_root = is_current_user_root()
-            except:
-                pass
+            user_is_root = is_current_user_root()
+        except:
+            pass
+        try:
             current_home = None
             if 'HOME' in os.environ:
                 current_home = os.environ['HOME']
@@ -1267,6 +1295,30 @@ def do_install():
                     log.info('+ Note: You may need to reboot to fully activate shell integration')
         except:
             log.info('- Failed to configure edkrepo command completion')
+            if args.verbose:
+                traceback.print_exc()
+
+        #If tcsh is installed, create the tcsh command completion script
+        try:
+            tcsh_completion_script = get_tcsh_command_completion_script_path(default_cfg_dir)
+            if shutil.which('tcsh') is not None or shutil.which('csh') is not None:
+                current_home = None
+                if 'HOME' in os.environ:
+                    current_home = os.environ['HOME']
+                try:
+                    if user_is_root and current_home is not None and current_home != user_home_dir:
+                        os.environ['HOME'] = user_home_dir
+                    res = default_run(['edkrepo', 'generate-command-completion-script', tcsh_completion_script, '--shell', 'tcsh'])
+                finally:
+                    if current_home is not None and os.environ['HOME'] != current_home:
+                        os.environ['HOME'] = current_home
+                if install_to_local or ostype == MAC:
+                    shutil.chown(tcsh_completion_script, user=username)
+                    os.chmod(tcsh_completion_script, 0o644)
+                add_tcsh_completion_to_shell(tcsh_completion_script, username, user_home_dir)
+                log.info('+ Configured edkrepo tcsh command completion')
+        except:
+            log.info('- Failed to configure edkrepo tcsh command completion')
             if args.verbose:
                 traceback.print_exc()
     else:
