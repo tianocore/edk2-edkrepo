@@ -224,7 +224,10 @@ class GlobalUserConfig(BaseConfig):
         self.prop_list = [
             CfgProp('send-review', 'max-patch-set', 'max_patch_set', '10', False),
             CfgProp('caching', 'enable-caching', 'enable_caching_text', 'false', False),
-            CfgProp('caching', 'cache-path', 'cache_path_text', 'default', False)]
+            CfgProp('caching', 'cache-path', 'cache_path_text', 'default', False),
+            CfgProp('reference-repos', 'enable-by-default', 'ref_repos_enable_by_default', 'false', False),
+            CfgProp('reference-repos', 'dissociate-by-default', 'ref_repos_dissociate_by_default', 'true', False),
+            CfgProp('reference-repos', 'reference-enabled-for', 'ref_repos_enabled_for', '', False)]
         super().__init__(self.filename, get_edkrepo_global_data_directory(), False)
 
     @property
@@ -249,6 +252,58 @@ class GlobalUserConfig(BaseConfig):
     def cache_path(self):
         return self.cache_path_text
 
+    @property
+    def reference_repos_enabled_by_default(self):
+        return self.ref_repos_enable_by_default.lower() == 'true'
+
+    @property
+    def reference_repos_dissociate_by_default(self):
+        return self.ref_repos_dissociate_by_default.lower() == 'true'
+
+    @property
+    def reference_repos_enabled_for(self):
+        value = self.ref_repos_enabled_for.strip()
+        if not value:
+            return []
+        return [name.strip() for name in value.split(',') if name.strip()]
+
+    def get_reference_repo_url(self, name):
+        if self.cfg.has_section(name) and self.cfg.has_option(name, 'url'):
+            return self.cfg[name]['url']
+        return None
+
+    def get_reference_repo_path(self, name):
+        if self.cfg.has_section(name) and self.cfg.has_option(name, 'reference-path'):
+            return self.cfg[name]['reference-path']
+        return None
+
+    def add_reference_repo(self, name, url, reference_path):
+        if not self.cfg.has_section(name):
+            self.cfg.add_section(name)
+        self.cfg.set(name, 'url', url)
+        self.cfg.set(name, 'reference-path', reference_path)
+        enabled_for = self.reference_repos_enabled_for
+        if name not in enabled_for:
+            enabled_for.append(name)
+            self.cfg['reference-repos']['reference-enabled-for'] = ','.join(enabled_for)
+        with open(self.filename, 'w') as cfg_stream:
+            self.cfg.write(cfg_stream)
+
+    def remove_reference_repo(self, name):
+        if self.cfg.has_section(name):
+            self.cfg.remove_section(name)
+        enabled_for = self.reference_repos_enabled_for
+        if name in enabled_for:
+            enabled_for.remove(name)
+            self.cfg['reference-repos']['reference-enabled-for'] = ','.join(enabled_for)
+        with open(self.filename, 'w') as cfg_stream:
+            self.cfg.write(cfg_stream)
+
+    def set_reference_repos_enable_by_default(self, enable):
+        self.ref_repos_enable_by_default = 'true' if enable else 'false'
+
+    def set_reference_repos_dissociate_by_default(self, enable):
+        self.ref_repos_dissociate_by_default = 'true' if enable else 'false'
 
     @property
     def cfg_filename(self):
