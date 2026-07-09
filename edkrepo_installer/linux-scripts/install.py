@@ -509,6 +509,30 @@ def get_site_packages_directory():
     res = default_run([def_python, '-c', 'import site; print(site.getsitepackages()[0])'])
     return res.stdout.strip()
 
+def get_python_executable_path():
+    res = default_run([def_python, '-c', 'import sys; print(sys.executable)'])
+    return res.stdout.strip()
+
+edkrepo_python_shim_name = 'edkrepo_python'
+edkrepo_python_shim_template = '''#!/bin/sh
+# @file edkrepo_python
+#  Launcher that runs the Python interpreter EdkRepo is installed on, so that
+#  Python git hooks can "import edkrepo".
+#
+# Automatically generated please DO NOT modify !!!
+#
+exec "{interpreter}" "$@"
+'''
+
+def generate_edkrepo_python_shim(default_cfg_dir, interpreter_path, username):
+    shim_path = os.path.join(default_cfg_dir, edkrepo_python_shim_name)
+    with open(shim_path, 'w') as f:
+        f.write(edkrepo_python_shim_template.format(interpreter=interpreter_path).replace('\r\n', '\n'))
+    shutil.chown(shim_path, user=username)
+    stat_data = os.stat(shim_path)
+    os.chmod(shim_path, stat_data.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    return shim_path
+
 def is_current_user_root():
     if os.geteuid() == 0:
         return True
@@ -1162,6 +1186,16 @@ def do_install():
             log.info('+ Generated pyenv shims')
         except:
             log.info('- Failed to generate pyenv shim')
+
+    #Create/refresh the edkrepo_python launcher. Regenerated on every install so
+    #that the launcher shim remains accurate after a Python interpreter upgrade.
+    try:
+        generate_edkrepo_python_shim(default_cfg_dir, get_python_executable_path(), username)
+        log.info('+ Created edkrepo_python launcher')
+    except Exception:
+        log.info('- Failed to create edkrepo_python launcher')
+        if args.verbose:
+            traceback.print_exc()
 
     #There is a possibility that ~/.local/bin is not in the PATH if ~/.local/bin
     #did not exist when the current shell was started

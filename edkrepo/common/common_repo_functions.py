@@ -9,6 +9,7 @@
 
 import json
 import os
+import re
 import shutil
 import sys
 import urllib.request
@@ -158,6 +159,61 @@ def write_conditional_include(workspace_path, repo_sources, included_configs):
                     gitglobalconfig.add_section(section)
                     gitglobalconfig.set(section, 'path', path)
 
+# Matches a shebang that generically resolves to "whatever python is on this
+# system", either via "env" or a hardcoded common system path. Does not match a
+# shebang that pins to a specific interpreter (Ex: '/usr/bin/python3.12'), which
+# is left alone since that's a deliberate choice by whoever wrote the hook.
+_GENERIC_PYTHON_SHEBANG_RE = re.compile(
+    r'^#!\s*(?:/usr/bin/env\s+|/usr/bin/|/usr/local/bin/|/bin/)python3?(\s.*)?$')
+
+def _edkrepo_hook_interpreter():
+    """
+    Returns the path that a repinned hook's shebang should point at.
+
+    Prefers the 'edkrepo_python' launcher created by the installer in
+    ~/.edkrepo, which is a small script that execs the interpreter EdkRepo is
+    currently installed on.
+
+    Falls back to sys.executable if the launcher is missing (Ex: an
+    installation from before this launcher existed).
+    """
+    shim_path = os.path.join(pathfix.expanduser('~/.edkrepo'), 'edkrepo_python')
+    if os.path.isfile(shim_path) and os.access(shim_path, os.X_OK):
+        return shim_path
+    return sys.executable
+
+def _repin_hook_shebang(hook_file_name):
+    """
+    Rewrites a generic Python shebang line in an installed git hook script to
+    instead point at the Python interpreter currently running EdkRepo.
+
+    A '/usr/bin/env python3' shebang resolves to whatever 'python3' happens to
+    be first on the invoking shell's PATH at the moment the hook runs. Pinning
+    the shebang removes that ambiguity and keeps the hook in sync with whichever
+    interpreter is currently in use.
+
+    Linux & macOS only. Windows has a different mechanism, see InstallWorker.cs.
+    """
+    if not (sys.platform.startswith('linux') or sys.platform == 'darwin'):
+        return
+    try:
+        with open(hook_file_name, 'r', errors='ignore') as handle:
+            lines = handle.readlines()
+    except (OSError, UnicodeError):
+        return
+    if not lines:
+        return
+    match = _GENERIC_PYTHON_SHEBANG_RE.match(lines[0])
+    if not match:
+        return
+    trailing_args = match.group(1) or ''
+    lines[0] = '#!{}{}\n'.format(_edkrepo_hook_interpreter(), trailing_args)
+    try:
+        with open(hook_file_name, 'w') as handle:
+            handle.writelines(lines)
+    except OSError:
+        pass
+
 def install_hooks(hooks, local_repo_path, repo_for_install, config, global_manifest_directory):
     # Determine the which hooks are for the repo in question and which are from a URL based source or are in a global
     # manifest repo relative path
@@ -183,6 +239,7 @@ def install_hooks(hooks, local_repo_path, repo_for_install, config, global_manif
         with urllib.request.urlopen(hook.source) as response, open(hook_file_name, 'wb') as out_file:
             data = response.read()
             out_file.write(data)
+        _repin_hook_shebang(hook_file_name)
 
     # Copy any global manifest repository relative path source based hooks
     for hook in hooks_path:
@@ -198,6 +255,7 @@ def install_hooks(hooks, local_repo_path, repo_for_install, config, global_manif
         if not os.path.exists(destination_path):
             os.makedirs(destination_path)
         shutil.copy(man_dir_rel_hook_path, hook_file_name)
+        _repin_hook_shebang(hook_file_name)
         if os.name == 'posix':
             # Need to make sure the script is executable or it will not run on Linux
             os.chmod(hook_file_name, os.stat(hook_file_name).st_mode | 0o111)
