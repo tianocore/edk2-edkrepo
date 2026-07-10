@@ -83,7 +83,29 @@ if __name__ == "__main__" or run_via_launcher_script:
 from edkrepo.config.config_factory import GlobalConfig
 
 def main():
-    cfg_file = GlobalConfig()
+    # "edkrepo setup" and "edkrepo uninstall" must work even when
+    # ~/.edkrepo/edkrepo.cfg does not exist yet.
+    if len(sys.argv) >= 2 and sys.argv[1] in ('setup', 'uninstall'):
+        from edkrepo.common import install_functions
+        if sys.argv[1] == 'setup':
+            return install_functions.handle_setup(sys.argv[2:])
+        else:
+            return install_functions.handle_uninstall(sys.argv[2:])
+
+    try:
+        cfg_file = GlobalConfig()
+    except Exception as e:
+        print('Error: {}'.format(str(e)))
+        if sys.platform.startswith('linux'):
+            from edkrepo.common import install_functions
+            if install_functions.has_system_install() and not install_functions.is_user_configured():
+                print('EdkRepo has not been configured for your user account yet.')
+                print('Running "edkrepo setup" automatically...')
+                prompt_flag = '--prompt' if install_functions.ask_prompt_customization() else '--no-prompt'
+                install_functions.handle_setup([prompt_flag])
+                print('')
+                print('Please run edkrepo again.')
+        return 1
     pref_entry = (cfg_file.preferred_entry[0]).replace('.py', '')
     pref_entry_func = cfg_file.preferred_entry[1]
 
