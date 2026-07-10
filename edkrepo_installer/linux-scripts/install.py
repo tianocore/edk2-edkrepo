@@ -513,6 +513,13 @@ def get_python_executable_path():
     res = default_run([def_python, '-c', 'import sys; print(sys.executable)'])
     return res.stdout.strip()
 
+def get_python_version(python_command):
+    '''
+    Returns the version of the given python interpreter.
+    '''
+    res = default_run([python_command, '-c', 'import platform; print(platform.python_version())'])
+    return res.stdout.strip()
+
 edkrepo_python_shim_name = 'edkrepo_python'
 edkrepo_python_shim_template = '''#!/bin/sh
 # @file edkrepo_python
@@ -1026,9 +1033,24 @@ def do_install():
         else:
             log.debug('+ {} {} detected'.format(tool, tool_version))
 
+    target_python_version = None
     # Verify required python modules are installed
     for module in cfg['req_py_modules']:
         if importlib.util.find_spec(module) is None:
+            if module == 'setuptools':
+                # setuptools is only required to install wheels on Python 3.11
+                # and older. Python 3.12 and newer no longer need it. EdkRepo
+                # itself only uses pkg_resources on Python 3.7 and older, so
+                # this dependency is purely based on the default environment
+                # bundling behavior in older versions of Python.
+                if target_python_version is None:
+                    try:
+                        target_python_version = get_python_version(def_python)
+                    except:
+                        target_python_version = python_version
+                if _check_version(target_python_version, '3.12.0') >= 0:
+                    log.debug('+ Python module setuptools not required on Python {}'.format(target_python_version))
+                    continue
             log.info('- Python module {} not found'.format(module))
             found_deps_issue = True
         else:
