@@ -25,6 +25,11 @@ To begin using EdkRepo, you'll typically:
 
 For detailed information about each command, see the Command References section below.
 
+## Installation
+
+For detailed platform-specific installation instructions, see the
+[README](../README.md).
+
 <details>
 <summary>
 
@@ -50,10 +55,13 @@ The commands provided by EdkRepo are documented below. These commands provide fu
 - [manifest-repos](command_references/manifest-repos.md) - Lists, adds or removes a manifest repository
 - [reset](command_references/reset.md) - Unstages all staged files in the workspace
 - [send-review](command_references/send-review.md) - Sends a local change for code review
+- [setup](command_references/setup.md) - Configures EdkRepo for your user account after a system-level install
 - [sparse](command_references/sparse.md) - Displays the current sparse checkout status
 - [squash](command_references/squash.md) - Convert multiple commits into a single commit
 - [status](command_references/status.md) - Displays the current combo and the status of each repository
 - [sync](command_references/sync.md) - Updates the local copy of the current combination's target branches
+- [uninstall](command_references/uninstall.md) - Uninstalls EdkRepo
 - [update-manifest-repo](command_references/update-manifest-repo.md) - Updates the global manifest repository
 
 </details>
+

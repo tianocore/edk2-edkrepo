@@ -37,23 +37,40 @@ Tested versions:
 
 ### Install EdkRepo on Linux
 
-Installing EdkRepo on Linux requires one to extract the tarball and run the included installer script.
+Installing EdkRepo on Linux requires one to run the self-extracting installer. Make it executable, run it, and follow the on-screen prompts.
 
-1. Extract the archive using the following command
-  `tar -xzvf edkrepo-<version>.tar.gz`
-2. Run the installer script `./install.py` and follow the on-screen prompts.
+1. `chmod +x edkrepo-<version>.run`
+2. `./edkrepo-<version>.run`
 
 The -v flag can be added for more verbose output if desired.
 
+### Linux Installation Types
+
+- **Local install (`--local`)** - Installs EdkRepo to the current user's home directory. Root access is not required and no system wide changes are made. This is the **recommended** installation method. The `--user` parameter can sometimes be needed when running in a container environment. A `--local` install is fully configured for the invoking user as soon as it completes.
+
+- **System install (`--system`)** - Installs EdkRepo system-wide. Root access is required. This method is useful for systems where multiple users will be running EdkRepo as in that scenario it saves disk space.
+
+For system level installations, one must run the installation script as root.
+
+#### System Installs Are a Two-Step Process
+
+Unlike a `--local` install, a `--system` install does not modify the current user's home directory. It only installs EdkRepo's files and Python packages system-wide. This means a `--system` install requires an additional configuration step.
+
+Every user who wants to use EdkRepo, including the administrator who performed the `--system` install, must separately run `edkrepo setup` once. This creates `~/.edkrepo`, sets up shell command completion, and optionally adds the current combo and git branch to the shell prompt.
+
+If a user runs an `edkrepo` command before running `edkrepo setup`, EdkRepo detects this and automatically performs the configuration process on the user's behalf. Unlike invoking `edkrepo setup` directly, this will interactively ask the user if they want to add the current combo and git branch to the shell prompt. If a fully automated install process is desired, make sure to run `edkrepo setup --prompt/--no-prompt` first. After the home directory configuration is complete, edkrepo asks the user to re-run their original command.
+
 ### Automated Linux Installation
 
-For an automated non-interactive install, one must provide at least 2 arguments: `--local` or `--system` and `--prompt` or `--no-prompt`.
+For an automated non-interactive install, one must provide either the `--local` argument or the `--system` argument. If `--local` is chosen, one must also provide either the `--prompt` or `--no-prompt` argument.
 
-`--local` requests installation to the current user's home directory. Root access is not required and no system wide changes are made. This is the **recommended** installation method.
+### Uninstalling EdkRepo on Linux
 
-`--system` request a system-wide installation. Root access is required. This method is useful for systems where multiple users will be running EdkRepo as it saves disk space in that scenario.
+Run `edkrepo uninstall` to remove EdkRepo. Pass `--yes` to skip the confirmation prompt.
 
-For system level installations, one must provide the `--user` parameter and run the installation script as root. The `--user` parameter can sometimes be needed when running in a container environment.
+On a `--local` install, this will completely remove EdkRepo. On a `--system` install, this will only remove the edkrepo configuration files from the current user's home directory.
+
+To remove a `--system` install, run `sudo edkrepo uninstall --system --yes`.
 
 ### Linux and macOS Build Process
 
@@ -135,23 +152,25 @@ If you are upgrading from an older version and have already run this script once
 
 ### Install EdkRepo on macOS
 
-Extract the archive:
+Mark the self-extracting installer as executable and run it:
 
-`tar -xzvf edkrepo-<version>.tar.gz`
+1. `chmod +x edkrepo-<version>.run`
+2. `./edkrepo-<version>.run`
 
-If you are installing from source, you will need to build the distribution tarball using the following commands first:
+If you are installing from source, you will need to build the self-extracting installer using the following commands first:
 
 1. `pip install wheel` (If not done already)
 2. `cd build-scripts`
 3. `./build_linux_installer.py`
 
-Install EdkRepo:
-
-`./install.py`
 
 Restart your shell so the new Pyenv shim for EdkRepo can take effect:
 
 `exec $SHELL`
+
+### Uninstalling EdkRepo on macOS
+
+Run `edkrepo uninstall` to remove EdkRepo. Pass `--yes` to skip the confirmation prompt.
 
 ## Windows Build and Installation
 
@@ -171,6 +190,10 @@ Python 3.10.16 or later is required, with Python 3.13.11 or later recommended du
 
 1. Run the installer .exe
 2. Click Install
+
+### Uninstalling EdkRepo on Windows
+
+Run `edkrepo uninstall`, or use the Windows Control Panel/Settings App to uninstall EdkRepo like any other application.
 
 ### Install From Source on Windows
 

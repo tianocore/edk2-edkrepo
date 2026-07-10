@@ -33,6 +33,7 @@ from edkrepo.common.edkrepo_exception import EdkrepoWarningException
 from edkrepo.common.edkrepo_exception import EdkrepoConfigFileInvalidException
 from edkrepo.common.humble import KEYBOARD_INTERRUPT, GIT_CMD_ERROR
 from edkrepo.common.pathfix import get_actual_path
+from edkrepo.common import install_functions
 
 def generate_command_line(command):
     parser = argparse.ArgumentParser(prog='edkrepo')
@@ -49,8 +50,12 @@ def generate_command_line(command):
         #To prevent errors if edkrepo is being run without being installed (Python 3.8 and later)
         current_version = "0.0.0"
     parser.add_argument("--version", action="version", version="%(prog)s {0}".format(current_version))
-    #command_names = command.command_list()
+    # "setup" is only relevant on Linux systems with a system-level EdkRepo
+    # install; hide it from --help/shell completion everywhere else.
+    show_setup_command = sys.platform.startswith('linux') and install_functions.has_system_install()
     for command_name in command.command_list():
+        if command_name == 'setup' and not show_setup_command:
+            continue
         subparser_name = 'parser_' + command_name
         command_name_metadata = command.get_metadata(command_name)
         if 'alias' in command_name_metadata:
