@@ -99,6 +99,7 @@ FUNC_RESOLVE_PATH = '_resolve_project_manifest_path'
 FUNC_COLLECT_PROJECT_RESULTS = '_collect_project_validation_results'
 FUNC_COLLECT_INVALID_BRANCH = '_collect_invalid_branch_results'
 FUNC_LOAD_TREE = '_load_tree'
+FUNC_JSON_TO_XML = 'json_to_xml'
 FUNC_JSON_LOAD = 'json.load'
 MODULE_BUILTINS_PRINT = 'builtins.print'
 MODULE_ET = 'ET'
@@ -332,9 +333,10 @@ class BaseTestValidateManifest:
         return self._make_obj_with_codename(self.__class__.validation_module, codename).validate_codename(project)
 
     def _assert_try_parse_result(self, expected_xmldata, expected_error):
-        """Call _try_parse_manifest_xml and assert both returned values."""
+        """Call _try_parse_manifest_xml on a ValidateManifest instance and assert both returned values."""
         vm_module = importlib.import_module(self.__class__.validation_module)
-        xmldata, error = vm_module._try_parse_manifest_xml(MANIFEST_PATH)
+        vm = vm_module.ValidateManifest(MANIFEST_PATH)
+        xmldata, error = vm._try_parse_manifest_xml(MANIFEST_PATH)
         assert xmldata is expected_xmldata
         assert error is expected_error
 
@@ -538,11 +540,13 @@ INDENT_DEPTH_2 = '\n    '
 class BaseTestBaseXmlHelper:
 
     manifest_module: str = None
+    impl_module: str = None
 
     @pytest.fixture
     def mock_et_module(self):
         """Complete mock of the ET module to prevent any real operations."""
-        with patch('{}.{}'.format(self.__class__.manifest_module, MODULE_ET)) as mock_et:
+        et_module = self.__class__.impl_module if self.__class__.impl_module else self.__class__.manifest_module
+        with patch('{}.{}'.format(et_module, MODULE_ET)) as mock_et:
             mock_et.Element = MagicMock()
             mock_et.SubElement = MagicMock()
             mock_et.ElementTree = MagicMock()
@@ -607,11 +611,10 @@ class BaseTestBaseXmlHelper:
         return mock_tree
 
     def _build_node(self, current_dict):
-        """Build an ET node from current_dict via _build_etree_node and return the first child of the parent."""
+        """Build an ET node from current_dict via build_etree_node and return the first child of the parent."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        instance = object.__new__(manifest_mod.BaseXmlHelper)
         parent = self._create_mock_element(ELEMENT_ROOT_TAG)
-        instance._build_etree_node(current_dict, parent)
+        manifest_mod.build_etree_node(current_dict, parent)
         return parent[FIRST_ELEMENT_INDEX]
 
     def _assert_init_raises_typeerror(self, xml_types):
@@ -630,37 +633,31 @@ class BaseTestBaseXmlHelper:
         mock_load_tree.side_effect = TypeError(INVALID_FILE_MSG)
         self._assert_init_raises_typeerror([TAG_MANIFEST])
 
-    def test_valid_json_returns_converted_element_tree(self, bare_instance, mock_json_open, mock_et_module):
-        """When open and json.load succeed, _json_to_xml must return a tree whose root tag matches the JSON node name and call _pretty_format and _build_etree_node each exactly once."""
-        mock_open, mock_json_load = mock_json_open
+    def test_valid_json_returns_converted_element_tree(self, mock_json_open, mock_et_module):
+        """When open and json.load succeed, json_to_xml must return a tree whose root tag matches the JSON node name."""
+        manifest_mod = importlib.import_module(self.__class__.manifest_module)
+        _, mock_json_load = mock_json_open
         mock_json_load.return_value = {ATTRIB_NAME: TAG_MANIFEST}
 
-        # Configure ET mocks to return mock elements
         mock_root = self._create_mock_element(ELEMENT_TAG_PLACEHOLDER)
         mock_et_module.Element.return_value = mock_root
         mock_tree = MagicMock()
         mock_et_module.ElementTree.return_value = mock_tree
 
-        def mock_build_node(d, p):
-            return self._create_mock_subelement(p, TAG_MANIFEST)
+        def create_subelement_mock(parent, tag, attrib=None):
+            return self._create_mock_subelement(parent, tag, attrib)
+        mock_et_module.SubElement.side_effect = create_subelement_mock
 
-        bare_instance._build_etree_node = MagicMock(side_effect=mock_build_node)
-        bare_instance._pretty_format = MagicMock()
-
-        # Configure getroot to return the child element that will be set by _setroot
         def mock_setroot(elem):
             mock_tree.getroot.return_value = elem
         mock_tree._setroot = mock_setroot
 
-        result = bare_instance._json_to_xml(MANIFEST_JSON)
+        result = manifest_mod.json_to_xml(MANIFEST_JSON)
 
         assert result.getroot().tag == TAG_MANIFEST
-        bare_instance._pretty_format.assert_called_once()
-        bare_instance._build_etree_node.assert_called_once()
 
     def test_dict_with_all_optional_fields(self, mock_et_module):
         """When the dict contains name, attrib, text, tail, and children, _build_etree_node must set all fields and recurse."""
-        # Configure ET.SubElement to return mock elements
         def create_subelement_mock(parent, tag, attrib=None):
             return self._create_mock_subelement(parent, tag, attrib)
 
@@ -682,7 +679,6 @@ class BaseTestBaseXmlHelper:
 
     def test_dict_with_name_only(self, mock_et_module):
         """When the dict contains only the name key, _build_etree_node must create a SubElement with empty attrib, None text, None tail, and no children."""
-        # Configure ET.SubElement to return mock elements
         def create_subelement_mock(parent, tag, attrib=None):
             return self._create_mock_subelement(parent, tag, attrib)
 
@@ -696,19 +692,21 @@ class BaseTestBaseXmlHelper:
         assert node.tail is None
         assert len(node) == ZERO_LENGTH
 
-    def test_no_parent_completes_without_error(self, bare_instance):
-        """When called without a parent argument, _pretty_format must complete without raising any exception."""
+    def test_no_parent_completes_without_error(self):
+        """When called without a parent argument, pretty_format must complete without raising any exception."""
+        manifest_mod = importlib.import_module(self.__class__.manifest_module)
         root = self._create_mock_element(ELEMENT_ROOT_TAG)
 
-        bare_instance._pretty_format(root)
+        manifest_mod.pretty_format(root)
 
-    def test_pretty_format_recurses_into_children(self, bare_instance):
-        """When current has nested children, _pretty_format must recursively set indentation on each ancestor's text."""
+    def test_pretty_format_recurses_into_children(self):
+        """When current has nested children, pretty_format must recursively set indentation on each ancestor's text."""
+        manifest_mod = importlib.import_module(self.__class__.manifest_module)
         root = self._create_mock_element(ELEMENT_ROOT_TAG)
         child = self._create_mock_subelement(root, NODE_CHILD)
         self._create_mock_subelement(child, NODE_CHILD)
 
-        bare_instance._pretty_format(root)
+        manifest_mod.pretty_format(root)
 
         assert root.text == INDENT_DEPTH_1
         assert child.text == INDENT_DEPTH_2
@@ -724,13 +722,12 @@ class BaseTestBaseXmlHelper:
         assert result is mock_tree
 
     def test_json_extension_delegates_to_json_to_xml(self, bare_instance):
-        """When fileref has a .json extension, _load_tree must delegate to self._json_to_xml and return its result."""
+        """When fileref has a .json extension, _load_tree must delegate to json_to_xml and return its result."""
         expected = MagicMock()
-        bare_instance._json_to_xml = MagicMock(return_value=expected)
+        with patch('{}.{}'.format(self.__class__.manifest_module, FUNC_JSON_TO_XML), return_value=expected) as mock_json_to_xml:
+            result = bare_instance._load_tree(MANIFEST_JSON)
 
-        result = bare_instance._load_tree(MANIFEST_JSON)
-
-        bare_instance._json_to_xml.assert_called_once_with(MANIFEST_JSON)
+        mock_json_to_xml.assert_called_once_with(MANIFEST_JSON)
         assert result is expected
 
     def test_unsupported_extension_raises_typeerror(self, bare_instance):
@@ -746,23 +743,23 @@ class BaseTestBaseXmlHelper:
             bare_instance._load_tree(MANIFEST_FILE_PATH)
 
     def test_json_parse_error_raises_typeerror(self, bare_instance):
-        """When _json_to_xml raises an exception during JSON parsing, _load_tree must catch it and raise TypeError."""
-        bare_instance._json_to_xml = MagicMock(side_effect=Exception(PARSE_ERROR_MSG))
-
-        with pytest.raises(TypeError):
-            bare_instance._load_tree(MANIFEST_JSON)
+        """When json_to_xml raises an exception during JSON parsing, _load_tree must catch it and raise TypeError."""
+        with patch('{}.{}'.format(self.__class__.manifest_module, FUNC_JSON_TO_XML), side_effect=Exception(PARSE_ERROR_MSG)):
+            with pytest.raises(TypeError):
+                bare_instance._load_tree(MANIFEST_JSON)
 
     @pytest.mark.parametrize(PRETTY_FORMAT_INDEX_FIELDS, [
         pytest.param(FIRST_ELEMENT_INDEX, INDENT_DEPTH_2, id=ID_INDEX_ZERO),
         pytest.param(ONE_ITEM, ORIGINAL_TEXT, id=ID_INDEX_NONZERO),
     ])
-    def test_pretty_format_parent_text_by_index(self, bare_instance, index, expected):
-        """When called with a given index and depth=2, _pretty_format must set parent.text to the expected value."""
+    def test_pretty_format_parent_text_by_index(self, index, expected):
+        """When called with a given index and depth=2, pretty_format must set parent.text to the expected value."""
+        manifest_mod = importlib.import_module(self.__class__.manifest_module)
         parent = self._create_mock_element(ELEMENT_ROOT_TAG)
         parent.text = ORIGINAL_TEXT
         child = self._create_mock_subelement(parent, ELEMENT_CHILD_TAG)
 
-        bare_instance._pretty_format(child, parent, index, INDENT_DEPTH_LEVEL_2)
+        manifest_mod.pretty_format(child, parent, index, INDENT_DEPTH_LEVEL_2)
 
         assert parent.text == expected
 
