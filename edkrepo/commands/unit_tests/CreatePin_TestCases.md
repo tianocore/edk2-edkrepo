@@ -64,10 +64,10 @@ Tests the `_generate_pin_data` method of the `CreatePinCommand` class, which gen
    ```bash
    python -m pytest test_create_pin.py
    ```
-   
+
    To run with verbose output:
    ```bash
    python -m pytest test_create_pin.py -v
    ```
-   
+
    See the official `pytest` documentation at: https://docs.pytest.org/en/latest/how-to/usage.html for additional command line options.
