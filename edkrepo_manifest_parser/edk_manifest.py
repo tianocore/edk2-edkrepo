@@ -78,69 +78,69 @@ class BaseXmlHelper():
         if self._xml_type not in xml_types:
             raise TypeError(UNSUPPORTED_TYPE_ERROR.format(fileref, self._xml_type))
 
-    def _json_to_xml(self, fileref):
-        """Read a JSON file, convert it to an ElementTree using _build_etree_node and _pretty_format, and return the tree."""
-        with open(fileref, 'r') as f:
-            json_in = json.load(f)
-
-        root = ET.Element('placeholder')
-        tree = ET.ElementTree(root)
-
-        self._build_etree_node(json_in, root)
-        tree._setroot(root[0])
-
-        self._pretty_format(tree.getroot())
-        return tree
-
-    def _build_etree_node(self, current_dict, parent):
-        """Build an ElementTree SubElement from current_dict and attach it as a child of parent; recurse into children."""
-        node_tag = current_dict['name']
-
-        # attribs
-        if 'attrib' in current_dict.keys():
-            node_attribs = current_dict['attrib']
-        else:
-            node_attribs = {}
-
-        # construct this subelement
-        node = ET.SubElement(parent, node_tag, attrib=node_attribs)
-
-        # text
-        if 'text' in current_dict.keys():
-            node.text = current_dict['text']
-
-        # tail
-        if 'tail' in current_dict.keys():
-            node.tail = current_dict['tail']
-
-        # children
-        if 'children' in current_dict.keys():
-            for child_dict in current_dict['children']:
-                # append child to this node
-                self._build_etree_node(child_dict, node)
-
-    def _pretty_format(self, current, parent=None, index=-1, depth=0):
-        """Recursively add indentation whitespace to all nodes in the ElementTree for human-readable formatting."""
-        for i, node in enumerate(current):
-            self._pretty_format(node, current, i, depth + 1)
-        if parent is not None:
-            if index == 0:
-                parent.text = '\n' + ('  ' * depth)
-
     def _load_tree(self, fileref):
-        """Load an ElementTree from a .xml file or a .json file via self._json_to_xml; raise TypeError if the file is invalid or the extension is unsupported."""
+        """Load an ElementTree from a .xml file or a .json file; raise TypeError if the file is invalid or the extension is unsupported."""
         try:
             file_ext = os.path.splitext(fileref)[1]
             if file_ext == '.xml':
                 return ET.ElementTree(file=fileref)  # fileref can be a filename or filestream
             elif file_ext == '.json':
-                return self._json_to_xml(fileref)
+                return json_to_xml(fileref)
             else:
                 raise TypeError(INVALID_XML_ERROR.format(fileref, UNSUPPORTED_EXTENSION_ERROR.format(file_ext)))
         except TypeError:
             raise
         except Exception as et_error:
             raise TypeError(INVALID_XML_ERROR.format(fileref, et_error))
+
+def json_to_xml(fileref):
+    """Read a JSON file, convert it to an ElementTree using _build_etree_node and _pretty_format, and return the tree."""
+    with open(fileref, 'r') as f:
+        json_in = json.load(f)
+
+    root = ET.Element('placeholder')
+    tree = ET.ElementTree(root)
+
+    build_etree_node(json_in, root)
+    tree._setroot(root[0])
+
+    pretty_format(tree.getroot())
+    return tree
+
+def build_etree_node(current_dict, parent):
+    """Build an ElementTree SubElement from current_dict and attach it as a child of parent; recurse into children."""
+    node_tag = current_dict['name']
+
+    # attribs
+    if 'attrib' in current_dict.keys():
+        node_attribs = current_dict['attrib']
+    else:
+        node_attribs = {}
+
+    # construct this subelement
+    node = ET.SubElement(parent, node_tag, attrib=node_attribs)
+
+    # text
+    if 'text' in current_dict.keys():
+        node.text = current_dict['text']
+
+    # tail
+    if 'tail' in current_dict.keys():
+        node.tail = current_dict['tail']
+
+    # children
+    if 'children' in current_dict.keys():
+        for child_dict in current_dict['children']:
+            # append child to this node
+            build_etree_node(child_dict, node)
+
+def pretty_format(current, parent=None, index=-1, depth=0):
+    """Recursively add indentation whitespace to all nodes in the ElementTree for human-readable formatting."""
+    for i, node in enumerate(current):
+        pretty_format(node, current, i, depth + 1)
+    if parent is not None:
+        if index == 0:
+            parent.text = '\n' + ('  ' * depth)
 
 
 #
@@ -152,7 +152,7 @@ class CiIndexXml(BaseXmlHelper):
         super().__init__(fileref, 'ProjectList')
         self._projects = {}
         for element in self._tree.iter(tag='Project'):
-            proj = _Project(element)
+            proj = self._make_project(element)
             # Todo: add check for unique
             self._projects[proj.name] = proj
 
@@ -181,6 +181,9 @@ class CiIndexXml(BaseXmlHelper):
         else:
             raise ValueError(INVALID_PROJECTNAME_ERROR.format(project_name))
 
+    def _make_project(self, element):
+        """Instantiate and return a _Project from a <Project> XML element."""
+        return _Project(element)
 
 class _Project():
     def __init__(self, element):
@@ -251,13 +254,13 @@ class ManifestXml(BaseXmlHelper):
         #
         for subroot in self._tree.iter(tag='RemoteList'):
             for element in subroot.iter(tag='Remote'):
-                self._add_unique_item(_RemoteRepo(element), self._remotes, element.tag)
+                self._add_unique_item(self._make_remote_repo(element), self._remotes, element.tag)
 
         #
         # parse <ProjectInfo> tags
         #
         subroot = self._tree.find('ProjectInfo')
-        self._project_info = _ProjectInfo(subroot)
+        self._project_info = self._make_project_info(subroot)
 
         #
         # parse <GeneralConfig> tags
@@ -320,7 +323,7 @@ class ManifestXml(BaseXmlHelper):
         subroot = self._tree.find('SparseCheckout')
         if subroot is not None:
             try:
-                self._sparse_settings = _SparseSettings(subroot.find('SparseSettings'))
+                self._sparse_settings = self._make_sparse_settings(subroot.find('SparseSettings'))
             except KeyError as k:
                 raise KeyError(REQUIRED_ATTRIB_ERROR_MSG.format(k, subroot.tag))
             for sparse_data in subroot.iter(tag='SparseData'):
@@ -374,6 +377,22 @@ class ManifestXml(BaseXmlHelper):
                 self._folder_to_folder_mappings.append(_FolderToFolderMapping(f2f_mapping))
         return
 
+    def _make_remote_repo(self, element):
+        """Factory hook returning a _RemoteRepo. Subclasses may override to inject a specialized type."""
+        return _RemoteRepo(element)
+
+    def _make_project_info(self, element):
+        """Factory hook returning a _ProjectInfo. Subclasses may override to inject a specialized type."""
+        return _ProjectInfo(element)
+
+    def _make_repo_source(self, element, remotes):
+        """Factory hook returning a _RepoSource. Subclasses may override to inject a specialized type."""
+        return _RepoSource(element, remotes)
+
+    def _make_sparse_settings(self, element):
+        """Factory hook returning a _SparseSettings. Subclasses may override to inject a specialized type."""
+        return _SparseSettings(element)
+
     def is_pin_file(self):
         """Return True if the parsed file is of type Pin, False otherwise."""
         if self._xml_type == 'Pin':
@@ -392,7 +411,7 @@ class ManifestXml(BaseXmlHelper):
         self._add_unique_item(combo, self._combinations, subroot.tag)
         temp_sources = []
         for element in subroot.iter(tag='Source'):
-            temp_sources.append(_RepoSource(element, self._remotes))
+            temp_sources.append(self._make_repo_source(element, self._remotes))
         self._combo_sources[combo.name] = temp_sources
 
     def _add_unique_item(self, obj, item_dict, tag):

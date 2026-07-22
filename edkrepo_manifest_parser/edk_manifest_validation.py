@@ -27,7 +27,7 @@ class ValidateManifest:
 
     def validate_parsing(self):
         """Attempt to parse the manifest XML file; return a (type, status, message) result tuple."""
-        self._manifest_xmldata, error = _try_parse_manifest_xml(self._manifestfile)
+        self._manifest_xmldata, error = self._try_parse_manifest_xml(self._manifestfile)
         if error is None:
             return ("PARSING", True, None)
         return ("PARSING", False, error)
@@ -57,12 +57,16 @@ class ValidateManifest:
         """Return True if str1 and str2 are equal under Unicode NFKD case-folding normalization."""
         return unicodedata.normalize("NFKD", str1.casefold()) == unicodedata.normalize("NFKD", str2.casefold())
 
-def _try_parse_manifest_xml(manifest_file):
-    """Attempt to construct a ManifestXml from *manifest_file*; return ``(xmldata, None)`` on success or ``(None, exception)`` on failure."""
-    try:
-        return ManifestXml(manifest_file), None
-    except Exception as e_message:
-        return None, e_message
+    def _try_parse_manifest_xml(self, manifest_file):
+        """Attempt to construct a ManifestXml from *manifest_file*; return ``(xmldata, None)`` on success or ``(None, exception)`` on failure."""
+        try:
+            return self._make_manifest_xml(manifest_file), None
+        except Exception as e_message:
+            return None, e_message
+
+    def _make_manifest_xml(self, manifest_file):
+        """Instantiate and return a ManifestXml from manifest_file; subclasses can override to inject a different ManifestXml type."""
+        return ManifestXml(manifest_file)
 
 def _collect_file_validation_results(manifest_filepath):
     """Validate parsing and codename for a single manifest file; return a list of (type, status, message) result tuples."""
