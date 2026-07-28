@@ -2,7 +2,7 @@
 REM @file
 REM build_windows_installer.bat
 REM
-REM Copyright (c) 2017 - 2025, Intel Corporation. All rights reserved.<BR>
+REM Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 REM SPDX-License-Identifier: BSD-2-Clause-Patent
 REM
 
@@ -16,6 +16,9 @@ set FIND_VS_WHERE=0
 if not defined TOOL_CHAIN_TAG (
   set FIND_VS_WHERE=1
 ) else (
+  if /I "%TOOL_CHAIN_TAG%"=="VS2026" (
+    set FIND_VS_WHERE=1
+  )
   if /I "%TOOL_CHAIN_TAG%"=="VS2022" (
     set FIND_VS_WHERE=1
   )
@@ -42,6 +45,9 @@ if %FIND_VS_WHERE% NEQ 0 (
 
 :VS2017PlusCheck
 
+if defined VS180COMNTOOLS (
+  set TOOL_CHAIN_TAG=VS2026
+)
 if defined VS170COMNTOOLS (
   set TOOL_CHAIN_TAG=VS2022
 )
@@ -50,6 +56,32 @@ if defined VS160COMNTOOLS (
 )
 if defined VS150COMNTOOLS (
   set TOOL_CHAIN_TAG=VS2017
+)
+
+set CHECK_VS2026=0
+if not defined TOOL_CHAIN_TAG (
+  set CHECK_VS2026=1
+) else (
+  if /I "%TOOL_CHAIN_TAG%"=="VS2026" (
+    set CHECK_VS2026=1
+  )
+)
+if %CHECK_VS2026% NEQ 0 (
+  set INSTALL_PATH=
+  for /f "usebackq tokens=1* delims=: " %%i in (`"%VS_WHERE%" -version [18.0^,19.0^)`) do (
+    if /i "%%i"=="installationPath" set INSTALL_PATH=%%j
+  )
+)
+if %CHECK_VS2026% NEQ 0 (
+  if defined INSTALL_PATH (
+    echo.
+    echo Prebuild:  Set the VS2026 environment.
+    echo.
+    if not defined VS180COMNTOOLS (
+      call "%INSTALL_PATH%\VC\Auxiliary\Build\vcvars32.bat"
+    )
+    set TOOL_CHAIN_TAG=VS2026
+  )
 )
 
 set CHECK_VS2022=0
@@ -61,6 +93,7 @@ if not defined TOOL_CHAIN_TAG (
   )
 )
 if %CHECK_VS2022% NEQ 0 (
+  set INSTALL_PATH=
   for /f "usebackq tokens=1* delims=: " %%i in (`"%VS_WHERE%" -version [17.0^,18.0^)`) do (
     if /i "%%i"=="installationPath" set INSTALL_PATH=%%j
   )
@@ -86,6 +119,7 @@ if not defined TOOL_CHAIN_TAG (
   )
 )
 if %CHECK_VS2019% NEQ 0 (
+  set INSTALL_PATH=
   for /f "usebackq tokens=1* delims=: " %%i in (`"%VS_WHERE%" -version [16.0^,17.0^)`) do (
     if /i "%%i"=="installationPath" set INSTALL_PATH=%%j
   )
@@ -111,6 +145,7 @@ if not defined TOOL_CHAIN_TAG (
   )
 )
 if %CHECK_VS2017% NEQ 0 (
+  set INSTALL_PATH=
   for /f "usebackq tokens=1* delims=: " %%i in (`"%VS_WHERE%" -version [15.0^,16.0^)`) do (
     if /i "%%i"=="installationPath" set INSTALL_PATH=%%j
   )

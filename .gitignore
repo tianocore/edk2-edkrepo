@@ -1,0 +1,8 @@
+# Python build output
+/build/
+/dist/
+/edkrepo.egg-info/
+
+# EdkRepoInstaller build output
+/edkrepo_installer/EdkRepoInstaller/bin/
+/edkrepo_installer/EdkRepoInstaller/obj/
