@@ -64,7 +64,7 @@ def patch_copyright_year(dist_root):
         r"^(_copyright_year\s*=\s*')[0-9]+(.*)",
         r"\g<1>{}\2".format(year),
         content, flags=re.MULTILINE)
-    with open(install_py_path, 'w') as f:
+    with open(install_py_path, 'w', newline='') as f:
         f.write(content)
 
 edkrepo_version=None

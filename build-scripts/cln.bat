@@ -42,6 +42,7 @@ if exist ..\dist (
   del /F EdkRepoSetup*.exe
   del /F *.whl
   del /F edkrepo*.tar.gz
+  del /F edkrepo*.run*
   rmdir /S /Q self_extract
   popd
 )
