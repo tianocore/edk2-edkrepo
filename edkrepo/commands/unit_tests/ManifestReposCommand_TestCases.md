@@ -15,7 +15,7 @@ Tests the `_list_manifest_repos` method of the ManifestRepos class which display
 - **Test ID**: `non_verbose_cfg_only`
 - **Description**: Display only global configuration repositories without verbose details.
 - **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=[]`, `verbose=False`
-- **Verification**: 
+- **Verification**:
   - Verifies `print_info_msg` is called with correct message format for each cfg repo
   - Verifies repository paths are NOT retrieved (performance optimization)
   - Verifies correct message strings from `humble.CFG_LIST_ENTRY` are used
@@ -24,7 +24,7 @@ Tests the `_list_manifest_repos` method of the ManifestRepos class which display
 - **Test ID**: `non_verbose_user_cfg_only`
 - **Description**: Display only user configuration repositories without verbose details.
 - **Test Data**: `cfg_repos=[]`, `user_cfg_repos=['user_repo1', 'user_repo2']`, `verbose=False`
-- **Verification**: 
+- **Verification**:
   - Verifies `print_info_msg` is called with correct message format for each user cfg repo
   - Verifies repository paths are NOT retrieved
   - Verifies correct message strings from `humble.USER_CFG_LIST_ENTRY` are used
@@ -33,7 +33,7 @@ Tests the `_list_manifest_repos` method of the ManifestRepos class which display
 - **Test ID**: `empty_lists`
 - **Description**: Handle the case where no repositories are configured.
 - **Test Data**: `cfg_repos=[]`, `user_cfg_repos=[]`, `verbose=False`
-- **Verification**: 
+- **Verification**:
   - Verifies no calls to `print_info_msg`
   - Verifies no calls to path retrieval functions
 
@@ -41,7 +41,7 @@ Tests the `_list_manifest_repos` method of the ManifestRepos class which display
 - **Test ID**: `verbose_cfg_only`
 - **Description**: Display global configuration repositories with verbose details showing paths.
 - **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=[]`, `verbose=True`
-- **Verification**: 
+- **Verification**:
   - Verifies repository paths are retrieved for each repo
   - Verifies normalized paths are displayed
   - Verifies correct verbose message strings from `humble.CFG_LIST_ENTRY_VERBOSE` are used
@@ -50,7 +50,7 @@ Tests the `_list_manifest_repos` method of the ManifestRepos class which display
 - **Test ID**: `verbose_user_cfg_only`
 - **Description**: Display user configuration repositories with verbose details showing paths.
 - **Test Data**: `cfg_repos=[]`, `user_cfg_repos=['user_repo1', 'user_repo2']`, `verbose=True`
-- **Verification**: 
+- **Verification**:
   - Verifies repository paths are retrieved for each repo
   - Verifies normalized paths are displayed
   - Verifies correct verbose message strings from `humble.USER_CFG_LIST_ENTRY_VERBOSE` are used
@@ -59,7 +59,7 @@ Tests the `_list_manifest_repos` method of the ManifestRepos class which display
 - **Test ID**: `verbose_both`
 - **Description**: Display both global and user configuration repositories with verbose details.
 - **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=['user_repo1']`, `verbose=True`
-- **Verification**: 
+- **Verification**:
   - Verifies repository paths are retrieved for all repos
   - Verifies both cfg and user cfg repos are displayed with normalized paths
   - Verifies correct message formats for both cfg and user cfg repos
@@ -74,7 +74,7 @@ Tests the `_list_manifest_repos_json` method of the ManifestRepos class which ge
 - **Test ID**: `cfg_only`
 - **Description**: Generate JSON output containing only global configuration repositories.
 - **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=[]`
-- **Verification**: 
+- **Verification**:
   - Verifies exact JSON string output with `indent=2` formatting
   - Verifies `edkrepo_cfg.manifest_repositories` contains 2 entries with correct names and normalized paths
   - Verifies `edkrepo_user_cfg.manifest_repositories` is empty array
@@ -84,7 +84,7 @@ Tests the `_list_manifest_repos_json` method of the ManifestRepos class which ge
 - **Test ID**: `user_cfg_only`
 - **Description**: Generate JSON output containing only user configuration repositories.
 - **Test Data**: `cfg_repos=[]`, `user_cfg_repos=['user_repo1', 'user_repo2']`
-- **Verification**: 
+- **Verification**:
   - Verifies exact JSON string output with `indent=2` formatting
   - Verifies `edkrepo_cfg.manifest_repositories` is empty array
   - Verifies `edkrepo_user_cfg.manifest_repositories` contains 2 entries with correct names and normalized paths
@@ -94,7 +94,7 @@ Tests the `_list_manifest_repos_json` method of the ManifestRepos class which ge
 - **Test ID**: `both`
 - **Description**: Generate JSON output containing both global and user configuration repositories.
 - **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=['user_repo1']`
-- **Verification**: 
+- **Verification**:
   - Verifies exact JSON string output with `indent=2` formatting
   - Verifies both repository arrays are populated with their respective repositories
   - Verifies all entries have correct names and normalized paths
@@ -104,7 +104,7 @@ Tests the `_list_manifest_repos_json` method of the ManifestRepos class which ge
 - **Test ID**: `empty_lists`
 - **Description**: Generate JSON output when no repositories are configured.
 - **Test Data**: `cfg_repos=[]`, `user_cfg_repos=[]`
-- **Verification**: 
+- **Verification**:
   - Verifies exact JSON string output with `indent=2` formatting
   - Verifies both repository arrays are empty
   - Verifies JSON structure is maintained
@@ -126,7 +126,7 @@ Tests the `_list_manifest_repos_json` method of the ManifestRepos class which ge
    ```bash
    python3 -m pytest test_manifest_repos_command.py
    ```
-   
+
    To run with verbose output:
    ```bash
    python3 -m pytest test_manifest_repos_command.py -v
@@ -143,7 +143,7 @@ Tests the `_list_manifest_repos_json` method of the ManifestRepos class which ge
    ```bash
    # Run only non-verbose cfg tests
    python3 -m pytest test_manifest_repos_command.py::TestListManifestRepos::test_list_manifest_repos[non_verbose_cfg_only]
-   
+
    # Run only JSON output with both repos
    python3 -m pytest test_manifest_repos_command.py::TestListManifestReposJson::test_list_manifest_repos_json[both]
    ```
