@@ -95,10 +95,9 @@ class ManifestCommand(EdkrepoCommand):
                     print(humble.SINGLE_PROJECT.format(project))
                 try:
                     proj_manifest = ManifestXml(find_project_in_single_index(project, ci_index_xml, man_repos[repo][0])[1])
-                    if args.verbose:
-                        self.verbose_project_data(project, proj_manifest, ci_index_xml)
                 except Exception as e:
                     print(humble.BAD_MANIFEST)
+                    proj_manifest = None
                 if args.verbose:
                     self.verbose_project_data(project, proj_manifest, ci_index_xml)
 
@@ -110,12 +109,14 @@ class ManifestCommand(EdkrepoCommand):
                         print(humble.ARCHIVED_PROJECT.format(project))
                     try:
                         proj_manifest = ManifestXml(find_project_in_single_index(project, ci_index_xml, man_repos[repo][0])[1])
-                        if args.verbose:
-                            self.verbose_project_data(project, proj_manifest, ci_index_xml)
                     except Exception as e:
                         print(humble.BAD_MANIFEST)
-    
+                        proj_manifest = None
+                    if args.verbose:
+                        self.verbose_project_data(project, proj_manifest, ci_index_xml)
+
     def verbose_project_data(self, project, proj_manifest, ci_index_xml):
         print(humble.MANIFEST_FILE_PATH.format(ci_index_xml.get_project_xml(project)))
-        print(humble.DEV_LEAD.format(' '.join(x for x in proj_manifest.project_info.dev_leads)))
-        print(humble.COMBOS.format(' '.join(x.name for x in proj_manifest.combinations)))
+        if proj_manifest:
+            print(humble.DEV_LEAD.format(' '.join(x for x in proj_manifest.project_info.dev_leads)))
+            print(humble.COMBOS.format(' '.join(x.name for x in proj_manifest.combinations)))
