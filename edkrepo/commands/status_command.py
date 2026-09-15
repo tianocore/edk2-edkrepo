@@ -3,28 +3,29 @@
 ## @file
 # status_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import os
 
+from colorama import Fore, Style
 from git import Repo
-from colorama import Fore
-from colorama import Style
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.status_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.humble.status_humble as humble
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
+
 
 class StatusCommand(EdkrepoCommand):
-
     def __init__(self):
+        """Initialize the status command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'status'
         metadata['help-text'] = arguments.STATUS_COMMAND_DESCRIPTION
@@ -32,6 +33,7 @@ class StatusCommand(EdkrepoCommand):
         metadata['arguments'] = args
         return metadata
     def run_command(self, args, config):
+        """Print the git status of every repo source in the current combo."""
         workspace_path = get_workspace_path()
         initial_manifest = get_workspace_manifest()
         ui_functions.display_current_project(initial_manifest, verbose=args.verbose)

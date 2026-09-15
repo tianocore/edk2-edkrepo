@@ -3,7 +3,7 @@
 ## @file
 # manifest_repos_command.py
 #
-# Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2020 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,23 +12,22 @@ import json
 import os
 import sys
 
-import edkrepo.commands.edkrepo_command as edkrepo_command
 import edkrepo.commands.arguments.manifest_repo_args as arguments
-import edkrepo.commands.humble.manifest_repos_humble as humble
+import edkrepo.commands.edkrepo_command as edkrepo_command
 import edkrepo.commands.humble.common_humble as common_humble
+import edkrepo.commands.humble.manifest_repos_humble as humble
 import edkrepo.common.edkrepo_exception as edkrepo_exception
-import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manifest_repos_maintenance
 import edkrepo.common.ui_functions as ui_functions
-
-
-
+import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manifest_repos_maintenance
 
 
 class ManifestRepos(edkrepo_command.EdkrepoCommand):
     def __init__(self):
+        """Initialize the manifest-repos command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'manifest-repos'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -77,6 +76,7 @@ class ManifestRepos(edkrepo_command.EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """List, add, or remove a manifest repository in the user configuration."""
         cfg_repos, user_cfg_repos, _ = manifest_repos_maintenance.list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
 
         if args.action == 'list':
@@ -148,6 +148,7 @@ class ManifestRepos(edkrepo_command.EdkrepoCommand):
                 user_cfg_file.write(cfg_stream)
 
     def _list_manifest_repos(self, cfg_repos, user_cfg_repos, config, verbose):
+        """Print each manifest repo with its path in verbose mode."""
         for repo in cfg_repos:
             if verbose:
                 ui_functions.print_info_msg(humble.CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(manifest_repos_maintenance.get_manifest_repo_path(repo, config))), header = False)

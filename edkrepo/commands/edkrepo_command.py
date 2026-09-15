@@ -3,7 +3,7 @@
 ## @file
 # edkrepo_command.py
 #
-# Copyright (c) 2017- 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,10 +12,13 @@ import edkrepo.commands.arguments.edkrepo_cmd_args as arguments
 
 class EdkrepoCommand(object):
     def __init__(self):
+        """Initialize the base edkrepo command."""
         pass
     def get_metadata(self):
+        """Return the command metadata; subclasses must override this method."""
         raise NotImplementedError()
     def run_command(self, args, config):
+        """Execute the command; subclasses must override this method."""
         raise NotImplementedError()
 
 

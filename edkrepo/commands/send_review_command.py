@@ -7,22 +7,22 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import os
 from datetime import datetime
+from enum import Enum
 import itertools
 import json
+import os
 import re
 import subprocess
 import webbrowser
-from enum import Enum
 
-from git import Repo
 from colorama import Fore
+from git import Repo
 from git.exc import GitCommandError
 
+import edkrepo.commands.arguments.send_review_args as arguments
 from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument
 import edkrepo.commands.humble.send_review_humble as humble
-import edkrepo.commands.arguments.send_review_args as arguments
 import edkrepo.common.common_repo_functions as common_repo_functions
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.ui_functions as ui_functions
@@ -31,9 +31,11 @@ import edkrepo.config.config_factory as config_factory
 
 class SendReviewCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the send-review command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'send-review'
         metadata['help-text'] = arguments.SEND_REVIEW_COMMAND_DESCRIPTION
@@ -74,6 +76,7 @@ class SendReviewCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Send a code review for the current workspace branch."""
         workspace_path = config_factory.get_workspace_path()
         manifest = config_factory.get_workspace_manifest()
         # Note: the repo object is accessed via ModifiedRepo.git
@@ -158,6 +161,7 @@ class SendReviewCommand(EdkrepoCommand):
             self.__send_github_pr_branch_mode(args, config, local_name, target_branch, repo, manifest, netrc_path)
 
     def __print_dry_run_header(self, repo, touched_files, target_url):
+        """Print the dry-run review header showing what would be sent."""
         print()
         review_header_create = (humble.CREATING_REVIEW_DRY_RUN.format(local_branch=repo.git.active_branch,
                                                                       local_repo=repo.git.git_dir,
@@ -188,9 +192,9 @@ class SendReviewCommand(EdkrepoCommand):
             amend_existing = True
             pr_branch_name = str(current_branch)
         except edkrepo_exception.EdkrepoGithubApiFailException as e:
-            # GitHub API failed or returned no data 
+            # GitHub API failed or returned no data
             ui_functions.print_error_msg(str(e), header=True)
-            
+
             # Use local branch name to infer whether to update existing PR or create new one
             if str(current_branch).startswith('pull_request'):
                 ui_functions.print_info_msg(humble.LOCAL_BRANCH_UPDATE_EXISTING_PR, header=False)
@@ -213,12 +217,12 @@ class SendReviewCommand(EdkrepoCommand):
                 else:
                     title_string = ' '.join(args.title)
 
-                pr_branch_name = self.__create_pr_branch(config, modified_repo.git, title_string)
+                pr_branch_name = self._create_pr_branch(config, modified_repo.git, title_string)
 
                 # Only check out the PR branch if we are not in dry-run mode
                 if not args.dry_run:
-                    modified_repo.git.heads[pr_branch_name].checkout()        
-        
+                    modified_repo.git.heads[pr_branch_name].checkout()
+
         pr_branch_str = '{}:{}'.format(pr_branch_name, pr_branch_name)
 
         if not amend_existing:
@@ -292,7 +296,7 @@ class SendReviewCommand(EdkrepoCommand):
                         if 'number' in results.keys():
                             pr_number = results['number']
                             # Add reviewers
-                            
+
                             ui_functions.print_info_msg(humble.ADD_REVIEWERS, header=False)
                             if pr_number and args.reviewers:
                                 self.__github_add_reviewers(args, pr_patch_url, netrc_path, curl_path, proxy_str)
@@ -376,6 +380,7 @@ class SendReviewCommand(EdkrepoCommand):
                     webbrowser.open(active_prs[pr])
 
     def __github_add_reviewers(self, args, pr_patch_url, netrc_path, curl_path, proxy_str=None):
+        """Add the requested reviewers to the GitHub pull request via the API."""
         reviewers = args.reviewers[0].split(' ')
         pr_url = '{}/requested_reviewers'.format(pr_patch_url)
         for reviewer in reviewers:
@@ -396,9 +401,7 @@ class SendReviewCommand(EdkrepoCommand):
                 if 'status' in results.keys() and results['status'] == '422':
                     ui_functions.print_info_msg(humble.INVALID_REVIEWER.format(reviewer, remote.name), header=False)
 
-
-
-    def __create_pr_branch(self, config, repo, title):
+    def _create_pr_branch(self, config, repo, title):
         """
         Creates a PR branch using the following steps:
         1. Normalize the 'Title' parameter by lower casing and replacing whitespace with '_'
@@ -423,8 +426,8 @@ class SendReviewCommand(EdkrepoCommand):
         pr_branch = repo.create_head(pr_branch_name)
         return pr_branch.name
 
-
     def __get_active_prs_on_branch(self, args, current_branch, modified_repo, manifest, netrc_path):
+        """Return a dict of active PR numbers to URLs for the current branch via the GitHub API."""
         remote = manifest.get_remote(modified_repo.manifest.remote_name)
         curl_path = common_repo_functions.find_curl()
         if not curl_path:
@@ -447,15 +450,15 @@ class SendReviewCommand(EdkrepoCommand):
                 results = json.loads(stdout)
             except (json.JSONDecodeError, ValueError) as e:
                 raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_RESPONSE_PARSE_ERROR.format(e))
-            
+
             # Handle case where API returns an error object instead of an array
             if isinstance(results, dict) and 'message' in results:
                 raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_UNEXPECTED_RESPONSE)
-            
+
             # Handle case where results is not iterable or is empty
             if not isinstance(results, list):
                 raise edkrepo_exception.EdkrepoGithubApiFailException(humble.GITHUB_UNEXPECTED_RESPONSE)
-                
+
             pr_count = len(results)
             if pr_count >= 1:
                 try:
@@ -475,6 +478,7 @@ class SendReviewCommand(EdkrepoCommand):
             raise edkrepo_exception.EdkrepoGithubApiFailException(humble.CURRENT_BRANCH_NOT_FOUND.format(current_branch))
 
     def __get_review_type(self, manifest, repo):
+        """Return the review type (PR_BRANCH or PR_FORK) for the target remote."""
         remote_review_dest = manifest.get_remote(repo.manifest.remote_name)
         review_type = remote_review_dest.review_type
         if review_type and review_type.lower() == 'pull request':
@@ -485,8 +489,8 @@ class SendReviewCommand(EdkrepoCommand):
             else:
                 raise edkrepo_exception.EdkrepoInvalidParametersException(humble.SEND_REVIEW_INVALID_PR_STRATEGY.format(remote_review_dest.pr_strategy))
 
-
 def get_changed_file_list (diff):
+    """Return the set of file paths changed in the given diff."""
     files = set()
     files.update([x.a_path for x in diff])
     files.update([x.b_path for x in diff])
@@ -499,6 +503,7 @@ class ModifiedRepo():
     self.manifest is the repo source tuple affiliated with the Repo object
     """
     def __init__(self, manifest, workspace_path, repo_reference=None):
+        """Initialize by finding the repo with commits ahead of its target branch, or matching a named repo."""
         if repo_reference:
             for manifest_repo in manifest.get_repo_sources(manifest.general_config.current_combo):
                 repo_path = os.path.join(workspace_path, manifest_repo.root)

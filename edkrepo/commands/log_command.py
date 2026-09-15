@@ -3,28 +3,31 @@
 ## @file
 # log_command.py
 #
-# Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+from datetime import datetime
 import os
 import subprocess
 import sys
-from datetime import datetime
 
 from colorama import Fore
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.log_args as arguments
-from edkrepo.common.common_repo_functions import sort_commits, find_less
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.common_repo_functions import find_less, sort_commits
 import edkrepo.common.ui_functions as ui_functions
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
+
 
 class LogCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the log command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'log'
         metadata['help-text'] = arguments.LOG_COMMAND_DESCRIPTION
@@ -44,6 +47,7 @@ class LogCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Print the cross-repo commit log for the workspace."""
         if args.number:
             try:
                 args.number = int(args.number)
@@ -105,4 +109,3 @@ class LogCommand(EdkrepoCommand):
         if less_path:
             less_output = subprocess.Popen([str(less_path), '-F', '-R', '-S', '-X', '-K'], stdin=subprocess.PIPE, stdout=sys.stdout, universal_newlines=True)
             less_output.communicate(input=output_string)
-

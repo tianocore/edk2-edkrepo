@@ -3,20 +3,22 @@
 ## @file
 # update_manifest_repo_command.py
 #
-# Copyright (c) 2017 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import DryRunArgument
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
 import edkrepo.commands.arguments.update_manifest_repo as arguments
+from edkrepo.commands.edkrepo_command import DryRunArgument, EdkrepoCommand
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
+
 
 class UpdateManifestRepoCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the update-manifest-repo command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'update-manifest-repo'
         metadata['help-text'] = arguments.UPDATE_MANIFEST_REPO_COMMAND_DESCRIPTION
@@ -31,4 +33,5 @@ class UpdateManifestRepoCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Pull the latest changes for all manifest repos."""
         pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], reset_hard=args.hard)

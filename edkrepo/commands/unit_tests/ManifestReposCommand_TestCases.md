@@ -1,114 +1,72 @@
-# Test Cases for `manifest_repos_command` Module
-
-## Test Structure
-
-Both test classes (`TestListManifestRepos` and `TestListManifestReposJson`) use pytest parameterization to consolidate multiple test scenarios into single test methods. Each parameterized test executes multiple test cases with different inputs, making the tests more maintainable and reducing code duplication.
+# Test Cases for `ManifestRepos` Class
 
 ## Test Cases
 
-### TestListManifestRepos
-Tests the `_list_manifest_repos` method of the ManifestRepos class which displays manifest repository information in text format, with optional verbose output showing repository paths.
+### TestRunCommand
+Tests `ManifestRepos.run_command` which lists, adds, and removes manifest repositories and validates the associated arguments.
 
-**Implementation**: Single parameterized test method (`test_list_manifest_repos`) with 6 test scenarios.
+#### 1. List Action Calls List Available Manifest Repos
+- **Test Name**: `test_run_command_list_action_calls_list_available_manifest_repos`
+- **Description**: When the list action runs.
+- **Expected Outcome**: `list_available_manifest_repos` is called with `cfg_file` and `user_cfg_file` from config.
 
-#### 1. Non-Verbose Output with CFG Repos Only
-- **Test ID**: `non_verbose_cfg_only`
-- **Description**: Display only global configuration repositories without verbose details.
-- **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=[]`, `verbose=False`
-- **Verification**: 
-  - Verifies `print_info_msg` is called with correct message format for each cfg repo
-  - Verifies repository paths are NOT retrieved (performance optimization)
-  - Verifies correct message strings from `humble.CFG_LIST_ENTRY` are used
+#### 2. List Action Text Format Calls List Manifest Repos
+- **Test Name**: `test_run_command_list_action_text_format_calls_list_manifest_repos`
+- **Description**: When the list action runs with no explicit format.
+- **Expected Outcome**: It routes to `_list_manifest_repos` for text output.
 
-#### 2. Non-Verbose Output with User CFG Repos Only
-- **Test ID**: `non_verbose_user_cfg_only`
-- **Description**: Display only user configuration repositories without verbose details.
-- **Test Data**: `cfg_repos=[]`, `user_cfg_repos=['user_repo1', 'user_repo2']`, `verbose=False`
-- **Verification**: 
-  - Verifies `print_info_msg` is called with correct message format for each user cfg repo
-  - Verifies repository paths are NOT retrieved
-  - Verifies correct message strings from `humble.USER_CFG_LIST_ENTRY` are used
+#### 3. List Action Invalid Format Raises Exception
+- **Test Name**: `test_run_command_list_action_invalid_format_raises_exception`
+- **Description**: When the list action runs with an unrecognised format type.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
 
-#### 3. Empty Repository Lists
-- **Test ID**: `empty_lists`
-- **Description**: Handle the case where no repositories are configured.
-- **Test Data**: `cfg_repos=[]`, `user_cfg_repos=[]`, `verbose=False`
-- **Verification**: 
-  - Verifies no calls to `print_info_msg`
-  - Verifies no calls to path retrieval functions
+#### 4. Remove Nonexistent Repo Raises Exception
+- **Test Name**: `test_run_command_remove_nonexistent_repo_raises_exception`
+- **Description**: When removing a repo absent from the user cfg `manifest_repo_list`.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
 
-#### 4. Verbose Output with CFG Repos Only
-- **Test ID**: `verbose_cfg_only`
-- **Description**: Display global configuration repositories with verbose details showing paths.
-- **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=[]`, `verbose=True`
-- **Verification**: 
-  - Verifies repository paths are retrieved for each repo
-  - Verifies normalized paths are displayed
-  - Verifies correct verbose message strings from `humble.CFG_LIST_ENTRY_VERBOSE` are used
+#### 5. Action Without Name Raises Exception (Add)
+- **Test Name**: `test_run_command_action_without_name_raises_exception[add]`
+- **Description**: When the add action runs without a name argument.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
 
-#### 5. Verbose Output with User CFG Repos Only
-- **Test ID**: `verbose_user_cfg_only`
-- **Description**: Display user configuration repositories with verbose details showing paths.
-- **Test Data**: `cfg_repos=[]`, `user_cfg_repos=['user_repo1', 'user_repo2']`, `verbose=True`
-- **Verification**: 
-  - Verifies repository paths are retrieved for each repo
-  - Verifies normalized paths are displayed
-  - Verifies correct verbose message strings from `humble.USER_CFG_LIST_ENTRY_VERBOSE` are used
+#### 6. Action Without Name Raises Exception (Remove)
+- **Test Name**: `test_run_command_action_without_name_raises_exception[remove]`
+- **Description**: When the remove action runs without a name argument.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
 
-#### 6. Verbose Output with Both CFG and User CFG Repos
-- **Test ID**: `verbose_both`
-- **Description**: Display both global and user configuration repositories with verbose details.
-- **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=['user_repo1']`, `verbose=True`
-- **Verification**: 
-  - Verifies repository paths are retrieved for all repos
-  - Verifies both cfg and user cfg repos are displayed with normalized paths
-  - Verifies correct message formats for both cfg and user cfg repos
+#### 7. Raises For Conflict With Existing Repos (Remove Cfg Repo)
+- **Test Name**: `test_run_command_raises_for_conflict_with_existing_repos[remove_cfg_repo]`
+- **Description**: When removing a cfg-defined repo.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
 
+#### 8. Raises For Conflict With Existing Repos (Add Existing Repo)
+- **Test Name**: `test_run_command_raises_for_conflict_with_existing_repos[add_existing_repo]`
+- **Description**: When adding a repo that already exists.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
+
+#### 9. Add Without Required Fields Raises Exception (Missing Branch)
+- **Test Name**: `test_run_command_add_without_required_fields_raises_exception[missing_branch]`
+- **Description**: When the add action is missing the branch field.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
+
+#### 10. Add Without Required Fields Raises Exception (Missing Url)
+- **Test Name**: `test_run_command_add_without_required_fields_raises_exception[missing_url]`
+- **Description**: When the add action is missing the url field.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
+
+#### 11. Add Without Required Fields Raises Exception (Missing Path)
+- **Test Name**: `test_run_command_add_without_required_fields_raises_exception[missing_path]`
+- **Description**: When the add action is missing the path field.
+- **Expected Outcome**: `EdkrepoInvalidParametersException` is raised.
 
 ### TestListManifestReposJson
-Tests the `_list_manifest_repos_json` method of the ManifestRepos class which generates JSON-formatted output of manifest repository information.
+Tests `ManifestRepos._list_manifest_repos_json`, which builds the JSON representation of the configured manifest repositories.
 
-**Implementation**: Single parameterized test method (`test_list_manifest_repos_json`) with 4 test scenarios.
-
-#### 1. JSON Output with CFG Repos Only
-- **Test ID**: `cfg_only`
-- **Description**: Generate JSON output containing only global configuration repositories.
-- **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=[]`
-- **Verification**: 
-  - Verifies exact JSON string output with `indent=2` formatting
-  - Verifies `edkrepo_cfg.manifest_repositories` contains 2 entries with correct names and normalized paths
-  - Verifies `edkrepo_user_cfg.manifest_repositories` is empty array
-  - Verifies output is valid JSON and matches expected structure
-
-#### 2. JSON Output with User CFG Repos Only
-- **Test ID**: `user_cfg_only`
-- **Description**: Generate JSON output containing only user configuration repositories.
-- **Test Data**: `cfg_repos=[]`, `user_cfg_repos=['user_repo1', 'user_repo2']`
-- **Verification**: 
-  - Verifies exact JSON string output with `indent=2` formatting
-  - Verifies `edkrepo_cfg.manifest_repositories` is empty array
-  - Verifies `edkrepo_user_cfg.manifest_repositories` contains 2 entries with correct names and normalized paths
-  - Verifies output is valid JSON and matches expected structure
-
-#### 3. JSON Output with Both CFG and User CFG Repos
-- **Test ID**: `both`
-- **Description**: Generate JSON output containing both global and user configuration repositories.
-- **Test Data**: `cfg_repos=['repo1', 'repo2']`, `user_cfg_repos=['user_repo1']`
-- **Verification**: 
-  - Verifies exact JSON string output with `indent=2` formatting
-  - Verifies both repository arrays are populated with their respective repositories
-  - Verifies all entries have correct names and normalized paths
-  - Verifies output is valid JSON and matches expected structure
-
-#### 4. JSON Output with Empty Repository Lists
-- **Test ID**: `empty_lists`
-- **Description**: Generate JSON output when no repositories are configured.
-- **Test Data**: `cfg_repos=[]`, `user_cfg_repos=[]`
-- **Verification**: 
-  - Verifies exact JSON string output with `indent=2` formatting
-  - Verifies both repository arrays are empty
-  - Verifies JSON structure is maintained
-  - Verifies output is valid JSON
+#### 1. List Manifest Repos Json Builds Structure With Names And Paths
+- **Test Name**: `test_list_manifest_repos_json_builds_structure_with_names_and_paths`
+- **Description**: When `_list_manifest_repos_json` builds JSON output for cfg and user-cfg repos.
+- **Expected Outcome**: The returned JSON groups repos under `edkrepo_cfg` and `edkrepo_user_cfg`, each entry carrying its `name` and normalized `path`.
 
 
 ## Running the Tests
@@ -116,40 +74,11 @@ Tests the `_list_manifest_repos_json` method of the ManifestRepos class which ge
 1. **Required Dependencies**:
    Ensure that the following third-party Python libraries are installed:
    - `pytest`
-   - `edkrepo_manifest_parser`
-   - `colorama`
-   - `GitPython`
    - To generate HTML report output, `pytest-html` must be installed.
 
-2. **Run All Tests**:
+2. **Run the Tests**:
    From the `edkrepo\commands\unit_tests\` directory, run:
    ```bash
-   python3 -m pytest test_manifest_repos_command.py
+   python3 -m pytest
    ```
-   
-   To run with verbose output:
-   ```bash
-   python3 -m pytest test_manifest_repos_command.py -v
-   ```
-
-3. **Run Specific Test Classes**:
-   ```bash
-   python3 -m pytest test_manifest_repos_command.py::TestListManifestRepos
-   python3 -m pytest test_manifest_repos_command.py::TestListManifestReposJson
-   ```
-
-4. **Run Specific Parameterized Test Cases**:
-   You can run individual parameterized scenarios using their test IDs:
-   ```bash
-   # Run only non-verbose cfg tests
-   python3 -m pytest test_manifest_repos_command.py::TestListManifestRepos::test_list_manifest_repos[non_verbose_cfg_only]
-   
-   # Run only JSON output with both repos
-   python3 -m pytest test_manifest_repos_command.py::TestListManifestReposJson::test_list_manifest_repos_json[both]
-   ```
-
-5. **Additional pytest Options**:
-   - Show all test IDs: `pytest --collect-only test_manifest_repos_command.py`
-   - Run tests matching a pattern: `pytest -k "verbose" test_manifest_repos_command.py`
-   - See the official `pytest` documentation at: https://docs.pytest.org/en/latest/how-to/usage.html for more options.
-
+   See the official `pytest` documentation at: https://docs.pytest.org/en/latest/how-to/usage.html for additional command line options.
