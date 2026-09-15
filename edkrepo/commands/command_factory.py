@@ -3,20 +3,21 @@
 ## @file
 # command_factory.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import importlib
 import inspect
 import os
-import sys
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.commands.composite_command import CompositeCommand
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 from edkrepo.config.config_factory import GlobalConfig
 
+
 def _is_command(CommandClass):
+    """Return True if the given class implements the edkrepo command interface."""
     if CommandClass == EdkrepoCommand:
         return False
     if CommandClass in EdkrepoCommand.__subclasses__():
@@ -46,6 +47,7 @@ def _is_command(CommandClass):
         return False
 
 def get_commands():
+    """Discover and return the list of command classes across configured command packages."""
     cfg_file = GlobalConfig()
     cmd_pkg_list = cfg_file.command_packages_list
     pref_cmd_pkg = cfg_file.pref_pkg
@@ -83,6 +85,7 @@ def get_commands():
     return final_cmd_list
 
 def create_composite_command():
+    """Build and return a CompositeCommand populated with an instance of every discovered command."""
     commands = get_commands()
     command = CompositeCommand()
     for cmd in commands:

@@ -11,20 +11,21 @@ import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument
 import edkrepo.commands.arguments.create_pin_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.humble as humble
-from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 import edkrepo.common.ui_functions as ui_functions
-
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 
 
 class CreatePinCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the create-pin command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, alias, and argument definitions."""
         metadata = {}
         metadata['name'] = 'create-pin'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -45,6 +46,7 @@ class CreatePinCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Create a pin file capturing the current HEAD state of every repo in the active combo."""
 
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
@@ -70,6 +72,7 @@ class CreatePinCommand(EdkrepoCommand):
                                   filename=pin_file_name)
 
     def _generate_pin_data(self, args, manifest, workspace_path):
+        """Return the repo sources for the current combo with their pinned commit SHAs."""
         repo_sources = manifest.get_repo_sources(manifest.general_config.current_combo)
         ui_functions.print_info_msg(humble.GENERATING_PIN_DATA.format(manifest.project_info.codename, manifest.general_config.current_combo), header = False)
         updated_repo_sources = []

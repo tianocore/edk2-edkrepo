@@ -9,53 +9,40 @@
 
 import itertools
 import os
+import re
 import shutil
 import sys
 import time
-import re
 
 import git
 from git import Repo
 from git.exc import GitCommandError
 
-# Our modules
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.commands.edkrepo_command import SubmoduleSkipArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.sync_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument, SubmoduleSkipArgument
 import edkrepo.commands.humble.sync_humble as humble
-from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoManifestNotFoundException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestChangedException
-from edkrepo.common.humble import SPARSE_RESET, SPARSE_CHECKOUT, INCLUDED_FILE_NAME
-from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
-from edkrepo.common.pathfix import get_actual_path, expanduser
-from edkrepo.common.common_repo_functions import clone_repos, create_repos, patchset_branch_creation_flow, patchset_operations_similarity, sparse_checkout_enabled
-from edkrepo.common.common_repo_functions import reset_sparse_checkout, sparse_checkout, verify_single_manifest
-from edkrepo.common.common_repo_functions import checkout_repos, check_dirty_repos
-from edkrepo.common.common_repo_functions import update_editor_config
-from edkrepo.common.common_repo_functions import update_repo_commit_template, get_latest_sha
-from edkrepo.common.common_repo_functions import update_hooks, combinations_in_manifest
-from edkrepo.common.common_repo_functions import write_included_config, remove_included_config
-from edkrepo.common.common_repo_functions import find_git_version, fetch_from_remote
+from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, clone_repos, combinations_in_manifest, create_repos, fetch_from_remote, find_git_version, get_latest_sha, patchset_branch_creation_flow, patchset_operations_similarity, remove_included_config, reset_sparse_checkout, sparse_checkout, sparse_checkout_enabled, update_editor_config, update_hooks, update_repo_commit_template, verify_single_manifest, write_included_config
+from edkrepo.common.edkrepo_exception import EdkrepoException, EdkrepoManifestChangedException, EdkrepoManifestNotFoundException
 from edkrepo.common.git_version import GitVersion
+from edkrepo.common.humble import INCLUDED_FILE_NAME, SPARSE_CHECKOUT, SPARSE_RESET
+from edkrepo.common.pathfix import expanduser, get_actual_path
+import edkrepo.common.ui_functions as ui_functions
 from edkrepo.common.workspace_maintenance.git_config_maintenance import clean_git_globalconfig
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import SOURCE_MANIFEST_REPO_NOT_FOUND
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path, list_available_manifest_repos, pull_all_manifest_repos, pull_workspace_manifest_repo
 from edkrepo.common.workspace_maintenance.workspace_maintenance import generate_name_for_obsolete_backup
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos, get_manifest_repo_path
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
-from edkrepo.config.config_factory import get_workspace_manifest_file
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_manifest_file, get_workspace_path
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 from project_utils.submodule import deinit_submodules, maintain_submodules
-import edkrepo.common.ui_functions as ui_functions
 
 
 class SyncCommand(EdkrepoCommand):
-
     def __init__(self):
+        """Initialize the sync command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'sync'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -79,6 +66,7 @@ class SyncCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Sync the workspace with the upstream manifest and repos."""
         workspace_path = get_workspace_path()
         initial_manifest = get_workspace_manifest()
         current_combo = initial_manifest.general_config.current_combo
@@ -233,6 +221,7 @@ class SyncCommand(EdkrepoCommand):
             sparse_checkout(workspace_path, repo_sources_to_sync, manifest)
 
     def __update_local_manifest(self, args, config, initial_manifest, workspace_path, global_manifest_directory):
+        """Update the local manifest to the latest version from the manifest repo."""
         #if the manifest repository for the current manifest was not found then there is no project with the manifest
         #specified project name in the index file for any of the manifest repositories
         if global_manifest_directory is None:
@@ -407,6 +396,7 @@ class SyncCommand(EdkrepoCommand):
             pass
 
     def __check_combo_patchset_sha_tag_branch(self, workspace_path, initial_sources, new_sources, initial_manifest, new_manifest_to_check):
+        """Return lists of repos to checkout and repos to create based on changes between the two manifests."""
         # Checks for changes in the defined SHAs, Tags or branches in the checked out combo. Returns
         # a list of repos to checkout. Checks to see if user is on appropriate SHA, tag or branch and
         # throws and exception if not.
@@ -447,6 +437,7 @@ class SyncCommand(EdkrepoCommand):
         return repos_to_checkout, repos_to_create
 
     def __check_for_new_manifest(self, args, config, initial_manifest, workspace_path, global_manifest_directory):
+        """Warn the user if the global manifest differs from the local manifest."""
         #if the manifest repository for the current manifest was not found then there is no project with the manifest
         #specified project name in the index file for any of the manifest repositories
         if global_manifest_directory is None:
@@ -472,6 +463,7 @@ class SyncCommand(EdkrepoCommand):
             ui_functions.print_info_msg(humble.SYNC_MANIFEST_UPDATE, header = False)
 
     def __check_submodule_config(self, workspace_path, manifest, repo_sources):
+        """Ensure the global git config includes submodule alternate-remote config files for all repos."""
         gitconfigpath = os.path.normpath(expanduser("~/.gitconfig"))
         gitglobalconfig = git.GitConfigParser(gitconfigpath, read_only=False)
         try:
@@ -535,4 +527,3 @@ class SyncCommand(EdkrepoCommand):
                 write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
         finally:
             gitglobalconfig.release()
-

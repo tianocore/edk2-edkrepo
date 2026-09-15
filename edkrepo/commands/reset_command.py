@@ -1,37 +1,29 @@
-#! python3
-#
-# This file contains 'Framework Code' and is licensed as such
-# under the terms of your license agreement with Intel or your
-# vendor. This file may not be modified, except as allowed by
-# additional terms of your license agreement.
+#!/usr/bin/env python3
 #
 ## @file
 # reset_command.py
 #
-# Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.
-# This software and associated documentation (if any) is furnished
-# under a license and may only be used or copied in accordance
-# with the terms of the license. Except as permitted by such
-# license, no part of this software or documentation may be
-# reproduced, stored in a retrieval system, or transmitted in any
-# form or by any means without the express written consent of
-# Intel Corporation.
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.reset_args as arguments
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
+
 
 class ResetCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the reset command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'reset'
         metadata['help-text'] = arguments.RESET_COMMAND_DESCRIPTION
@@ -44,6 +36,7 @@ class ResetCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Reset every repo source in the current combo, optionally performing a hard reset."""
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
         manifest_config = manifest.general_config
