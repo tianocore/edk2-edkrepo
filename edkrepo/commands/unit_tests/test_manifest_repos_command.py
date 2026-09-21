@@ -7,152 +7,152 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import sys
-import os
+import importlib
 import json
-from unittest.mock import MagicMock, patch, call
+import os
+from unittest.mock import MagicMock, patch
+
 import pytest
 
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from edkrepo.commands.manifest_repos_command import ManifestRepos
 from edkrepo.commands.humble import manifest_repos_humble as humble
+from edkrepo.commands.unit_test_bases import base_tests as bt
+from edkrepo.common import edkrepo_exception
 
 
-# Shared fixtures for all test classes
-@pytest.fixture
-def manifest_repos_cmd():
-    """Provide a ManifestRepos instance for testing"""
-    return ManifestRepos()
+MODULE_MANIFEST_REPOS_COMMAND = 'edkrepo.commands.manifest_repos_command'
+
+FAKE_REPO_NAME = 'fake_repo'
+ACTION_ADD = 'add'
+ACTION_REMOVE = 'remove'
 
 
-@pytest.fixture
-def mock_config():
-    """Provide a mock config for testing"""
-    return {'cfg_file': MagicMock(), 'user_cfg_file': MagicMock()}
+class TestManifestReposCommand(bt.BaseCommandTest):
 
+    command_module = MODULE_MANIFEST_REPOS_COMMAND
 
-class TestListManifestRepos:
-    """Unit tests for the ManifestRepos._list_manifest_repos method"""
+    @pytest.fixture
+    def manifest_repos_cmd(self):
+        """Return a fresh ManifestRepos instance for each test."""
+        command_mod = importlib.import_module(MODULE_MANIFEST_REPOS_COMMAND)
+        return command_mod.ManifestRepos()
 
-    @pytest.mark.parametrize("cfg_repos,user_cfg_repos,verbose,mock_paths", [
-        # Non-verbose tests
-        (['repo1', 'repo2'], [], False, []),
-        ([], ['user_repo1', 'user_repo2'], False, []),
-        ([], [], False, []),
-        # Verbose tests
-        (['repo1', 'repo2'], [], True, ['/path/to/repo1', '/path/to/repo2']),
-        ([], ['user_repo1', 'user_repo2'], True, ['/path/to/user_repo1', '/path/to/user_repo2']),
-        (['repo1', 'repo2'], ['user_repo1'], True, ['/path/to/repo1', '/path/to/repo2', '/path/to/user_repo1']),
-    ], ids=[
-        "non_verbose_cfg_only",
-        "non_verbose_user_cfg_only",
-        "empty_lists",
-        "verbose_cfg_only",
-        "verbose_user_cfg_only",
-        "verbose_both",
+    @pytest.fixture
+    def mock_args(self):
+        """Return a mock args namespace with list action and safe defaults."""
+        args = MagicMock()
+        args.action = 'list'
+        args.format = None
+        args.verbose = False
+        args.name = None
+        args.branch = None
+        args.url = None
+        args.path = None
+        return args
+
+    @pytest.fixture(autouse=True)
+    def mock_list_available_manifest_repos(self):
+        """Patch list_available_manifest_repos returning empty lists; always active."""
+        with patch(
+            '{}.manifest_repos_maintenance.list_available_manifest_repos'.format(
+                MODULE_MANIFEST_REPOS_COMMAND
+            ),
+            return_value=([], [], []),
+        ) as mock:
+            yield mock
+
+    @pytest.fixture
+    def mock_list_manifest_repos(self):
+        """Patch ManifestRepos._list_manifest_repos on the class; yields the mock."""
+        command_mod = importlib.import_module(MODULE_MANIFEST_REPOS_COMMAND)
+        with patch.object(command_mod.ManifestRepos, '_list_manifest_repos') as mock:
+            yield mock
+
+    def test_run_command_list_action_calls_list_available_manifest_repos(self, manifest_repos_cmd, mock_args, mock_config, mock_list_available_manifest_repos):
+        """list_available_manifest_repos must be called with cfg_file and user_cfg_file from config."""
+        manifest_repos_cmd.run_command(mock_args, mock_config)
+
+        mock_list_available_manifest_repos.assert_called_once_with(
+            mock_config['cfg_file'], mock_config['user_cfg_file']
+        )
+
+    def test_run_command_list_action_text_format_calls_list_manifest_repos(self, manifest_repos_cmd, mock_args, mock_config, mock_list_manifest_repos):
+        """list action with no explicit format must route to _list_manifest_repos for text output."""
+        manifest_repos_cmd.run_command(mock_args, mock_config)
+
+        mock_list_manifest_repos.assert_called_once()
+
+    def test_run_command_list_action_invalid_format_raises_exception(self, manifest_repos_cmd, mock_args, mock_config):
+        """list action with an unrecognised format type must raise EdkrepoInvalidParametersException."""
+        mock_args.format = ['badformat']
+
+        with pytest.raises(edkrepo_exception.EdkrepoInvalidParametersException):
+            manifest_repos_cmd.run_command(mock_args, mock_config)
+
+    def test_run_command_remove_nonexistent_repo_raises_exception(self, manifest_repos_cmd, mock_args, mock_config):
+        """remove of a repo absent from the user cfg manifest_repo_list must raise EdkrepoInvalidParametersException."""
+        mock_args.action = ACTION_REMOVE
+        mock_args.name = FAKE_REPO_NAME
+        mock_config['user_cfg_file'].manifest_repo_list = []
+
+        with pytest.raises(edkrepo_exception.EdkrepoInvalidParametersException) as exc_info:
+            manifest_repos_cmd.run_command(mock_args, mock_config)
+
+        assert str(exc_info.value) == humble.REMOVE_NOT_EXIST
+
+    def test_list_manifest_repos_json_builds_structure_with_names_and_paths(self, manifest_repos_cmd, mock_config):
+        """_list_manifest_repos_json must return JSON grouping cfg and user-cfg repos, each with its name and normalized path."""
+        with patch('{}.manifest_repos_maintenance.get_manifest_repo_path'.format(MODULE_MANIFEST_REPOS_COMMAND),
+                   side_effect=lambda repo, config: '/root/{}'.format(repo)):
+            result = manifest_repos_cmd._list_manifest_repos_json(['cfg_repo'], ['user_repo'], mock_config)
+
+        parsed = json.loads(result)
+
+        assert parsed['edkrepo_cfg']['manifest_repositories'] == [{'name': 'cfg_repo', 'path': os.path.normpath('/root/cfg_repo')}]
+        assert parsed['edkrepo_user_cfg']['manifest_repositories'] == [{'name': 'user_repo', 'path': os.path.normpath('/root/user_repo')}]
+
+    @pytest.mark.parametrize('action', [
+        pytest.param(ACTION_ADD, id='add'),
+        pytest.param(ACTION_REMOVE, id='remove'),
     ])
-    @patch('edkrepo.commands.manifest_repos_command.ui_functions.print_info_msg')
-    @patch('edkrepo.commands.manifest_repos_command.manifest_repos_maintenance.get_manifest_repo_path')
-    def test_list_manifest_repos(self, mock_get_path, mock_print_info, manifest_repos_cmd, 
-                                 mock_config, cfg_repos, user_cfg_repos, verbose, mock_paths):
-        """Test _list_manifest_repos with various configurations"""
-        # Setup mock paths
-        if mock_paths:
-            mock_get_path.side_effect = mock_paths
-        
-        # Execute method
-        manifest_repos_cmd._list_manifest_repos(cfg_repos, user_cfg_repos, mock_config, verbose)
-        
-        # Verify print_info_msg calls
-        if not cfg_repos and not user_cfg_repos:
-            mock_print_info.assert_not_called()
-        else:
-            for repo in cfg_repos:
-                if verbose:
-                    path = mock_paths[cfg_repos.index(repo)] if mock_paths else None
-                    mock_print_info.assert_any_call(
-                        humble.CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(path)), 
-                        header=False
-                    )
-                else:
-                    mock_print_info.assert_any_call(humble.CFG_LIST_ENTRY.format(repo), header=False)
-            
-            for repo in user_cfg_repos:
-                if verbose:
-                    path_index = len(cfg_repos) + user_cfg_repos.index(repo)
-                    path = mock_paths[path_index] if mock_paths else None
-                    mock_print_info.assert_any_call(
-                        humble.USER_CFG_LIST_ENTRY_VERBOSE.format(repo, os.path.normpath(path)), 
-                        header=False
-                    )
-                else:
-                    mock_print_info.assert_any_call(humble.USER_CFG_LIST_ENTRY.format(repo), header=False)
-        
-        # Verify get_manifest_repo_path calls
-        if verbose and (cfg_repos or user_cfg_repos):
-            for repo in cfg_repos:
-                mock_get_path.assert_any_call(repo, mock_config)
-            for repo in user_cfg_repos:
-                mock_get_path.assert_any_call(repo, mock_config)
-        else:
-            mock_get_path.assert_not_called()
+    def test_run_command_action_without_name_raises_exception(self, manifest_repos_cmd, mock_args, mock_config, action):
+        """add or remove action without a name argument must raise EdkrepoInvalidParametersException."""
+        mock_args.action = action
 
+        with pytest.raises(edkrepo_exception.EdkrepoInvalidParametersException):
+            manifest_repos_cmd.run_command(mock_args, mock_config)
 
-class TestListManifestReposJson:
-    """Unit tests for the ManifestRepos._list_manifest_repos_json method"""
-
-    @pytest.mark.parametrize("cfg_repos,user_cfg_repos,mock_paths", [
-        (['repo1', 'repo2'], [], ['/path/to/repo1', '/path/to/repo2']),
-        ([], ['user_repo1', 'user_repo2'], ['/path/to/user_repo1', '/path/to/user_repo2']),
-        (['repo1', 'repo2'], ['user_repo1'], ['/path/to/repo1', '/path/to/repo2', '/path/to/user_repo1']),
-        ([], [], []),
-    ], ids=[
-        "cfg_only",
-        "user_cfg_only",
-        "both",
-        "empty_lists",
+    @pytest.mark.parametrize('action, expected_msg', [
+        pytest.param(ACTION_REMOVE, humble.CANNOT_REMOVE_CFG, id='remove_cfg_repo'),
+        pytest.param(ACTION_ADD, humble.ALREADY_EXISTS.format(FAKE_REPO_NAME), id='add_existing_repo'),
     ])
-    @patch('edkrepo.commands.manifest_repos_command.manifest_repos_maintenance.get_manifest_repo_path')
-    def test_list_manifest_repos_json(self, mock_get_path, manifest_repos_cmd,
-                                      mock_config, cfg_repos, user_cfg_repos, mock_paths):
-        """Test _list_manifest_repos_json with various configurations"""
-        # Setup mock paths
-        if mock_paths:
-            mock_get_path.side_effect = mock_paths
-        
-        # Execute method
-        result = manifest_repos_cmd._list_manifest_repos_json(cfg_repos, user_cfg_repos, mock_config)
-        
-        # Build expected JSON output
-        expected_output = {
-            "edkrepo_cfg": {
-                "manifest_repositories": []
-            },
-            "edkrepo_user_cfg": {
-                "manifest_repositories": []
-            }
-        }
-        
-        # Add cfg repos to expected output
-        for i, repo in enumerate(cfg_repos):
-            path = os.path.normpath(mock_paths[i])
-            expected_output["edkrepo_cfg"]["manifest_repositories"].append({
-                "name": repo,
-                "path": path
-            })
-        
-        # Add user cfg repos to expected output
-        for i, repo in enumerate(user_cfg_repos):
-            path_index = len(cfg_repos) + i
-            path = os.path.normpath(mock_paths[path_index])
-            expected_output["edkrepo_user_cfg"]["manifest_repositories"].append({
-                "name": repo,
-                "path": path
-            })
-        
-        # Verify the return value is valid JSON and matches expected structure
-        assert result == json.dumps(expected_output, indent=2)
-        output_data = json.loads(result)
-        assert output_data == expected_output
+    def test_run_command_raises_for_conflict_with_existing_repos(self, manifest_repos_cmd, mock_args, mock_config, mock_list_available_manifest_repos, action, expected_msg):
+        """remove of a cfg repo or add of an existing repo must raise EdkrepoInvalidParametersException."""
+        mock_args.action = action
+        mock_args.name = FAKE_REPO_NAME
+        mock_args.branch = ['main']
+        mock_args.url = ['http://example.git']
+        mock_args.path = ['/local/path']
+        mock_list_available_manifest_repos.return_value = ([FAKE_REPO_NAME], [], [])
 
+        with pytest.raises(edkrepo_exception.EdkrepoInvalidParametersException) as exc_info:
+            manifest_repos_cmd.run_command(mock_args, mock_config)
+
+        assert str(exc_info.value) == expected_msg
+
+    @pytest.mark.parametrize('branch, url, path', [
+        pytest.param(None, ['http://example.git'], ['/local/path'], id='missing_branch'),
+        pytest.param(['main'], None, ['/local/path'], id='missing_url'),
+        pytest.param(['main'], ['http://example.git'], None, id='missing_path'),
+    ])
+    def test_run_command_add_without_required_fields_raises_exception(self, manifest_repos_cmd, mock_args, mock_config, branch, url, path):
+        """add action missing any of branch, url, or path must raise EdkrepoInvalidParametersException."""
+        mock_args.action = ACTION_ADD
+        mock_args.name = FAKE_REPO_NAME
+        mock_args.branch = branch
+        mock_args.url = url
+        mock_args.path = path
+
+        with pytest.raises(edkrepo_exception.EdkrepoInvalidParametersException) as exc_info:
+            manifest_repos_cmd.run_command(mock_args, mock_config)
+
+        assert str(exc_info.value) == humble.ADD_REQUIRED

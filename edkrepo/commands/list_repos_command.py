@@ -3,7 +3,7 @@
 ## @file
 # list_repos_command.py
 #
-# Copyright (c) 2019 - 2023, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2019 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -13,22 +13,24 @@ import json
 import os
 import sys
 
-import edkrepo.commands.edkrepo_command as edkrepo_command
 import edkrepo.commands.arguments.list_repos_args as arguments
-import edkrepo.commands.humble.list_repos_humble as humble
+import edkrepo.commands.edkrepo_command as edkrepo_command
 import edkrepo.commands.humble.common_humble as common_humble
+import edkrepo.commands.humble.list_repos_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestInvalidException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_all_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos, pull_all_manifest_repos
 from edkrepo.config.tool_config import CI_INDEX_FILE_NAME
 from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
 
+
 class ListReposCommand(edkrepo_command.EdkrepoCommand):
     def __init__(self):
+        """Initialize the list-repos command."""
         super().__init__()
         self.repo_names = None
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'list-repos'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -49,6 +51,7 @@ class ListReposCommand(edkrepo_command.EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """List all git repositories and their branches across configured manifest repos."""
         json_output = False
         if args.format is not None:
             if args.format[0] not in ['text', 'json']:
@@ -75,58 +78,16 @@ class ListReposCommand(edkrepo_command.EdkrepoCommand):
             found_manifests = {}
             manifests = {}
             repo_urls = set()
-            config_manifest_repos_project_list = []
-            user_config_manifest_repos_project_list = []
             repos_list = []
 
             for manifest_repo in cfg_manifest_repos:
-                # Get path to global manifest file
-                global_manifest_directory = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
-                if args.verbose:
-                    print(humble.MANIFEST_DIRECTORY)
-                    print(global_manifest_directory)
-                    print()
-                #Create a dictionary containing all the manifests listed in the CiIndex.xml file
-                index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
-                ci_index_xml = CiIndexXml(index_path)
-                config_manifest_repos_project_list = ci_index_xml.project_list
-                if args.archived:
-                    config_manifest_repos_project_list.extend(ci_index_xml.archived_project_list)
-                for project in config_manifest_repos_project_list:
-                    xml_file = ci_index_xml.get_project_xml(project)
-                    manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
-                    found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
-                    combo_list = [c.name for c in manifest.combinations]
-                    if args.archived:
-                        combo_list.extend([c.name for c in manifest.archived_combinations])
-                    for combo in combo_list:
-                        sources = manifest.get_repo_sources(combo)
-                        for source in sources:
-                            repo_urls.add(self.get_repo_url(source.remote_url))
+                self._collect_manifests_from_repo(
+                    manifest_repo, config['cfg_file'].manifest_repo_abs_path(manifest_repo),
+                    args, found_manifests, repo_urls)
             for manifest_repo in user_config_manifest_repos:
-                # Get path to global manifest file
-                global_manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
-                if args.verbose:
-                    print(humble.MANIFEST_DIRECTORY)
-                    print(global_manifest_directory)
-                    print()
-                #Create a dictionary containing all the manifests listed in the CiIndex.xml file
-                index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
-                ci_index_xml = CiIndexXml(index_path)
-                user_config_manifest_repos_project_list = ci_index_xml.project_list
-                if args.archived:
-                    user_config_manifest_repos_project_list.extend(ci_index_xml.archived_project_list)
-                for project in user_config_manifest_repos_project_list:
-                    xml_file = ci_index_xml.get_project_xml(project)
-                    manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
-                    found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
-                    combo_list = [c.name for c in manifest.combinations]
-                    if args.archived:
-                        combo_list.extend([c.name for c in manifest.archived_combinations])
-                    for combo in combo_list:
-                        sources = manifest.get_repo_sources(combo)
-                        for source in sources:
-                            repo_urls.add(self.get_repo_url(source.remote_url))
+                self._collect_manifests_from_repo(
+                    manifest_repo, config['user_cfg_file'].manifest_repo_abs_path(manifest_repo),
+                    args, found_manifests, repo_urls)
 
             #The possibility exists for two (or more) manifest repositories to contain manifest
             #files with the same project name. This is unlikely however. If a project name is
@@ -213,7 +174,7 @@ class ListReposCommand(edkrepo_command.EdkrepoCommand):
 
                 if ref_type[0]:
                     branch_data = { 'name': ref_type[0], 'projects': [] }
-                else: 
+                else:
                     branch_data = None
                 if ref_type[1]:
                     commit_data = { 'name': ref_type[1], 'projects': [] }
@@ -384,18 +345,44 @@ class ListReposCommand(edkrepo_command.EdkrepoCommand):
                               else:
                                   print(humble.COMBO_FORMAT_STRING.format(project_name_print, combo_data['name']))
 
+    def _collect_manifests_from_repo(self, manifest_repo, global_manifest_directory, args, found_manifests, repo_urls):
+        """Collect manifests and repo URLs from a single manifest repository into the provided dicts."""
+        if args.verbose:
+            print(humble.MANIFEST_DIRECTORY)
+            print(global_manifest_directory)
+            print()
+        index_path = os.path.join(global_manifest_directory, CI_INDEX_FILE_NAME)
+        ci_index_xml = CiIndexXml(index_path)
+        project_list = ci_index_xml.project_list
+        if args.archived:
+            project_list.extend(ci_index_xml.archived_project_list)
+        for project in project_list:
+            xml_file = ci_index_xml.get_project_xml(project)
+            manifest = ManifestXml(os.path.normpath(os.path.join(global_manifest_directory, xml_file)))
+            found_manifests['{}:{}'.format(manifest_repo, project)] = manifest
+            combo_list = [c.name for c in manifest.combinations]
+            if args.archived:
+                combo_list.extend([c.name for c in manifest.archived_combinations])
+            for combo in combo_list:
+                sources = manifest.get_repo_sources(combo)
+                for source in sources:
+                    repo_urls.add(self.get_repo_url(source.remote_url))
+
     def get_repo_url(self, repo_url):
+        """Return the canonical URL, stripping a trailing '.git' suffix if present."""
         if repo_url[-4:].lower() == '.git':
             return repo_url[:-4]
         return repo_url
 
     def get_repo_name(self, repo_url, manifests):
+        """Return the display name for the repo with the given URL."""
         for name in self.repo_names:
             if self.repo_names[name][0] == repo_url:
                 return name
         raise EdkrepoInvalidParametersException(humble.REPO_NAME_NOT_FOUND)
 
     def generate_repo_names(self, repo_urls, manifests, archived=False):
+        """Populate self.repo_names with sorted, unique display names for all repo URLs."""
         #Determine the names of the repositories
         self.repo_names = collections.OrderedDict()
         for repo_url in repo_urls:
@@ -419,6 +406,7 @@ class ListReposCommand(edkrepo_command.EdkrepoCommand):
             self.repo_names.move_to_end(name_to_move, False)
 
     def __repo_name_worker(self, repo_url, manifests, archived=False):
+        """Determine and register the best unique display name for a single repo URL."""
         #This is a heuristic that guesses the "name" of a repository by looking
         #at the name given to it by the most manifest files.
         names = collections.defaultdict(int)

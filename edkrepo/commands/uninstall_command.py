@@ -16,15 +16,17 @@ go through the standard edkrepo_entry_point.main().
 
 import sys
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.uninstall_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 
 
 class UninstallCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the uninstall command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'uninstall'
         metadata['help-text'] = arguments.UNINSTALL_COMMAND_DESCRIPTION
@@ -45,5 +47,6 @@ class UninstallCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Delegate to install_functions.handle_uninstall() to perform the uninstall operation."""
         from edkrepo.common import install_functions
         sys.exit(install_functions.handle_uninstall(sys.argv[2:]))

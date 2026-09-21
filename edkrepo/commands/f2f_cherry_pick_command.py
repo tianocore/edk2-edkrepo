@@ -3,7 +3,7 @@
 ## @file
 # f2f_cherry_pick_command.py
 #
-# Copyright (c) 2018 - 2022, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -12,26 +12,25 @@ from difflib import SequenceMatcher
 import json
 import os
 import re
-from subprocess import run, Popen, PIPE, STDOUT
+from subprocess import PIPE, Popen, run, STDOUT
 import sys
 import time
 import uuid
 
-from git import Repo
 from colorama import Fore
+from git import Repo
 
-from edkrepo.common.common_repo_functions import sparse_checkout_enabled, get_full_path, get_unique_branch_name
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
-from edkrepo.common.edkrepo_exception import EdkrepoAbortCherryPickException, EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
-from edkrepo.common.edkrepo_exception import EdkrepoNotFoundException, EdkrepoGitException
-from edkrepo.common.humble import NOT_GIT_REPO, COMMIT_NOT_FOUND
-from edkrepo.common.squash import get_git_repo_root, split_commit_range, get_start_and_end_commit
-from edkrepo.common.squash import commit_list_to_message, squash_commits
-from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_equal
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
 import edkrepo.commands.arguments.f2f_cherry_pick_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.humble.f2f_cherry_pick_humble as humble
+from edkrepo.common.common_repo_functions import get_full_path, get_unique_branch_name, sparse_checkout_enabled
+from edkrepo.common.edkrepo_exception import EdkrepoAbortCherryPickException, EdkrepoGitException, EdkrepoInvalidParametersException, EdkrepoNotFoundException, EdkrepoWorkspaceInvalidException
+from edkrepo.common.humble import COMMIT_NOT_FOUND, NOT_GIT_REPO
+from edkrepo.common.squash import commit_list_to_message, get_git_repo_root, get_start_and_end_commit, split_commit_range, squash_commits
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.common.workspace_maintenance.workspace_maintenance import case_insensitive_equal
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
+
 
 FolderCherryPick = namedtuple('FolderCherryPick', ['source', 'destination', 'intermediate', 'source_excludes'])
 ChangeIdRegex = re.compile(r"^\s*[Cc]hange-Id:\s*(\S+)\s*$")
@@ -40,11 +39,14 @@ RepoInfo = namedtuple('RepoInfo', ['repo_path', 'json_path', 'repo'])
 CommitInfo = namedtuple('CommitInfo', ['start_commit', 'end_commit', 'source_commit', 'single_commit', 'original_branch', 'original_head', 'append_sha', 'squash', 'todo_commits', 'complete_commits'])
 CherryPickInfo = namedtuple('CherryPickInfo', ['f2f_cherry_pick_src', 'f2f_src_branch', 'f2f_dest_branch', 'num_cherry_picks', 'cherry_pick_operations', 'cherry_pick_operations_template'])
 
+
 class F2fCherryPickCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the folder-to-folder cherry-pick command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'f2f-cherry-pick'
         metadata['help-text'] = arguments.F2F_CHERRY_PICK_COMMAND_DESCRIPTION
@@ -92,6 +94,7 @@ class F2fCherryPickCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Run a folder-to-folder cherry-pick, or list templates, continue, or abort an in-progress operation."""
         if args.list_templates:
             _list_templates()
             return
@@ -118,6 +121,7 @@ class F2fCherryPickCommand(EdkrepoCommand):
         _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cherry_pick_info)
 
 def _start_new_cherry_pick(args, json_path):
+    """Parse arguments and initialize state for a new cherry-pick, returning (repo_info, cherry_pick_operations)."""
     (cherry_pick_operations, repo_path) = _parse_arguments(args)
     json_path = os.path.join(repo_path, json_path)
     if os.path.isfile(json_path):
@@ -128,6 +132,7 @@ def _start_new_cherry_pick(args, json_path):
     return (repo_info, cherry_pick_operations)
 
 def _prep_new_cherry_pick(args, repo, commit_ish, config, cherry_pick_operations):
+    """Prepare a new cherry pick and return (commit_info, cherry_pick_operations)."""
     # Check for staged, unstaged, and untracked files
 
     # Require everything be totally clean before attempting Folder to Folder voodoo
@@ -181,6 +186,7 @@ def _prep_new_cherry_pick(args, repo, commit_ish, config, cherry_pick_operations
     return commit_info, cherry_pick_operations
 
 def _resume_cherry_pick(args, json_path):
+    """Restore saved cherry-pick state to continue or abort an in-progress operation."""
     # Get path to Git repository
     repo_path = get_git_repo_root()
     json_path = os.path.join(repo_path, json_path)
@@ -207,6 +213,7 @@ def _resume_cherry_pick(args, json_path):
         return (repo_info, commit_info, cherry_pick_info)
 
 def _abort_cherry_pick(repo, json_path, original_branch, original_head, f2f_src_branch, f2f_dest_branch, f2f_cherry_pick_src):
+    """Abort an in-progress cherry pick, restoring the original branch/head and deleting temporary branches and state."""
     repo.git.reset('--hard')
     repo.heads[original_branch].checkout()
     repo.git.reset('--hard', original_head)
@@ -220,6 +227,7 @@ def _abort_cherry_pick(repo, json_path, original_branch, original_head, f2f_src_
     return
 
 def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cherry_pick_info):
+    """Perform the folder-to-folder cherry-pick operations to completion, saving state on merge conflict."""
     # Unpack namedtuples
 
     (repo_path, json_path, repo) = (repo_info.repo_path, repo_info.json_path, repo_info.repo)
@@ -385,6 +393,7 @@ def _complete_cherry_pick(args, continue_operation, repo_info, commit_info, cher
 
 def _post_cherry_pick_processing(repo, cherry_pick_operation, f2f_dest_branch, single_commit,
                                  original_branch, source_commit, append_sha):
+    """Finalize a cherry pick by stripping the commit message, renaming folders back, and cherry-picking onto the original branch."""
     if single_commit:
         strip_commit_message(repo.commit(f2f_dest_branch), repo, source_commit, append_sha)
     #
@@ -398,12 +407,14 @@ def _post_cherry_pick_processing(repo, cherry_pick_operation, f2f_dest_branch, s
     repo.git.cherry_pick('--allow-empty', str(repo.commit(f2f_dest_branch)))
 
 def inside_directory(parent_path, child_path):
+    """Return True if child_path is located inside parent_path."""
     parent_path = parent_path.replace('/', os.sep)
     child_path = child_path.replace('/', os.sep)
     parent_path = os.path.join(parent_path, '')
     return os.path.commonprefix([parent_path, child_path]) == parent_path
 
 def get_common_folder_name(folder1, folder2, config):
+    """Return the longest common substring between two folder names, ignoring configured folders."""
     ignored_folders = config['cfg_file'].f2f_cp_ignored_folders
     match = SequenceMatcher(None, folder1, folder2).find_longest_match(0, len(folder1), 0, len(folder2))
     if match.size > 3:
@@ -419,14 +430,15 @@ def get_common_folder_name(folder1, folder2, config):
     else:
         return ''
 
-
 def cherry_pick_operations_to_include_folder_list(cherry_pick_operations):
+    """Return the flattened list of source folders across all cherry-pick operations."""
     include_folder_list = []
     for cherry_pick_operation in cherry_pick_operations:
         include_folder_list.extend([folder.source for folder in cherry_pick_operation])
     return include_folder_list
 
 def get_commit_list(include_folder_list, repo, start_commit, end_commit):
+    """Return the commits in the range that touch any of the included folders."""
     commit_list = repo.git.rev_list('{}..{}'.format(start_commit, end_commit)).split()
     include_commit_list = []
     for commit in commit_list:
@@ -438,10 +450,12 @@ def get_commit_list(include_folder_list, repo, start_commit, end_commit):
     return include_commit_list
 
 def get_squash_commit_message_list(cherry_pick_operations, repo, start_commit, end_commit):
+    """Return a combined commit message for the commits in the range that affect the cherry-pick folders."""
     include_folder_list = cherry_pick_operations_to_include_folder_list(cherry_pick_operations)
     return commit_list_to_message(get_commit_list(include_folder_list, repo, start_commit, end_commit), True, repo)
 
 def strip_commit_message(commit, repo, source_commit=None, append_sha=False):
+    """Rewrite the given commit's message, removing Gerrit trailers and optionally appending the source SHA."""
     commit = repo.commit(commit)
     initial_lines = commit.message.split('\n')
     lines = []
@@ -480,6 +494,7 @@ def strip_commit_message(commit, repo, source_commit=None, append_sha=False):
         del os.environ['COMMIT_MESSAGE']
 
 def _perform_cherry_pick(commit, repo, verbose):
+    """Run 'git cherry-pick' for the commit and return True if a merge conflict occurred."""
     merge_conflict = False
     p = Popen(['git', 'cherry-pick', commit], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
     stdout = p.communicate()[0]
@@ -504,6 +519,7 @@ def _perform_cherry_pick(commit, repo, verbose):
     return merge_conflict
 
 def _prepare_source_branch(cherry_pick_operation, branch_name, repo):
+    """Filter the source branch down to the source folders and rename them to intermediate folders."""
     #
     # Step 2 - Remove everything except the source directories
     #
@@ -523,6 +539,7 @@ def _prepare_source_branch(cherry_pick_operation, branch_name, repo):
     rename_directories(rename_dictionary, 'HEAD~2..HEAD', repo)
 
 def _prepare_destination_branch(cherry_pick_operation, branch_name, repo):
+    """Rename the destination folders to intermediate folders so the cherry pick can apply."""
     #
     # Step 5 - Rename from destination directory to intermediate directory
     #
@@ -532,6 +549,7 @@ def _prepare_destination_branch(cherry_pick_operation, branch_name, repo):
     rename_directories(rename_dictionary, 'HEAD~2..HEAD', repo)
 
 def _finalize_destination_branch(cherry_pick_operation, branch_name, repo):
+    """Rename the intermediate folders back to the destination folders after the cherry pick."""
     #
     # Step 7 - Rename from intermediate directory to destination directory
     #
@@ -541,6 +559,7 @@ def _finalize_destination_branch(cherry_pick_operation, branch_name, repo):
     rename_directories(rename_dictionary, 'HEAD~2..HEAD', repo)
 
 def remove_all_directories_except_included(include_list, commit_range, repo, prune_empty=False):
+    """Run a filter-branch that keeps only the included directories over the given commit range."""
     for include in include_list:
         if include.find(' ') != -1:
             raise EdkrepoInvalidParametersException(humble.F2F_CHERRY_PICK_NO_SPACES)
@@ -553,6 +572,7 @@ def remove_all_directories_except_included(include_list, commit_range, repo, pru
     run_filter_branch(command, repo)
 
 def remove_single_directory(directory, commit_range, repo, prune_empty=False):
+    """Run a filter-branch that removes a single directory over the given commit range."""
     command = "git filter-branch --index-filter 'git rm -fr --cached --ignore-unmatch {}' {} -- {}"
     if prune_empty:
         prune_empty_str = '--prune-empty'
@@ -562,6 +582,7 @@ def remove_single_directory(directory, commit_range, repo, prune_empty=False):
     run_filter_branch(command, repo)
 
 def rename_directories(rename_dictionary, commit_range, repo):
+    """Run a filter-branch that renames directories according to the mapping over the given commit range."""
     sed_list = []
     for source in rename_dictionary:
         sed_list.append("sed \"s|\\t{}\\(.*\\)|\\t{}\\1|\"".format(source, rename_dictionary[source]))
@@ -571,6 +592,7 @@ def rename_directories(rename_dictionary, commit_range, repo):
     run_filter_branch(command, repo)
 
 def run_filter_branch(command, repo):
+    """Execute a git filter-branch command, cleaning up backup refs and the rewrite directory before and after."""
     refs = repo.git.show_ref().split()
     for ref in refs:
         if ref.startswith('refs/original/'):
@@ -609,6 +631,7 @@ def run_filter_branch(command, repo):
 
 _bash_path = None
 def find_bash_windows():
+    """Locate and cache the path to Git for Windows' bash.exe, or return None if not found."""
     global _bash_path
     if _bash_path is not None:
         return _bash_path
@@ -625,6 +648,7 @@ def find_bash_windows():
     return None
 
 def split_path(path):
+    """Split a path into its drive/head and an ordered list of its components."""
     paths = []
     last_head = None
     (head, tail) = os.path.split(path)
@@ -637,6 +661,7 @@ def split_path(path):
 
 _git_ls_tree_cache = {}
 def git_ls_tree(tree_ish, repo):
+    """Return the cached recursive file list for a tree-ish via 'git ls-tree'."""
     global _git_ls_tree_cache
     # It takes git a considerable period of time compute ls-tree
     # This code flow uses ls-tree from the same tree-ish several times,
@@ -647,6 +672,7 @@ def git_ls_tree(tree_ish, repo):
     return _git_ls_tree_cache[tree_ish]
 
 def git_is_file(path, tree_ish, repo, case_insensitive=False):
+    """Return True if the path exists as a file in the given tree-ish (or any of a list of tree-ishes)."""
     if isinstance(tree_ish, list):
         for item in tree_ish:
             if git_is_file(path, item, repo, case_insensitive):
@@ -663,6 +689,7 @@ def git_is_file(path, tree_ish, repo, case_insensitive=False):
     return False
 
 def git_is_dir(path, tree_ish, repo, case_insensitive=False):
+    """Return True if the path exists as a directory in the given tree-ish (or any of a list of tree-ishes)."""
     if isinstance(tree_ish, list):
         for item in tree_ish:
             if git_is_dir(path, item, repo, case_insensitive):
@@ -682,6 +709,7 @@ def git_is_dir(path, tree_ish, repo, case_insensitive=False):
     return False
 
 def git_path_exists(path, tree_ish, repo, case_insensitive=False):
+    """Return True if the path exists as either a file or directory in the given tree-ish."""
     if git_is_file(path, tree_ish, repo, case_insensitive):
         return True
     if git_is_dir(path, tree_ish, repo, case_insensitive):
@@ -691,6 +719,7 @@ def git_path_exists(path, tree_ish, repo, case_insensitive=False):
 def _save_f2f_cherry_pick_state(repo_path, original_branch, original_head, single_commit, remaining_cp_operations,
                                 f2f_src_branch, f2f_dest_branch, f2f_cp_src_branch, num_cherry_picks, source_commit,
                                 append_sha, todo_commits, complete_commits, cp_operations_template, squash):
+    """Serialize the in-progress cherry-pick state to a JSON status file in the repo's .git directory."""
     if not os.path.isdir(os.path.join(repo_path, '.git')):
         raise EdkrepoWorkspaceInvalidException(NOT_GIT_REPO)
     json_path = os.path.join(repo_path, '.git', 'f2f_cherry_pick_status.json')
@@ -734,6 +763,7 @@ def _save_f2f_cherry_pick_state(repo_path, original_branch, original_head, singl
         json.dump(data, f, indent=2, sort_keys=True)
 
 def _restore_f2f_cherry_pick_state(repo_path):
+    """Load and return the saved cherry-pick state from the repo's JSON status file."""
     if not os.path.isdir(os.path.join(repo_path, '.git')):
         raise EdkrepoWorkspaceInvalidException(NOT_GIT_REPO)
     json_path = os.path.join(repo_path, '.git', 'f2f_cherry_pick_status.json')
@@ -760,6 +790,7 @@ def _restore_f2f_cherry_pick_state(repo_path):
             cp_operations_template, data['complete_commits'], data['todo_commits'], data['squash'])
 
 def _init_f2f_cherry_pick_operations(cherry_pick_operations, repo, src_commit, dest_commit, config):
+    """Normalize, validate, and expand cherry-pick operations for the given source and destination commits."""
     repo_path = repo.working_tree_dir
     # Normalize all the paths
     used_common_folder_paths = []
@@ -846,6 +877,7 @@ def _init_f2f_cherry_pick_operations(cherry_pick_operations, repo, src_commit, d
     return cherry_pick_operations
 
 def _get_intermediate_folder_name(source, destination, used_common_folder_paths, repo, src_commit, dest_commit, config):
+    """Compute a unique, collision-free intermediate folder path used to bridge the source and destination folders."""
     source_split_path = split_path(source)[1]
     destination_split_path = split_path(destination)[1]
     # Is this a top-level directory?
@@ -900,6 +932,7 @@ def _get_intermediate_folder_name(source, destination, used_common_folder_paths,
     return common_folder_path
 
 def _check_for_name_collision(path, repo, src_commit, dest_commit):
+    """Return True if the path already exists in the source or destination commit."""
     if git_path_exists(path, src_commit, repo):
         return True
     if src_commit != dest_commit:
@@ -908,6 +941,7 @@ def _check_for_name_collision(path, repo, src_commit, dest_commit):
     return False
 
 def _optimize_f2f_cherry_pick_operations(cherry_pick_operations, repo, source_commit):
+    """Return only the cherry-pick operations whose source folders are touched by the given commit."""
     changed_files = list(repo.commit(source_commit).stats.files)
     temp_cherry_pick_operations = []
     for operation in cherry_pick_operations:
@@ -920,6 +954,7 @@ def _optimize_f2f_cherry_pick_operations(cherry_pick_operations, repo, source_co
     return temp_cherry_pick_operations
 
 def _path_in_changed_files(path, changed_files):
+    """Return True if the given path is (or is an ancestor of) any of the changed files."""
     for file_path in changed_files:
         while os.path.dirname(file_path) != file_path:
             if path == file_path:
@@ -928,6 +963,7 @@ def _path_in_changed_files(path, changed_files):
     return False
 
 def _list_templates():
+    """Print the folder-to-folder mapping templates defined in the workspace manifest."""
     manifest = get_workspace_manifest()
     f2f_templates = manifest.folder_to_folder_mappings
     for template in f2f_templates:
@@ -941,6 +977,7 @@ def _list_templates():
         ui_functions.print_info_msg('',header=False)
 
 def _parse_arguments(args):
+    """Build the cherry-pick operations and repo path from a manifest template or explicit --folders arguments."""
     cherry_pick_operations = []
     if args.template is not None and args.folders is not None:
         raise EdkrepoInvalidParametersException(humble.F2F_CHERRY_PICK_TEMPLATE_AND_FOLDERS)
