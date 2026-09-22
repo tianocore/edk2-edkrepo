@@ -26,15 +26,15 @@ Tests `BaseXmlHelper.__init__` which loads and validates the file (XML or JSON),
 - **Expected Outcome**: Instance is created successfully with `_xml_type` set to `Pin`.
 
 ### TestJsonToXml
-Tests `_json_to_xml` which reads a JSON file, converts it to an `ElementTree` via `_build_etree_node` and `_pretty_format`, and returns the tree.
+Tests `json_to_xml` which reads a JSON file, converts it to an `ElementTree` via `build_etree_node` and `pretty_format`, and returns the tree.
 
 #### 1. Valid JSON File — Returns Converted ElementTree and Calls Pretty Format
 - **Test Name**: `test_valid_json_returns_converted_element_tree`
-- **Description**: `open` and `json.load` are mocked to supply a valid JSON dict; `ET.Element` and `ET.ElementTree` are fully mocked to return mock objects; `_build_etree_node` appends a mock `SubElement`; `_pretty_format` is a no-op mock.
-- **Expected Outcome**: The returned tree's root tag matches the element appended by the mock `_build_etree_node` and `_pretty_format` is called exactly once.
+- **Description**: `open` and `json.load` are mocked to supply a valid JSON dict; `ET.Element` and `ET.ElementTree` are fully mocked to return mock objects; `build_etree_node` appends a mock `SubElement`; `pretty_format` is a no-op mock.
+- **Expected Outcome**: The returned tree's root tag matches the element appended by the mock `build_etree_node` and `pretty_format` is called exactly once.
 
 ### TestBuildEtreeNode
-Tests `_build_etree_node` which builds an `ElementTree SubElement` from a dict and attaches it as a child of parent, recursing into children. All ET operations are fully mocked.
+Tests `build_etree_node` which builds an `ElementTree SubElement` from a dict and attaches it as a child of parent, recursing into children. All ET operations are fully mocked.
 
 #### 1. Dict With All Optional Fields
 - **Test Name**: `test_dict_with_all_optional_fields`
@@ -47,7 +47,7 @@ Tests `_build_etree_node` which builds an `ElementTree SubElement` from a dict a
 - **Expected Outcome**: The mock `SubElement` is created with the correct tag, empty `attrib` dict, `None` text, `None` tail, and no children.
 
 ### TestPrettyFormat
-Tests `_pretty_format` which recursively adds indentation whitespace to all nodes in the `ElementTree` for human-readable formatting. All elements are fully mocked.
+Tests `pretty_format` which recursively adds indentation whitespace to all nodes in the `ElementTree` for human-readable formatting. All elements are fully mocked.
 
 #### 1. Called With Parent and index=0 — Sets parent.text
 - **Test Name**: `test_pretty_format_parent_text_by_index[index_zero]`
@@ -61,12 +61,12 @@ Tests `_pretty_format` which recursively adds indentation whitespace to all node
 
 #### 3. Called Without Parent — Completes Without Error
 - **Test Name**: `test_no_parent_completes_without_error`
-- **Description**: `_pretty_format` is called on the root element with the default `parent=None`.
+- **Description**: `pretty_format` is called on the root element with the default `parent=None`.
 - **Expected Outcome**: The call completes without raising any exception.
 
 #### 4. Recurses Into Children — Sets Indentation at Every Level
 - **Test Name**: `test_pretty_format_recurses_into_children`
-- **Description**: `_pretty_format` is called on a root that has a child which itself has a grandchild.
+- **Description**: `pretty_format` is called on a root that has a child which itself has a grandchild.
 - **Expected Outcome**: `root.text` and `child.text` are each set to the correct newline-plus-indent string for their respective depths.
 
 ### TestLoadTree
@@ -77,10 +77,10 @@ Tests `_load_tree` which loads an `ElementTree` from a `.xml` or `.json` file, r
 - **Description**: `fileref` has a `.xml` extension; `ET.ElementTree` is patched to return a mock tree.
 - **Expected Outcome**: `ET.ElementTree` is called with `file=fileref` and its return value is returned.
 
-#### 2. JSON Extension — Delegates to _json_to_xml
+#### 2. JSON Extension — Delegates to json_to_xml
 - **Test Name**: `test_json_extension_delegates_to_json_to_xml`
-- **Description**: `fileref` has a `.json` extension; `_json_to_xml` is mocked on the instance.
-- **Expected Outcome**: `self._json_to_xml` is called with `fileref` and its return value is returned.
+- **Description**: `fileref` has a `.json` extension; `json_to_xml` is mocked at module level.
+- **Expected Outcome**: `json_to_xml` is called with `fileref` and its return value is returned.
 
 #### 3. Unsupported Extension — Raises TypeError
 - **Test Name**: `test_unsupported_extension_raises_typeerror`
@@ -94,7 +94,7 @@ Tests `_load_tree` which loads an `ElementTree` from a `.xml` or `.json` file, r
 
 #### 5. JSON Parse Error — Raises TypeError
 - **Test Name**: `test_json_parse_error_raises_typeerror`
-- **Description**: `_json_to_xml` is mocked to raise an `Exception` during JSON parsing.
+- **Description**: `json_to_xml` is mocked to raise an `Exception` during JSON parsing.
 - **Expected Outcome**: The exception is caught and re-raised as a `TypeError`.
 
 
