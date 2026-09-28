@@ -3,37 +3,36 @@
 ## @file
 # list_pins_command.py
 #
-# Copyright (c) 2018 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+import io
 import os
 import subprocess
 import sys
-import io
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument
-from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import pull_workspace_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices
-from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
-from edkrepo.config.config_factory import get_workspace_manifest
-from edkrepo.common.edkrepo_exception import EdkrepoWorkspaceInvalidException, EdkrepoInvalidParametersException
-from edkrepo.common.edkrepo_exception import EdkrepoManifestNotFoundException
 import edkrepo.commands.arguments.list_pins_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand, SourceManifestRepoArgument
 import edkrepo.commands.humble.list_pins_humble as humble
 from edkrepo.common.common_repo_functions import find_less
-from edkrepo_manifest_parser.edk_manifest import ManifestXml, CiIndexXml
+from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoManifestNotFoundException, EdkrepoWorkspaceInvalidException
+from edkrepo.common.humble import VERIFY_PROJ_NOT_IN_INDEX
+from edkrepo.common.workspace_maintenance.humble.manifest_repos_maintenance_humble import PROJ_NOT_IN_REPO, SOURCE_MANIFEST_REPO_NOT_FOUND
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_project_in_all_indices, find_source_manifest_repo, list_available_manifest_repos, pull_workspace_manifest_repo
+from edkrepo.config.config_factory import get_workspace_manifest
+from edkrepo_manifest_parser.edk_manifest import CiIndexXml, ManifestXml
+
 
 class ListPinsCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the list-pins command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'list-pins'
         metadata['help-text'] = arguments.LIST_PINS_COMMAND_DESCRIPTION
@@ -53,36 +52,13 @@ class ListPinsCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """List the pin files that match the current (or specified) project."""
         less_path, use_less = find_less()
         if use_less:
             output_string = ''
             separator = '\n'
         cfg, user_cfg, conflicts = list_available_manifest_repos(config['cfg_file'], config['user_cfg_file'])
-        try:
-            manifest = get_workspace_manifest()
-            pull_workspace_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
-            src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
-            if src_manifest_repo in cfg:
-                manifest_directory = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
-            elif src_manifest_repo in user_cfg:
-                manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
-            else:
-                raise EdkrepoManifestNotFoundException(SOURCE_MANIFEST_REPO_NOT_FOUND.format(manifest.project_info.codename))
-        except EdkrepoWorkspaceInvalidException:
-            if not args.project:
-                raise EdkrepoInvalidParametersException(humble.NOT_IN_WKSPCE)
-            else:
-                #arg parse provides a list so only use the first item since we are limiting users to one project
-                manifest_repo, src_cfg, manifest_path = find_project_in_all_indices(args.project[0],
-                                                                                 config['cfg_file'],
-                                                                                 config['user_cfg_file'],
-                                                                                 PROJ_NOT_IN_REPO.format(args.project[0]),
-                                                                                 SOURCE_MANIFEST_REPO_NOT_FOUND.format(args.project[0]))
-                if manifest_repo in cfg:
-                    manifest_directory = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
-                elif manifest_repo in user_cfg:
-                    manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
-                manifest = ManifestXml(manifest_path)
+        manifest, manifest_directory = self._resolve_manifest_and_directory(args, config, cfg, user_cfg)
         if manifest.general_config.pin_path is None:
             print(humble.NO_PIN_FOLDER)
             return
@@ -125,3 +101,32 @@ class ListPinsCommand(EdkrepoCommand):
 
         if less_path:
             subprocess.run([str(less_path), '-F', '-R', '-S', '-X', '-K'], stdout=sys.stdout, input=output_string, universal_newlines=True)
+
+    def _resolve_manifest_and_directory(self, args, config, cfg, user_cfg):
+        """Return (manifest, manifest_directory) from the workspace or a named project."""
+        try:
+            manifest = get_workspace_manifest()
+            pull_workspace_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo, False)
+            src_manifest_repo = find_source_manifest_repo(manifest, config['cfg_file'], config['user_cfg_file'], args.source_manifest_repo)
+            if src_manifest_repo in cfg:
+                manifest_directory = config['cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+            elif src_manifest_repo in user_cfg:
+                manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(src_manifest_repo)
+            else:
+                raise EdkrepoManifestNotFoundException(SOURCE_MANIFEST_REPO_NOT_FOUND.format(manifest.project_info.codename))
+        except EdkrepoWorkspaceInvalidException:
+            if not args.project:
+                raise EdkrepoInvalidParametersException(humble.NOT_IN_WKSPCE)
+            else:
+                #arg parse provides a list so only use the first item since we are limiting users to one project
+                manifest_repo, src_cfg, manifest_path = find_project_in_all_indices(args.project[0],
+                                                                                 config['cfg_file'],
+                                                                                 config['user_cfg_file'],
+                                                                                 PROJ_NOT_IN_REPO.format(args.project[0]),
+                                                                                 SOURCE_MANIFEST_REPO_NOT_FOUND.format(args.project[0]))
+                if manifest_repo in cfg:
+                    manifest_directory = config['cfg_file'].manifest_repo_abs_path(manifest_repo)
+                elif manifest_repo in user_cfg:
+                    manifest_directory = config['user_cfg_file'].manifest_repo_abs_path(manifest_repo)
+                manifest = ManifestXml(manifest_path)
+        return manifest, manifest_directory

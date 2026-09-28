@@ -3,7 +3,7 @@
 ## @file
 # clone_command.py
 #
-# Copyright (c) 2017- 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,8 +11,11 @@ import os
 import shutil
 import sys
 
+from colorama import Fore
+
 import edkrepo.commands.arguments.clone_args as arguments
 import edkrepo.commands.edkrepo_command as edkrepo_command
+from edkrepo.commands.humble.reference_repos_humble import NO_DISSOCIATE_WARNING
 import edkrepo.common.common_repo_functions as common_repo_functions
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.humble as humble
@@ -23,15 +26,15 @@ import edkrepo.common.workspace_maintenance.manifest_repos_maintenance as manife
 import edkrepo.common.workspace_maintenance.workspace_maintenance as workspace_maintenance
 import edkrepo_manifest_parser.edk_manifest as edk_manifest
 import project_utils.submodule as submodule_utils
-from colorama import Fore
-from edkrepo.commands.humble.reference_repos_humble import NO_DISSOCIATE_WARNING
 
 
 class CloneCommand(edkrepo_command.EdkrepoCommand):
     def __init__(self):
+        """Initialize the clone command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'clone'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -100,8 +103,8 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
         args.append(edkrepo_command.SourceManifestRepoArgument)
         return metadata
 
-
     def run_command(self, args, config):
+        """Clone a project into a new workspace directory."""
         manifest_repos_maintenance.pull_all_manifest_repos(config['cfg_file'], config['user_cfg_file'], False)
 
         workspace_dir = args.Workspace
@@ -201,26 +204,7 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
         submodule_included_configs = common_repo_functions.write_included_config(manifest.remotes, manifest.submodule_alternate_remotes, local_manifest_dir)
         common_repo_functions.write_conditional_include(workspace_dir, repo_sources_to_clone, submodule_included_configs)
 
-        # Resolve reference repository settings
-        use_reference = config['user_cfg_file'].reference_repos_enabled_by_default
-        use_dissociate = config['user_cfg_file'].reference_repos_dissociate_by_default
-        if args.reference_if_able:
-            use_reference = True
-        if args.no_reference_if_able:
-            use_reference = False
-        if args.dissociate:
-            use_dissociate = True
-        if args.no_dissociate:
-            use_dissociate = False
-        if use_reference and not use_dissociate:
-            ui_functions.print_info_msg('{}{}{}'.format(Fore.YELLOW, NO_DISSOCIATE_WARNING, Fore.RESET), header=False)
-        reference_path_map = {}
-        if use_reference:
-            for ref_name in config['user_cfg_file'].reference_repos_enabled_for:
-                ref_url = config['user_cfg_file'].get_reference_repo_url(ref_name)
-                ref_path = config['user_cfg_file'].get_reference_repo_path(ref_name)
-                if ref_url and ref_path:
-                    reference_path_map[ref_url.lower()] = ref_path
+        use_reference, use_dissociate, reference_path_map = self._resolve_reference_settings(args, config)
 
         clone_times = common_repo_functions.clone_repos(args, workspace_dir, repo_sources_to_clone, project_client_side_hooks, config, manifest, manifest_repository_path, reference_path_map=reference_path_map, dissociate=use_dissociate)
 
@@ -244,9 +228,31 @@ class CloneCommand(edkrepo_command.EdkrepoCommand):
             ui_functions.print_info_msg(humble.SPARSE_CHECKOUT)
             common_repo_functions.sparse_checkout(workspace_dir, repo_sources_to_clone, manifest)
 
-
         # Print performance timing if requested
         if args.performance:
             print()
             for repo_root, duration in clone_times:
                 ui_functions.print_info_msg(humble.CLONE_TIME.format(repo_root, duration), header=False)
+
+    def _resolve_reference_settings(self, args, config):
+        """Resolve reference-repo settings and return (use_reference, use_dissociate, reference_path_map)."""
+        use_reference = config['user_cfg_file'].reference_repos_enabled_by_default
+        use_dissociate = config['user_cfg_file'].reference_repos_dissociate_by_default
+        if args.reference_if_able:
+            use_reference = True
+        if args.no_reference_if_able:
+            use_reference = False
+        if args.dissociate:
+            use_dissociate = True
+        if args.no_dissociate:
+            use_dissociate = False
+        if use_reference and not use_dissociate:
+            ui_functions.print_info_msg('{}{}{}'.format(Fore.YELLOW, NO_DISSOCIATE_WARNING, Fore.RESET), header=False)
+        reference_path_map = {}
+        if use_reference:
+            for ref_name in config['user_cfg_file'].reference_repos_enabled_for:
+                ref_url = config['user_cfg_file'].get_reference_repo_url(ref_name)
+                ref_path = config['user_cfg_file'].get_reference_repo_path(ref_name)
+                if ref_url and ref_path:
+                    reference_path_map[ref_url.lower()] = ref_path
+        return use_reference, use_dissociate, reference_path_map

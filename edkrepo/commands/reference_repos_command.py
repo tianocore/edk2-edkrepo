@@ -7,8 +7,8 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-import edkrepo.commands.edkrepo_command as edkrepo_command
 import edkrepo.commands.arguments.reference_repos_args as arguments
+import edkrepo.commands.edkrepo_command as edkrepo_command
 import edkrepo.commands.humble.reference_repos_humble as humble
 import edkrepo.common.edkrepo_exception as edkrepo_exception
 import edkrepo.common.ui_functions as ui_functions
@@ -16,9 +16,11 @@ import edkrepo.common.ui_functions as ui_functions
 
 class ReferenceRepos(edkrepo_command.EdkrepoCommand):
     def __init__(self):
+        """Initialize the reference-repos command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'reference-repos'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -69,6 +71,7 @@ class ReferenceRepos(edkrepo_command.EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """List, add, remove, enable, or disable reference repos in the user configuration."""
         user_cfg = config['user_cfg_file']
 
         if args.action == 'list':
@@ -109,6 +112,7 @@ class ReferenceRepos(edkrepo_command.EdkrepoCommand):
             ui_functions.print_info_msg(humble.DISSOCIATE_DISABLED, header=False)
 
     def _list_reference_repos(self, user_cfg):
+        """Print the current reference-repo configuration from the user config."""
         ui_functions.print_info_msg(humble.LIST_HEADER, header=False)
         ui_functions.print_info_msg(humble.ENABLE_BY_DEFAULT.format(user_cfg.reference_repos_enabled_by_default), header=False)
         ui_functions.print_info_msg(humble.DISSOCIATE_BY_DEFAULT.format(user_cfg.reference_repos_dissociate_by_default), header=False)

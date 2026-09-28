@@ -3,7 +3,7 @@
 ## @file
 # squash_command.py
 #
-# Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -11,18 +11,20 @@ import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.squash_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.humble.squash_humble as humble
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoWorkspaceInvalidException
-from edkrepo.common.squash import get_git_repo_root, split_commit_range, get_start_and_end_commit
-from edkrepo.common.squash import commit_list_to_message, squash_commits
+from edkrepo.common.squash import commit_list_to_message, get_git_repo_root, get_start_and_end_commit, split_commit_range, squash_commits
+
 
 class SquashCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the squash command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'squash'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -47,6 +49,7 @@ class SquashCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Squash the commit range into a single new branch."""
         commit_ish = vars(args)['commit-ish']
         new_branch = vars(args)['new-branch']
         one_line = vars(args)['oneline']
@@ -85,13 +88,16 @@ class SquashCommand(EdkrepoCommand):
             original_branch.checkout()
 
 def branch_name_exists(branch_name, repo):
+    """Return True if the given branch name already exists in the repo."""
     if branch_name in [x.name for x in repo.heads]:
         return True
     else:
         return False
 
 def get_commit_list(repo, start_commit, end_commit):
+    """Return the list of commits in the range from start_commit to end_commit."""
     return repo.git.rev_list('{}..{}'.format(start_commit, end_commit)).split()
 
 def get_squash_commit_message_list(repo, start_commit, end_commit, one_line):
+    """Return the combined commit message for the squash from the commit range."""
     return commit_list_to_message(get_commit_list(repo, start_commit, end_commit), one_line, repo)

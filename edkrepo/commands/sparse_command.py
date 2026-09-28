@@ -3,27 +3,26 @@
 ## @file
 # sparse_command.py
 #
-# Copyright (c) 2017- 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.sparse_args as arguments
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
-from edkrepo.common.common_repo_functions import sparse_checkout_enabled, sparse_checkout, reset_sparse_checkout
-from edkrepo.common.common_repo_functions import check_dirty_repos
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
+from edkrepo.common.common_repo_functions import check_dirty_repos, reset_sparse_checkout, sparse_checkout, sparse_checkout_enabled
 from edkrepo.common.edkrepo_exception import EdkrepoSparseException
-from edkrepo.common.humble import SPARSE_ENABLE_DISABLE, SPARSE_NO_CHANGE, SPARSE_ENABLE, SPARSE_DISABLE
-from edkrepo.common.humble import SPARSE_STATUS, SPARSE_CHECKOUT_STATUS
-from edkrepo.common.humble import SPARSE_BY_DEFAULT_STATUS, SPARSE_ENABLED_REPOS
+from edkrepo.common.humble import SPARSE_BY_DEFAULT_STATUS, SPARSE_CHECKOUT_STATUS, SPARSE_DISABLE, SPARSE_ENABLE, SPARSE_ENABLED_REPOS, SPARSE_ENABLE_DISABLE, SPARSE_NO_CHANGE, SPARSE_STATUS
 import edkrepo.common.ui_functions as ui_functions
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 
 
 class SparseCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the sparse command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'sparse'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -40,6 +39,7 @@ class SparseCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Enable, disable, or report the sparse-checkout state for the current workspace."""
         # Collect workspace/repo data
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()

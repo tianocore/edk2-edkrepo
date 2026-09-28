@@ -6,27 +6,25 @@
 # Copyright (c) 2017 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
-import os
-from colorama import Fore
-from colorama import Style
-from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.arguments.combo_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand
 import edkrepo.commands.humble.combo_humble as humble
 import edkrepo.commands.humble.common_humble as common_humble
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path, get_manifest_repo_info_from_config
-import edkrepo.common.ui_functions as ui_functions
-from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 from edkrepo.common.edkrepo_exception import EdkrepoManifestInvalidException, EdkrepoPinFileNotFoundException
+import edkrepo.common.ui_functions as ui_functions
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_info_from_config, get_manifest_repo_path
 from edkrepo.common.workspace_maintenance.workspace_pin_file_operations import get_checked_out_pin_file
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 
 
 class ComboCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the combo command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, and argument definitions."""
         metadata = {}
         metadata['name'] = 'combo'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -40,6 +38,7 @@ class ComboCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """List the combinations available in the workspace manifest."""
         manifest = get_workspace_manifest()
         ui_functions.display_current_project(manifest, verbose=args.verbose)
         all_combos = manifest.combinations
@@ -119,4 +118,3 @@ class ComboCommand(EdkrepoCommand):
         else:
             sources = manifest.get_repo_sources(combo)
         return sources
-

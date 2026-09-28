@@ -11,27 +11,26 @@ import os
 
 from git import Repo
 
-from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument, SourceManifestRepoArgument
 import edkrepo.commands.arguments.checkout_pin_args as arguments
+from edkrepo.commands.edkrepo_command import EdkrepoCommand, OverrideArgument, SourceManifestRepoArgument
 import edkrepo.commands.humble.checkout_pin_humble as humble
-from edkrepo.common.common_repo_functions import sparse_checkout_enabled, reset_sparse_checkout, sparse_checkout
-from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest, fetch_from_remote
-from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET, SUBMODULE_DEINIT_FAILED
+from edkrepo.common.common_repo_functions import check_dirty_repos, checkout_repos, combinations_in_manifest, fetch_from_remote, reset_sparse_checkout, sparse_checkout, sparse_checkout_enabled
 from edkrepo.common.edkrepo_exception import EdkrepoInvalidParametersException, EdkrepoProjectMismatchException
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import list_available_manifest_repos
-from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path
-from edkrepo.config.config_factory import get_workspace_path, get_workspace_manifest
+from edkrepo.common.humble import SPARSE_CHECKOUT, SPARSE_RESET, SUBMODULE_DEINIT_FAILED
+import edkrepo.common.ui_functions as ui_functions
+from edkrepo.common.workspace_maintenance.manifest_repos_maintenance import find_source_manifest_repo, get_manifest_repo_path, list_available_manifest_repos
+from edkrepo.config.config_factory import get_workspace_manifest, get_workspace_path
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
 from project_utils.submodule import deinit_full, maintain_submodules
-import edkrepo.common.ui_functions as ui_functions
-
 
 
 class CheckoutPinCommand(EdkrepoCommand):
     def __init__(self):
+        """Initialize the checkout-pin command."""
         super().__init__()
 
     def get_metadata(self):
+        """Return the command metadata: name, help text, alias, and argument definitions."""
         metadata = {}
         metadata['name'] = 'checkout-pin'
         metadata['help-text'] = arguments.COMMAND_DESCRIPTION
@@ -48,6 +47,7 @@ class CheckoutPinCommand(EdkrepoCommand):
         return metadata
 
     def run_command(self, args, config):
+        """Check out the repositories to the state described by the given pin file."""
         workspace_path = get_workspace_path()
         manifest = get_workspace_manifest()
 
@@ -91,6 +91,7 @@ class CheckoutPinCommand(EdkrepoCommand):
                 sparse_checkout(workspace_path, pin_repo_sources, manifest)
 
     def __get_pin_path(self, args, workspace_path, manifest_repo_path, manifest):
+        """Resolve and return the absolute path to the requested pin file."""
         pin_path = None
         if not args.pinfile.endswith('.xml'):
             pin_name = '{}.xml'.format(args.pinfile)
@@ -109,8 +110,8 @@ class CheckoutPinCommand(EdkrepoCommand):
         else:
             raise EdkrepoInvalidParametersException(humble.NOT_FOUND)
 
-
     def __find_pin_in_manifest_repo(self, pin_name, manifest_repo_path, pin_path):
+        """Return the pin file path within the manifest repo, or None if it is not found."""
         expected_path_in_manifest_repo = os.path.normpath(os.path.join(manifest_repo_path, pin_path, pin_name))
         path_if_at_root_of_man_repo = os.path.normpath(os.path.join(manifest_repo_path, pin_name))
         if os.path.isfile(expected_path_in_manifest_repo):
@@ -121,6 +122,7 @@ class CheckoutPinCommand(EdkrepoCommand):
             return None
 
     def __find_pin_in_workspace(self, workspace_path, pin_name):
+        """Search the workspace for the named pin file and return its path, or None if not found."""
         # Before walking the entire workspace attempt to locate the pin at the root and in the repo/ dir as a performance improvement.
         path_at_wkspc_root = os.path.normpath(os.path.join(workspace_path, pin_name))
         path_in_repo_dir = os.path.normpath(os.path.join(workspace_path, 'repo', pin_name))
@@ -135,8 +137,8 @@ class CheckoutPinCommand(EdkrepoCommand):
         else:
             return None
 
-
     def __pin_matches_project(self, pin, manifest, workspace_path):
+        """Validate that the pin corresponds to the current project."""
         manifest_remotes = [(x.name, x.url) for x in manifest.remotes]
         pin_remotes = [(x.name, x.url) for x in pin.remotes]
         if pin.project_info.codename != manifest.project_info.codename:
