@@ -89,10 +89,12 @@ Tests `get_parent_of_nested_repo` which returns the parent `RepoSource` for a ne
 Tests `is_repo_nested` which returns True/False for whether a repo path has a parent in the given source list, delegating to `get_parent_of_nested_repo`.
 
 #### 1. Returns True When Parent Found
+- **Test Name**: `test_is_repo_nested_returns_true_when_parent_found`
 - **Description**: When `get_parent_of_nested_repo` finds a parent source for the given path.
 - **Expected Outcome**: Returns `True`.
 
 #### 2. Returns False When No Parent Found
+- **Test Name**: `test_is_repo_nested_returns_false_when_no_parent_found`
 - **Description**: When `get_parent_of_nested_repo` raises `ValueError` (no parent found, or path invalid).
 - **Expected Outcome**: Returns `False`.
 
@@ -100,10 +102,12 @@ Tests `is_repo_nested` which returns True/False for whether a repo path has a pa
 Tests `list_nested_repos` which returns the subset of a list of `RepoSource` tuples that are nested (have a parent elsewhere in the same list).
 
 #### 1. Returns Only Nested Sources
+- **Test Name**: `test_list_nested_repos_returns_only_nested_sources`
 - **Description**: When the list contains a mix of root-level and nested sources.
 - **Expected Outcome**: A list containing only the nested source(s) is returned.
 
 #### 2. Returns Empty List When None Nested
+- **Test Name**: `test_list_nested_repos_returns_empty_list_when_none_nested`
 - **Description**: When no source in the list has a parent within the list.
 - **Expected Outcome**: An empty list is returned.
 

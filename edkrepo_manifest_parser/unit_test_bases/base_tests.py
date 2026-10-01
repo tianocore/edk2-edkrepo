@@ -65,7 +65,6 @@ PARAM_ATTRIB_VAL_FIELD_EXPECTED = 'attrib_key, attrib_val, {}, {}'.format(PARAM_
 
 # Common pytest parametrize IDs shared across multiple test modules
 ID_NO_MATCH = 'no_match'
-ID_MISSING = 'missing'
 ID_REMOTE_MISSING = 'remote_missing'
 ID_REMOTE_NAME_PRESENT = 'remote_name_present'
 
@@ -85,23 +84,6 @@ FIRST_ELEMENT_INDEX = 0
 ZERO_LENGTH = 0
 ONE_ITEM = 1
 TWO_ITEMS = 2
-
-# Indentation depth constant
-INDENT_DEPTH_LEVEL_2 = 2
-
-# Common class and function names for patching
-CLASS_VALIDATE_MANIFEST = 'ValidateManifest'
-CLASS_MANIFEST_XML = 'ManifestXml'
-CLASS_CI_INDEX_XML = 'CiIndexXml'
-CLASS_PROJECT = '_Project'
-FUNC_COLLECT_FILE_RESULTS = '_collect_file_validation_results'
-FUNC_RESOLVE_PATH = '_resolve_project_manifest_path'
-FUNC_COLLECT_PROJECT_RESULTS = '_collect_project_validation_results'
-FUNC_COLLECT_INVALID_BRANCH = '_collect_invalid_branch_results'
-FUNC_LOAD_TREE = '_load_tree'
-FUNC_JSON_LOAD = 'json.load'
-MODULE_BUILTINS_PRINT = 'builtins.print'
-MODULE_ET = 'ET'
 
 # Common attribute names
 ATTR_CHILDREN = '_children'
@@ -169,38 +151,17 @@ def make_find_map_element(find_map=None, dev_leads=None, tag=None):
 
 
 PROJECT1_NAME_LOWER = PROJECT1_NAME.lower()
-ACTUAL_CODENAME = 'ActualCodename'
-HELLO_UPPER = 'Hello'
-STR_FOO = 'foo'
-STR_BAR = 'bar'
-CASE_EQUAL_FIELDS = 'str1,str2,{}'.format(PARAM_EXPECTED)
-ID_SAME_CASE = 'same_case'
-ID_DIFF_CASE = 'different_case'
-ID_UNEQUAL = 'unequal'
-SINGLE_MATCH_FAIL_FIELDS = 'project,project_list,expected_msg'
-ID_MULTIPLE_MATCHES = 'multiple_matches'
 MANIFEST_PATH_2 = '/fake/path/manifest2.xml'
-CANNOT_PROCESS_MSG = 'Cannot process codename validation'
 PARSE_PASS = (RESULT_PARSING, True, None)
 PARSE_FAIL = (RESULT_PARSING, False, BAD_XML_MSG)
 CODENAME_PASS = (RESULT_CODENAME, True, None)
 DUPLICATE_PASS = (RESULT_DUPLICATE, True, None)
-CODENAME_HARDCODED_FAIL = (RESULT_CODENAME, False, CANNOT_PROCESS_MSG)
+CODENAME_HARDCODED_FAIL = (RESULT_CODENAME, False, 'Cannot process codename validation')
 FILE_RESULTS = [PARSE_PASS, CODENAME_PASS]
 FAILURE_RESULTS = [PARSE_FAIL, CODENAME_PASS]
 PROJECT_LIST = [PROJECT1_NAME, PROJECT2_NAME]
 PROJECT_XML_A = '{}/{}.xml'.format(PROJECT1_NAME, PROJECT1_NAME)
-PROJECT_RESULTS = [PARSE_PASS, CODENAME_PASS, DUPLICATE_PASS]
 MANIFEST_DIR = '/fake/manifest/dir'
-VALIDATION_STATUS_FIELDS = 'data, expected'
-ID_ALL_PASS = 'all_pass'
-ID_ONE_FAIL = 'one_fail'
-ID_EMPTY_DICT = 'empty_dict'
-FILE_NAME_FMT = 'File name: {} '
-ERROR_TYPE_FMT = 'Error type: {} '
-ERROR_MSG_FMT = 'Error message: {} \n'
-EXPECTED_PRINT_COUNT = 4
-EXPECTED_COLLECT_PROJECT_COUNT = 2
 
 
 class BaseTestValidateManifest:
@@ -210,43 +171,43 @@ class BaseTestValidateManifest:
     @pytest.fixture
     def mock_validate_manifest(self):
         """Patch ValidateManifest for the duration of a test; yields the mock class for per-test configuration."""
-        with patch('{}.{}'.format(self.__class__.validation_module, CLASS_VALIDATE_MANIFEST)) as mock:
+        with patch('{}.{}'.format(self.__class__.validation_module, 'ValidateManifest')) as mock:
             yield mock
 
     @pytest.fixture
     def mock_collect_file_results(self):
         """Patch _collect_file_validation_results for the duration of a test; yields the mock for per-test configuration."""
-        with patch('{}.{}'.format(self.__class__.validation_module, FUNC_COLLECT_FILE_RESULTS)) as mock:
+        with patch('{}.{}'.format(self.__class__.validation_module, '_collect_file_validation_results')) as mock:
             yield mock
 
     @pytest.fixture
     def mock_ci_index_cls(self):
         """Patch CiIndexXml for the duration of a test; yields the mock class for per-test configuration."""
-        with patch('{}.{}'.format(self.__class__.validation_module, CLASS_CI_INDEX_XML)) as mock:
+        with patch('{}.{}'.format(self.__class__.validation_module, 'CiIndexXml')) as mock:
             yield mock
 
     @pytest.fixture
     def mock_resolve_path(self):
         """Patch _resolve_project_manifest_path for the duration of a test; yields the mock for per-test configuration."""
-        with patch('{}.{}'.format(self.__class__.validation_module, FUNC_RESOLVE_PATH)) as mock:
+        with patch('{}.{}'.format(self.__class__.validation_module, '_resolve_project_manifest_path')) as mock:
             yield mock
 
     @pytest.fixture
     def mock_collect_project_results(self):
         """Patch _collect_project_validation_results for the duration of a test; yields the mock for per-test configuration."""
-        with patch('{}.{}'.format(self.__class__.validation_module, FUNC_COLLECT_PROJECT_RESULTS)) as mock:
+        with patch('{}.{}'.format(self.__class__.validation_module, '_collect_project_validation_results')) as mock:
             yield mock
 
     @pytest.fixture
     def mock_print(self):
         """Patch builtins.print for the duration of a test; yields the mock for assertion."""
-        with patch(MODULE_BUILTINS_PRINT) as mock:
+        with patch('builtins.print') as mock:
             yield mock
 
     @pytest.fixture
     def mock_manifest_xml(self):
         """Patch ManifestXml; yields a configured mock class whose return_value is a fresh MagicMock instance exposed as mock_cls.instance."""
-        with patch('{}.{}'.format(self.__class__.validation_module, CLASS_MANIFEST_XML)) as mock_cls:
+        with patch('{}.{}'.format(self.__class__.validation_module, 'ManifestXml')) as mock_cls:
             instance = MagicMock()
             mock_cls.return_value = instance
             mock_cls.instance = instance
@@ -259,24 +220,6 @@ class BaseTestValidateManifest:
         return vm_module.ValidateManifest(MANIFEST_PATH)
 
     @staticmethod
-    def _make_mock_ci_index(mock_ci_index_cls, project_list, archived_project_list):
-        """Configure a mock CiIndexXml class so its instance returns the given project and archived lists."""
-        mock_ci = mock_ci_index_cls.return_value
-        mock_ci.project_list = list(project_list)
-        mock_ci.archived_project_list = list(archived_project_list)
-        return mock_ci
-
-    @staticmethod
-    def _make_mock_project_validator(mock_cls, parse_result):
-        """Configure a mock ValidateManifest class so its instance returns the given parse result and passing validations; validate_branch_names returns [] so it contributes no results."""
-        mock_vm = mock_cls.return_value
-        mock_vm.validate_parsing.return_value = parse_result
-        mock_vm.validate_branch_names.return_value = []
-        mock_vm.validate_codename.return_value = CODENAME_PASS
-        mock_vm.validate_case_insensitive_single_match.return_value = DUPLICATE_PASS
-        return mock_vm
-
-    @staticmethod
     def _setup_file_validator_mock(mock_validate_manifest, parse_result, xmldata):
         """Configure the ValidateManifest instance mock with the given parse result and _manifest_xmldata; return mock_vm."""
         mock_vm = mock_validate_manifest.return_value
@@ -287,18 +230,10 @@ class BaseTestValidateManifest:
     @staticmethod
     def _setup_manifestrepo_mocks(mock_ci_index_cls, mock_collect_project_results):
         """Configure CiIndexXml with one active and one archived project and set collect-project mock to return PROJECT_RESULTS."""
-        BaseTestValidateManifest._make_mock_ci_index(mock_ci_index_cls, [PROJECT1_NAME], [PROJECT2_NAME])
-        mock_collect_project_results.return_value = PROJECT_RESULTS
-
-    @staticmethod
-    def _make_obj_with_codename(validation_module, codename):
-        """Build a ValidateManifest instance whose _manifest_xmldata reports the given codename."""
-        vm_module = importlib.import_module(validation_module)
-        obj = vm_module.ValidateManifest(MANIFEST_PATH)
-        mock_data = MagicMock()
-        mock_data.project_info.codename = codename
-        obj._manifest_xmldata = mock_data
-        return obj
+        mock_ci = mock_ci_index_cls.return_value
+        mock_ci.project_list = [PROJECT1_NAME]
+        mock_ci.archived_project_list = [PROJECT2_NAME]
+        mock_collect_project_results.return_value = [PARSE_PASS, CODENAME_PASS, DUPLICATE_PASS]
 
     @staticmethod
     def _call_single_match(vm, project, project_list):
@@ -315,7 +250,11 @@ class BaseTestValidateManifest:
     def _call_collect_project_results(self, mock_validate_manifest, parse_result):
         """Set up the ValidateManifest mock, invoke _collect_project_validation_results, assert three results, and return (mock_vm, result)."""
         validation_mod = importlib.import_module(self.__class__.validation_module)
-        mock_vm = self._make_mock_project_validator(mock_validate_manifest, parse_result)
+        mock_vm = mock_validate_manifest.return_value
+        mock_vm.validate_parsing.return_value = parse_result
+        mock_vm.validate_branch_names.return_value = []
+        mock_vm.validate_codename.return_value = CODENAME_PASS
+        mock_vm.validate_case_insensitive_single_match.return_value = DUPLICATE_PASS
         result = validation_mod._collect_project_validation_results(
             MANIFEST_FILE_PATH, PROJECT1_NAME, PROJECT_LIST, CI_INDEX_PATH
         )
@@ -329,7 +268,12 @@ class BaseTestValidateManifest:
 
     def _call_validate_codename(self, codename, project):
         """Build a ValidateManifest with the given codename and return the result of validate_codename."""
-        return self._make_obj_with_codename(self.__class__.validation_module, codename).validate_codename(project)
+        vm_module = importlib.import_module(self.__class__.validation_module)
+        obj = vm_module.ValidateManifest(MANIFEST_PATH)
+        mock_data = MagicMock()
+        mock_data.project_info.codename = codename
+        obj._manifest_xmldata = mock_data
+        return obj.validate_codename(project)
 
     def _assert_try_parse_result(self, expected_xmldata, expected_error):
         """Call _try_parse_manifest_xml and assert both returned values."""
@@ -376,7 +320,7 @@ class BaseTestValidateManifest:
 
     def test_validate_codename_fails_when_codename_mismatches(self):
         """When _manifest_xmldata.project_info.codename differs from the project, must return ('CODENAME', False, message)."""
-        result = self._call_validate_codename(ACTUAL_CODENAME, PROJECT1_NAME)
+        result = self._call_validate_codename('ActualCodename', PROJECT1_NAME)
 
         assert result[TUPLE_INDEX_TYPE] == RESULT_CODENAME
         assert result[TUPLE_INDEX_STATUS] is False
@@ -454,7 +398,7 @@ class BaseTestValidateManifest:
 
         result = validation_mod.validate_manifestrepo(MANIFEST_DIR, verify_archived=True)
 
-        assert mock_collect_project_results.call_count == EXPECTED_COLLECT_PROJECT_COUNT
+        assert mock_collect_project_results.call_count == 2
         assert set(result.keys()) == {MANIFEST_FILE_PATH, MANIFEST_PATH_2}
 
     def test_print_manifest_errors_prints_header_and_details_for_failures(self, mock_print):
@@ -463,10 +407,10 @@ class BaseTestValidateManifest:
         self._call_print_errors(FAILURE_RESULTS)
 
         mock_print.assert_any_call(validation_mod.VERIFY_ERROR_HEADER)
-        mock_print.assert_any_call(FILE_NAME_FMT.format(MANIFEST_FILE_PATH))
-        mock_print.assert_any_call(ERROR_TYPE_FMT.format(RESULT_PARSING))
-        mock_print.assert_any_call(ERROR_MSG_FMT.format(BAD_XML_MSG))
-        assert mock_print.call_count == EXPECTED_PRINT_COUNT
+        mock_print.assert_any_call('File name: {} '.format(MANIFEST_FILE_PATH))
+        mock_print.assert_any_call('Error type: {} '.format(RESULT_PARSING))
+        mock_print.assert_any_call('Error message: {} \n'.format(BAD_XML_MSG))
+        assert mock_print.call_count == 4
 
     def test_print_manifest_errors_all_passing_only_header_printed(self, mock_print):
         """When all results are passing, only VERIFY_ERROR_HEADER is printed and no error detail lines follow."""
@@ -475,19 +419,19 @@ class BaseTestValidateManifest:
 
         mock_print.assert_called_once_with(validation_mod.VERIFY_ERROR_HEADER)
 
-    @pytest.mark.parametrize(VALIDATION_STATUS_FIELDS, [
-        pytest.param({MANIFEST_FILE_PATH: FILE_RESULTS}, False, id=ID_ALL_PASS),
-        pytest.param({MANIFEST_FILE_PATH: FAILURE_RESULTS}, True, id=ID_ONE_FAIL),
-        pytest.param({}, False, id=ID_EMPTY_DICT),
+    @pytest.mark.parametrize('data, expected', [
+        pytest.param({MANIFEST_FILE_PATH: FILE_RESULTS}, False, id='all_pass'),
+        pytest.param({MANIFEST_FILE_PATH: FAILURE_RESULTS}, True, id='one_fail'),
+        pytest.param({}, False, id='empty_dict'),
     ])
     def test_get_manifest_validation_status(self, data, expected):
         """Verify all manifests in the dict; parametrized over all-pass, one-fail, and empty-dict scenarios."""
         validation_mod = importlib.import_module(self.__class__.validation_module)
         assert validation_mod.get_manifest_validation_status(data) is expected
 
-    @pytest.mark.parametrize(SINGLE_MATCH_FAIL_FIELDS, [
+    @pytest.mark.parametrize('project,project_list,expected_msg', [
         pytest.param(UNKNOWN, [PROJECT1_NAME, PROJECT2_NAME], UNKNOWN, id=ID_NO_MATCH),
-        pytest.param(PROJECT1_NAME, [PROJECT1_NAME, PROJECT1_NAME_LOWER], PROJECT1_NAME, id=ID_MULTIPLE_MATCHES),
+        pytest.param(PROJECT1_NAME, [PROJECT1_NAME, PROJECT1_NAME_LOWER], PROJECT1_NAME, id='multiple_matches'),
     ])
     def test_validate_case_insensitive_single_match_fails(self, vm, project, project_list, expected_msg):
         """Must return ('DUPLICATE', False, message) when no match or multiple matches are found."""
@@ -497,41 +441,26 @@ class BaseTestValidateManifest:
         assert result[TUPLE_INDEX_STATUS] is False
         assert expected_msg in str(result[TUPLE_INDEX_MESSAGE])
 
-    @pytest.mark.parametrize(CASE_EQUAL_FIELDS, [
-        pytest.param(HELLO, HELLO, True, id=ID_SAME_CASE),
-        pytest.param(HELLO_UPPER, HELLO, True, id=ID_DIFF_CASE),
-        pytest.param(STR_FOO, STR_BAR, False, id=ID_UNEQUAL),
+    @pytest.mark.parametrize('str1,str2,{}'.format(PARAM_EXPECTED), [
+        pytest.param(HELLO, HELLO, True, id='same_case'),
+        pytest.param('Hello', HELLO, True, id='different_case'),
+        pytest.param('foo', 'bar', False, id='unequal'),
     ])
     def test_case_insensitive_equal(self, vm, str1, str2, expected):
         """Must return True when str1 and str2 are case-insensitively equal, False otherwise."""
         assert vm.case_insensitive_equal(str1, str2) is expected
 
 
-PIN_XML = '/fake/path/pin.xml'
 MANIFEST_JSON = '/fake/path/manifest.json'
-MANIFEST_XYZ = '/fake/path/manifest.xyz'
 NODE_SOLO = 'Solo'
 NODE_PARENT = 'Parent'
 NODE_CHILD = 'Child'
-NODE_KEY_TEXT = 'text'
-NODE_KEY_TAIL = 'tail'
-NODE_KEY_CHILDREN = 'children'
 ELEMENT_ROOT_TAG = 'root'
-ELEMENT_CHILD_TAG = 'child'
-ELEMENT_TAG_PLACEHOLDER = 'placeholder'
 ATTRIB_KEY = 'key'
 ATTRIB_VAL = 'val'
 TAIL_VALUE = ' world'
 ORIGINAL_TEXT = 'original'
 PARSE_ERROR_MSG = 'parse error'
-INVALID_FILE_MSG = 'invalid file'
-PRETTY_FORMAT_INDEX_FIELDS = 'index,{}'.format(PARAM_EXPECTED)
-ID_INDEX_ZERO = 'index_zero'
-ID_INDEX_NONZERO = 'index_nonzero'
-INIT_SUCCESS_FIELDS = 'tag,fileref,xml_types'
-ID_MANIFEST_TYPE = 'manifest_type'
-ID_PIN_TYPE = 'pin_type'
-INDENT_DEPTH_1 = '\n  '
 INDENT_DEPTH_2 = '\n    '
 
 
@@ -542,7 +471,7 @@ class BaseTestBaseXmlHelper:
     @pytest.fixture
     def mock_et_module(self):
         """Complete mock of the ET module to prevent any real operations."""
-        with patch('{}.{}'.format(self.__class__.manifest_module, MODULE_ET)) as mock_et:
+        with patch('{}.{}'.format(self.__class__.manifest_module, 'ET')) as mock_et:
             mock_et.Element = MagicMock()
             mock_et.SubElement = MagicMock()
             mock_et.ElementTree = MagicMock()
@@ -558,15 +487,8 @@ class BaseTestBaseXmlHelper:
     def mock_load_tree(self):
         """Patch BaseXmlHelper._load_tree for the duration of a test; yields the mock."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        with patch.object(manifest_mod.BaseXmlHelper, FUNC_LOAD_TREE) as mock:
+        with patch.object(manifest_mod.BaseXmlHelper, '_load_tree') as mock:
             yield mock
-
-    @pytest.fixture
-    def mock_json_open(self):
-        """Patch builtins.open and json.load for the duration of a test; yields (mock_open, mock_json_load)."""
-        with patch(BUILTIN_OPEN) as mock_open, \
-             patch('{}.{}'.format(self.__class__.manifest_module, FUNC_JSON_LOAD)) as mock_json_load:
-            yield mock_open, mock_json_load
 
     @pytest.fixture
     def bare_instance(self):
@@ -627,36 +549,37 @@ class BaseTestBaseXmlHelper:
 
     def test_load_tree_raises_typeerror_propagates(self, mock_load_tree):
         """When _load_tree raises TypeError, the exception must propagate out of __init__ unchanged."""
-        mock_load_tree.side_effect = TypeError(INVALID_FILE_MSG)
+        mock_load_tree.side_effect = TypeError('invalid file')
         self._assert_init_raises_typeerror([TAG_MANIFEST])
 
-    def test_valid_json_returns_converted_element_tree(self, bare_instance, mock_json_open, mock_et_module):
+    def test_valid_json_returns_converted_element_tree(self, bare_instance, mock_et_module):
         """When open and json.load succeed, _json_to_xml must return a tree whose root tag matches the JSON node name and call _pretty_format and _build_etree_node each exactly once."""
-        mock_open, mock_json_load = mock_json_open
-        mock_json_load.return_value = {ATTRIB_NAME: TAG_MANIFEST}
+        with patch(BUILTIN_OPEN), \
+             patch('{}.{}'.format(self.__class__.manifest_module, 'json.load')) as mock_json_load:
+            mock_json_load.return_value = {ATTRIB_NAME: TAG_MANIFEST}
 
-        # Configure ET mocks to return mock elements
-        mock_root = self._create_mock_element(ELEMENT_TAG_PLACEHOLDER)
-        mock_et_module.Element.return_value = mock_root
-        mock_tree = MagicMock()
-        mock_et_module.ElementTree.return_value = mock_tree
+            # Configure ET mocks to return mock elements
+            mock_root = self._create_mock_element('placeholder')
+            mock_et_module.Element.return_value = mock_root
+            mock_tree = MagicMock()
+            mock_et_module.ElementTree.return_value = mock_tree
 
-        def mock_build_node(d, p):
-            return self._create_mock_subelement(p, TAG_MANIFEST)
+            def mock_build_node(d, p):
+                return self._create_mock_subelement(p, TAG_MANIFEST)
 
-        bare_instance._build_etree_node = MagicMock(side_effect=mock_build_node)
-        bare_instance._pretty_format = MagicMock()
+            bare_instance._build_etree_node = MagicMock(side_effect=mock_build_node)
+            bare_instance._pretty_format = MagicMock()
 
-        # Configure getroot to return the child element that will be set by _setroot
-        def mock_setroot(elem):
-            mock_tree.getroot.return_value = elem
-        mock_tree._setroot = mock_setroot
+            # Configure getroot to return the child element that will be set by _setroot
+            def mock_setroot(elem):
+                mock_tree.getroot.return_value = elem
+            mock_tree._setroot = mock_setroot
 
-        result = bare_instance._json_to_xml(MANIFEST_JSON)
+            result = bare_instance._json_to_xml(MANIFEST_JSON)
 
-        assert result.getroot().tag == TAG_MANIFEST
-        bare_instance._pretty_format.assert_called_once()
-        bare_instance._build_etree_node.assert_called_once()
+            assert result.getroot().tag == TAG_MANIFEST
+            bare_instance._pretty_format.assert_called_once()
+            bare_instance._build_etree_node.assert_called_once()
 
     def test_dict_with_all_optional_fields(self, mock_et_module):
         """When the dict contains name, attrib, text, tail, and children, _build_etree_node must set all fields and recurse."""
@@ -669,9 +592,9 @@ class BaseTestBaseXmlHelper:
         node = self._build_node({
             ATTRIB_NAME: NODE_PARENT,
             FIELD_ATTRIB: {ATTRIB_KEY: ATTRIB_VAL},
-            NODE_KEY_TEXT: HELLO,
-            NODE_KEY_TAIL: TAIL_VALUE,
-            NODE_KEY_CHILDREN: [{ATTRIB_NAME: NODE_CHILD}],
+            'text': HELLO,
+            'tail': TAIL_VALUE,
+            'children': [{ATTRIB_NAME: NODE_CHILD}],
         })
 
         assert node.tag == NODE_PARENT
@@ -710,7 +633,7 @@ class BaseTestBaseXmlHelper:
 
         bare_instance._pretty_format(root)
 
-        assert root.text == INDENT_DEPTH_1
+        assert root.text == '\n  '
         assert child.text == INDENT_DEPTH_2
 
     def test_xml_extension_returns_element_tree(self, bare_instance, mock_et):
@@ -736,7 +659,7 @@ class BaseTestBaseXmlHelper:
     def test_unsupported_extension_raises_typeerror(self, bare_instance):
         """When fileref has an unsupported extension, _load_tree must raise TypeError."""
         with pytest.raises(TypeError):
-            bare_instance._load_tree(MANIFEST_XYZ)
+            bare_instance._load_tree('/fake/path/manifest.xyz')
 
     def test_file_parse_error_raises_typeerror(self, bare_instance, mock_et):
         """When ET.ElementTree raises an exception during parsing, _load_tree must catch it and raise TypeError."""
@@ -752,23 +675,23 @@ class BaseTestBaseXmlHelper:
         with pytest.raises(TypeError):
             bare_instance._load_tree(MANIFEST_JSON)
 
-    @pytest.mark.parametrize(PRETTY_FORMAT_INDEX_FIELDS, [
-        pytest.param(FIRST_ELEMENT_INDEX, INDENT_DEPTH_2, id=ID_INDEX_ZERO),
-        pytest.param(ONE_ITEM, ORIGINAL_TEXT, id=ID_INDEX_NONZERO),
+    @pytest.mark.parametrize('index,{}'.format(PARAM_EXPECTED), [
+        pytest.param(FIRST_ELEMENT_INDEX, INDENT_DEPTH_2, id='index_zero'),
+        pytest.param(ONE_ITEM, ORIGINAL_TEXT, id='index_nonzero'),
     ])
     def test_pretty_format_parent_text_by_index(self, bare_instance, index, expected):
         """When called with a given index and depth=2, _pretty_format must set parent.text to the expected value."""
         parent = self._create_mock_element(ELEMENT_ROOT_TAG)
         parent.text = ORIGINAL_TEXT
-        child = self._create_mock_subelement(parent, ELEMENT_CHILD_TAG)
+        child = self._create_mock_subelement(parent, 'child')
 
-        bare_instance._pretty_format(child, parent, index, INDENT_DEPTH_LEVEL_2)
+        bare_instance._pretty_format(child, parent, index, 2)
 
         assert parent.text == expected
 
-    @pytest.mark.parametrize(INIT_SUCCESS_FIELDS, [
-        pytest.param(TAG_MANIFEST, MANIFEST_FILE_PATH, [TAG_MANIFEST, TAG_PIN], id=ID_MANIFEST_TYPE),
-        pytest.param(TAG_PIN, PIN_XML, [TAG_PIN], id=ID_PIN_TYPE),
+    @pytest.mark.parametrize('tag,fileref,xml_types', [
+        pytest.param(TAG_MANIFEST, MANIFEST_FILE_PATH, [TAG_MANIFEST, TAG_PIN], id='manifest_type'),
+        pytest.param(TAG_PIN, '/fake/path/pin.xml', [TAG_PIN], id='pin_type'),
     ])
     def test_init_valid_root_tag_sets_attributes(self, mock_load_tree, tag, fileref, xml_types):
         """When _load_tree returns a tree whose root tag is in xml_types, __init__ must set _fileref, _tree, and _xml_type."""
@@ -783,8 +706,6 @@ class BaseTestBaseXmlHelper:
 
 
 PROJECT_XML_A = '{}/{}.xml'.format(PROJECT1_NAME, PROJECT1_NAME)
-ELEMENT_TAG_CI_PROJECT_LIST = 'ProjectList'
-CI_DEFAULT_XML_PATH = 'fake_path.xml'
 CI_PARAMETRIZE_FIELDS = 'archived_a,archived_b,{}'.format(PARAM_EXPECTED)
 ID_MIXED = 'mixed'
 ID_ALL_ARCHIVED = 'all_archived'
@@ -801,7 +722,7 @@ class BaseTestCiIndexXml:
         with patch('{}.{}'.format(self.__class__.manifest_module, METHOD_ET_ELEMENT_TREE)) as mock_et_cls:
             mock_tree = MagicMock()
             mock_et_cls.return_value = mock_tree
-            mock_tree.getroot.return_value.tag = ELEMENT_TAG_CI_PROJECT_LIST
+            mock_tree.getroot.return_value.tag = 'ProjectList'
             mock_tree.iter.return_value = []
             yield mock_et_cls
 
@@ -814,14 +735,14 @@ class BaseTestCiIndexXml:
     @pytest.fixture
     def mock_project_cls(self):
         """Patch _Project for the duration of a test; yields the mock class with no default configuration."""
-        with patch('{}.{}'.format(self.__class__.manifest_module, CLASS_PROJECT)) as mock:
+        with patch('{}.{}'.format(self.__class__.manifest_module, '_Project')) as mock:
             yield mock
 
     @staticmethod
     def _make_mock_project(name, archived, xml_path=None):
         """Build and return a mock _Project with the given name, archived flag, and xmlPath."""
         if xml_path is None:
-            xml_path = CI_DEFAULT_XML_PATH
+            xml_path = 'fake_path.xml'
         proj = MagicMock()
         proj.name = name
         proj.archived = archived
@@ -911,10 +832,6 @@ ATTRIB_XML_PATH = 'xmlPath'
 ELEMENT_TAG_PROJECT = 'Project'
 TEST_PROJECT_NAME = 'MyProject'
 PROJECT_XML_PATH = '{}/{}.xml'.format(TEST_PROJECT_NAME, TEST_PROJECT_NAME)
-PROJECT_ARCHIVED_FLAG_FIELDS = 'archived_value,{}'.format(PARAM_EXPECTED)
-ID_TRUE_LOWER = 'true_lower'
-ID_FALSE_LOWER = 'false_lower'
-ID_TRUE_UPPER = 'true_upper'
 
 
 class BaseTestProject:
@@ -957,11 +874,11 @@ class BaseTestProject:
         assert proj.name == TEST_PROJECT_NAME
         assert proj.xmlPath == PROJECT_XML_PATH
 
-    @pytest.mark.parametrize(PROJECT_ARCHIVED_FLAG_FIELDS, [
-        pytest.param(ATTRIB_BOOL_TRUE, True, id=ID_TRUE_LOWER),
-        pytest.param(ATTRIB_BOOL_FALSE, False, id=ID_FALSE_LOWER),
-        pytest.param(None, False, id=ID_MISSING),
-        pytest.param(ARCHIVED_TRUE_UPPER, True, id=ID_TRUE_UPPER),
+    @pytest.mark.parametrize('archived_value,{}'.format(PARAM_EXPECTED), [
+        pytest.param(ATTRIB_BOOL_TRUE, True, id='true_lower'),
+        pytest.param(ATTRIB_BOOL_FALSE, False, id='false_lower'),
+        pytest.param(None, False, id='missing'),
+        pytest.param(ARCHIVED_TRUE_UPPER, True, id='true_upper'),
     ])
     def test_init_archived_flag(self, archived_value, expected):
         """Each archived_value must produce the expected boolean on self.archived."""
@@ -971,36 +888,12 @@ class BaseTestProject:
         assert proj.archived is expected
 
 
-PARAM_IS_PIN_FILE = 'xml_type, {}'.format(PARAM_EXPECTED)
-ID_XML_TYPE_PIN = 'xml_type_pin'
-ID_XML_TYPE_MANIFEST = 'xml_type_manifest'
-PARAM_SUBMODULE_ALTS = 'alt_remote, query_remote, expect_match'
-ID_ALT_MATCHING = 'matching_remote'
-PARAM_NESTED_REPO_RAISES = 'sources, path, expected_error'
-ID_NON_NESTED_PATH = 'non_nested_path'
-ID_NO_PARENT_FOUND = 'no_parent_found'
-PARAM_COMBO_ARG = 'combo_arg'
-ID_COMBO_NONE = 'combo_none'
-ID_COMBO_SPECIFIED = 'combo_specified'
 COMBO_NAME = 'default'
-PIN_PREFIX_COMBO = '{}:{}'.format(TAG_PIN, BRANCH)
 PARENT_REPO = 'parent'
 NESTED_REPO = '{}/child'.format(PARENT_REPO)
 INVALID_REPO_PATH = 'singlecomponent'
-TAG_GENERAL_CONFIG = 'GeneralConfig'
-TAG_BINARY_LIST = 'BinaryList'
-TAG_SPARSE_CHECKOUT = 'SparseCheckout'
-TAG_SUBMODULE_ALT_REMOTES = 'SubmoduleAlternateRemotes'
-TAG_SELECTIVE_SUBMODULE_INIT = 'SelectiveSubmoduleInitList'
-TAG_PATCH_SETS = 'PatchSets'
-ROOT_PATH = 'platform/repo'
-PARENT_SHA_ORPHAN = 'orphan'
-METHOD_COPY_DEEPCOPY = 'copy.deepcopy'
 METHOD_ET_ELEMENT_TREE = 'ET.ElementTree'
-METHOD_ET_ELEMENT = 'ET.Element'
-METHOD_ET_SUB_ELEMENT = 'ET.SubElement'
 PIN_DESCRIPTION = 'Test pin description'
-INVALID_COMBO = 'nonexistent_combo'
 METHOD_GENERATE_PIN_ETREE = 'generate_pin_etree'
 PIN_JSON_PATH = '/fake/pin.json'
 KEY_CHILDREN = 'children'
@@ -1055,7 +948,7 @@ class BaseTestManifestXml:
         entry.combo = combo
         return entry
 
-    def _make_patchset_tuple(self, name, remote, parent_sha=PARENT_SHA_ORPHAN, fetch_branch=BRANCH):
+    def _make_patchset_tuple(self, name, remote, parent_sha='orphan', fetch_branch=BRANCH):
         """Build and return a PatchSet namedtuple with the given fields."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
         return manifest_mod.PatchSet(remote=remote, name=name, parent_sha=parent_sha, fetch_branch=fetch_branch)
@@ -1071,26 +964,11 @@ class BaseTestManifestXml:
         return remote
 
     @staticmethod
-    def _make_mock_alt(remote_name):
-        """Build and return a mock submodule alternate with the given remote_name."""
-        alt = MagicMock()
-        alt.remote_name = remote_name
-        return alt
-
-    @staticmethod
     def _make_combo_root(elements):
         """Build and return a mock combo root whose iter() yields the given elements."""
         combo_root = MagicMock()
         combo_root.iter.return_value = elements
         return combo_root
-
-    def _setup_combo_with_patchset(self, manifest_instance):
-        """Populate manifest_instance with one combo and one patchset; return the PatchSet tuple."""
-        ps = self._make_patchset_tuple(PATCHSET_NAME, REMOTE_NAME)
-        mock_src = self._make_mock_source(patch_set=PATCHSET_NAME, remote_name=REMOTE_NAME)
-        manifest_instance._combo_sources = {COMBO_NAME: [mock_src]}
-        manifest_instance._patch_sets = {(PATCHSET_NAME, REMOTE_NAME): ps}
-        return ps
 
     def _setup_patchset_with_ops(self, manifest_instance, operations):
         """Populate manifest_instance with one patchset and given operations; return the PatchSet tuple."""
@@ -1100,21 +978,6 @@ class BaseTestManifestXml:
             (PATCHSET_NAME, REMOTE_NAME): operations
         }
         return ps
-
-    @staticmethod
-    def _make_valid_repo_source(remote_name=None, root=None, remote_url=None, commit=None, branch=None):
-        """Build and return a RepoSource-like mock with the given fields."""
-        src = MagicMock()
-        src.remote_name = remote_name or REMOTE_NAME
-        src.root = root or ROOT_PATH
-        src.remote_url = remote_url or REMOTE_URL
-        src.commit = commit or COMMIT
-        src.branch = branch or BRANCH
-        src.tag = None
-        src.patch_set = None
-        src.sparse = False
-        src.enable_submodule = False
-        return src
 
     def test_validate_repo_local_root_raises_for_single_component_path(self):
         """When repo_local_root has only one path component, must raise ValueError."""
@@ -1151,7 +1014,7 @@ class BaseTestManifestXml:
         manifest_instance._combo_sources = {BRANCH: [mock_src]}
         manifest_instance._general_config = MagicMock()
         manifest_instance._general_config.tuple.default_combo = BRANCH
-        result = manifest_instance.get_repo_sources(PIN_PREFIX_COMBO)
+        result = manifest_instance.get_repo_sources('{}:{}'.format(TAG_PIN, BRANCH))
         assert result == [mock_src.tuple]
 
     def test_get_repo_sources_raises_value_error_when_combo_not_found(self, manifest_instance):
@@ -1173,7 +1036,7 @@ class BaseTestManifestXml:
         mock_elem = MagicMock()
         mock_elem.attrib = {ATTRIB_NAME: COMBO_NAME}
         mock_et.return_value.find.return_value = self._make_combo_root([mock_elem])
-        with patch('{}.{}'.format(self.__class__.manifest_module, METHOD_COPY_DEEPCOPY), return_value=mock_elem):
+        with patch('{}.{}'.format(self.__class__.manifest_module, 'copy.deepcopy'), return_value=mock_elem):
             result = manifest_instance.get_combo_element(COMBO_NAME)
         assert result is mock_elem
 
@@ -1287,18 +1150,18 @@ class BaseTestManifestXml:
         mocked_file.assert_called_once_with(PIN_JSON_PATH, FILE_MODE_WRITE)
         mocked_file().write.assert_called_once_with(json.dumps(dummy_json, indent=TWO_ITEMS))
 
-    @pytest.mark.parametrize(PARAM_IS_PIN_FILE, [
-        pytest.param(TAG_PIN, True, id=ID_XML_TYPE_PIN),
-        pytest.param(TAG_MANIFEST, False, id=ID_XML_TYPE_MANIFEST),
+    @pytest.mark.parametrize('xml_type, {}'.format(PARAM_EXPECTED), [
+        pytest.param(TAG_PIN, True, id='xml_type_pin'),
+        pytest.param(TAG_MANIFEST, False, id='xml_type_manifest'),
     ])
     def test_is_pin_file(self, manifest_instance, xml_type, expected):
         """When _xml_type is set to the given value, is_pin_file must return the expected boolean."""
         manifest_instance._xml_type = xml_type
         assert manifest_instance.is_pin_file() is expected
 
-    @pytest.mark.parametrize(PARAM_NESTED_REPO_RAISES, [
-        pytest.param([], INVALID_REPO_PATH, None, id=ID_NON_NESTED_PATH),
-        pytest.param([], NESTED_REPO, None, id=ID_NO_PARENT_FOUND),
+    @pytest.mark.parametrize('sources, path, expected_error', [
+        pytest.param([], INVALID_REPO_PATH, None, id='non_nested_path'),
+        pytest.param([], NESTED_REPO, None, id='no_parent_found'),
     ])
     def test_get_parent_of_nested_repo_raises(self, manifest_instance, sources, path, expected_error):
         """When path is non-nested or no parent source is found, must raise ValueError with the expected message."""
@@ -1336,24 +1199,28 @@ class BaseTestManifestXml:
         result = manifest_instance.list_nested_repos([mock_src1, mock_src2])
         assert result == []
 
-    @pytest.mark.parametrize(PARAM_SUBMODULE_ALTS, [
-        pytest.param(REMOTE_NAME, REMOTE_NAME, True, id=ID_ALT_MATCHING),
+    @pytest.mark.parametrize('alt_remote, query_remote, expect_match', [
+        pytest.param(REMOTE_NAME, REMOTE_NAME, True, id='matching_remote'),
         pytest.param(UPSTREAM, REMOTE_NAME, False, id=ID_NO_MATCH),
     ])
     def test_get_submodule_alternates_for_remote(self, manifest_instance, alt_remote, query_remote, expect_match):
         """When an alternate's remote_name matches the query, its tuple is returned; otherwise an empty list."""
-        mock_alt = self._make_mock_alt(alt_remote)
+        mock_alt = MagicMock()
+        mock_alt.remote_name = alt_remote
         manifest_instance._submodule_alternate_remotes = [mock_alt]
         result = manifest_instance.get_submodule_alternates_for_remote(query_remote)
         assert result == ([mock_alt.tuple] if expect_match else [])
 
-    @pytest.mark.parametrize(PARAM_COMBO_ARG, [
-        pytest.param(None, id=ID_COMBO_NONE),
-        pytest.param(COMBO_NAME, id=ID_COMBO_SPECIFIED),
+    @pytest.mark.parametrize('combo_arg', [
+        pytest.param(None, id='combo_none'),
+        pytest.param(COMBO_NAME, id='combo_specified'),
     ])
     def test_get_patchsets_for_combo_returns_patchset(self, manifest_instance, combo_arg):
         """When combo is None or a valid name, get_patchsets_for_combo must return the patchset for that combo."""
-        ps = self._setup_combo_with_patchset(manifest_instance)
+        ps = self._make_patchset_tuple(PATCHSET_NAME, REMOTE_NAME)
+        mock_src = self._make_mock_source(patch_set=PATCHSET_NAME, remote_name=REMOTE_NAME)
+        manifest_instance._combo_sources = {COMBO_NAME: [mock_src]}
+        manifest_instance._patch_sets = {(PATCHSET_NAME, REMOTE_NAME): ps}
         result = manifest_instance.get_patchsets_for_combo(combo=combo_arg)
         assert result[COMBO_NAME] == ps
 
@@ -1361,10 +1228,6 @@ class BaseTestManifestXml:
 ATTRIB_PARENT_SHA = 'parentSha'
 ATTRIB_FETCH_BRANCH = 'fetchBranch'
 ELEMENT_TAG_PATCHSET = 'PatchSet'
-OTHER_PATCHSET_NAME = 'other_ps'
-ID_NAME_MISSING = 'name_missing'
-ID_PARENT_SHA_MISSING = 'parent_sha_missing'
-ID_FETCH_BRANCH_MISSING = 'fetch_branch_missing'
 
 
 class BaseTestPatchSet:
@@ -1419,7 +1282,7 @@ class BaseTestPatchSet:
         ps1 = manifest_mod._PatchSet(self._make_full_element())
         ps2 = manifest_mod._PatchSet(make_mock_element({
             ATTRIB_REMOTE: REMOTE_NAME,
-            ATTRIB_NAME: OTHER_PATCHSET_NAME,
+            ATTRIB_NAME: 'other_ps',
             ATTRIB_PARENT_SHA: COMMIT,
             ATTRIB_FETCH_BRANCH: BRANCH,
         }, tag=ELEMENT_TAG_PATCHSET))
@@ -1449,9 +1312,9 @@ class BaseTestPatchSet:
 
     @pytest.mark.parametrize(PARAM_MISSING_ATTRIB, [
         pytest.param(ATTRIB_REMOTE, id=ID_REMOTE_MISSING),
-        pytest.param(ATTRIB_NAME, id=ID_NAME_MISSING),
-        pytest.param(ATTRIB_PARENT_SHA, id=ID_PARENT_SHA_MISSING),
-        pytest.param(ATTRIB_FETCH_BRANCH, id=ID_FETCH_BRANCH_MISSING),
+        pytest.param(ATTRIB_NAME, id='name_missing'),
+        pytest.param(ATTRIB_PARENT_SHA, id='parent_sha_missing'),
+        pytest.param(ATTRIB_FETCH_BRANCH, id='fetch_branch_missing'),
     ])
     def test_parse_required_attribs_raises_key_error_when_missing(self, missing_attrib):
         """When any required attribute is absent, must raise KeyError with the required-attrib message."""
@@ -1471,9 +1334,6 @@ class BaseTestPatchSet:
 
 ELEMENT_TAG_CHERRY_PICK = 'CherryPick'
 ATTRIB_SHA = 'sha'
-ATTRIB_SOURCE_REMOTE = 'sourceRemote'
-ATTRIB_SOURCE_BRANCH = 'sourceBranch'
-ATTRIB_MERGE_STRATEGY = 'mergeStrategy'
 OPS_FILE = 'some_file.patch'
 OPS_SHA = 'aabbcc'
 OPS_MERGE_STRATEGY = 'ours'
@@ -1493,9 +1353,9 @@ class BaseTestPatchSetOperations:
         return manifest_mod._PatchSetOperations(make_mock_element({
             ATTRIB_FILE: OPS_FILE,
             ATTRIB_SHA: OPS_SHA,
-            ATTRIB_SOURCE_REMOTE: UPSTREAM,
-            ATTRIB_SOURCE_BRANCH: DEV,
-            ATTRIB_MERGE_STRATEGY: OPS_MERGE_STRATEGY,
+            'sourceRemote': UPSTREAM,
+            'sourceBranch': DEV,
+            'mergeStrategy': OPS_MERGE_STRATEGY,
         }, tag=ELEMENT_TAG_CHERRY_PICK))
 
     def test_init_sets_type_from_element_tag(self):
@@ -1546,9 +1406,6 @@ CHILD_CODE_NAME = 'CodeName'
 CHILD_DESCRIPT = 'Description'
 PROJECT_INFO_NAME = 'TestProject'
 PROJECT_INFO_DESCRIPT = 'A test project.'
-PARAM_REQUIRED_ABSENT = 'missing_child'
-ID_CODE_NAME_ABSENT = 'code_name_absent'
-ID_DESCRIPT_ABSENT = 'descript_absent'
 CHILD_ORG = 'Org'
 CHILD_SHORT_NAME = 'ShortName'
 CHILD_LEAD_REVIEWERS = 'LeadReviewers'
@@ -1558,15 +1415,6 @@ ORG = 'Intel'
 SHORT_NAME = 'TP'
 ATTRIB_ORG = 'org'
 ATTRIB_SHORT_NAME = 'short_name'
-PARAM_OPTIONAL_PRESENT = 'child_key, value, attr'
-PARAM_OPTIONAL_ABSENT = 'attr'
-ID_ORG_PRESENT = 'org_present'
-ID_SHORT_NAME_PRESENT = 'short_name_present'
-ID_ORG_ABSENT = 'org_absent'
-ID_SHORT_NAME_ABSENT = 'short_name_absent'
-FIELD_CODENAME = 'codename'
-FIELD_DEV_LEADS = 'dev_leads'
-FIELD_REVIEWERS = 'reviewers'
 
 
 class BaseTestProjectInfo:
@@ -1670,9 +1518,9 @@ class BaseTestProjectInfo:
             short_name=SHORT_NAME,
         )
 
-    @pytest.mark.parametrize(PARAM_REQUIRED_ABSENT, [
-        pytest.param(CHILD_CODE_NAME, id=ID_CODE_NAME_ABSENT),
-        pytest.param(CHILD_DESCRIPT, id=ID_DESCRIPT_ABSENT),
+    @pytest.mark.parametrize('missing_child', [
+        pytest.param(CHILD_CODE_NAME, id='code_name_absent'),
+        pytest.param(CHILD_DESCRIPT, id='descript_absent'),
     ])
     def test_parse_required_fields_raises_when_required_child_absent(self, missing_child):
         """When a required child element is absent, must raise AttributeError."""
@@ -1686,9 +1534,9 @@ class BaseTestProjectInfo:
         with pytest.raises(AttributeError):
             manifest_mod._parse_project_info_required_fields(element)
 
-    @pytest.mark.parametrize(PARAM_OPTIONAL_PRESENT, [
-        pytest.param(CHILD_ORG, ORG, ATTRIB_ORG, id=ID_ORG_PRESENT),
-        pytest.param(CHILD_SHORT_NAME, SHORT_NAME, ATTRIB_SHORT_NAME, id=ID_SHORT_NAME_PRESENT),
+    @pytest.mark.parametrize('child_key, value, attr', [
+        pytest.param(CHILD_ORG, ORG, ATTRIB_ORG, id='org_present'),
+        pytest.param(CHILD_SHORT_NAME, SHORT_NAME, ATTRIB_SHORT_NAME, id='short_name_present'),
     ])
     def test_init_sets_optional_field_when_present(self, child_key, value, attr):
         """When an optional child element is present, __init__ must set the field to its text value."""
@@ -1703,9 +1551,9 @@ class BaseTestProjectInfo:
 
         assert getattr(info, attr) == value
 
-    @pytest.mark.parametrize(PARAM_OPTIONAL_ABSENT, [
-        pytest.param(ATTRIB_ORG, id=ID_ORG_ABSENT),
-        pytest.param(ATTRIB_SHORT_NAME, id=ID_SHORT_NAME_ABSENT),
+    @pytest.mark.parametrize('attr', [
+        pytest.param(ATTRIB_ORG, id='org_absent'),
+        pytest.param(ATTRIB_SHORT_NAME, id='short_name_absent'),
     ])
     def test_init_sets_optional_field_to_none_when_absent(self, required_info, attr):
         """When an optional child element is absent, __init__ must set the field to None."""
@@ -1723,21 +1571,11 @@ FIELD_PIN_PATH = 'pin_path'
 FIELD_DEFAULT_COMBO = 'default_combo'
 FIELD_CURR_COMBO = 'curr_combo'
 FIELD_SOURCE_MANIFEST_REPO = 'source_manifest_repo'
-ID_PIN_PATH_ABSENT = 'pin_path_absent'
-ID_DEFAULT_COMBO_ABSENT = 'default_combo_absent'
-ID_CURR_COMBO_ABSENT = 'curr_combo_absent'
-ID_SOURCE_REPO_ABSENT = 'source_manifest_repo_absent'
 
 
 class BaseTestGeneralConfig:
 
     manifest_module: str = None
-
-    @pytest.fixture
-    def empty_config(self):
-        """Return a _GeneralConfig built from an element with no children so all fields default to None."""
-        manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        return manifest_mod._GeneralConfig(self._make_mock_element({}))
 
     @staticmethod
     def _make_mock_element(find_map=None):
@@ -1801,19 +1639,20 @@ class BaseTestGeneralConfig:
         )
 
     @pytest.mark.parametrize(PARAM_FIELD_NAME, [
-        pytest.param(FIELD_PIN_PATH, id=ID_PIN_PATH_ABSENT),
-        pytest.param(FIELD_DEFAULT_COMBO, id=ID_DEFAULT_COMBO_ABSENT),
-        pytest.param(FIELD_CURR_COMBO, id=ID_CURR_COMBO_ABSENT),
-        pytest.param(FIELD_SOURCE_MANIFEST_REPO, id=ID_SOURCE_REPO_ABSENT),
+        pytest.param(FIELD_PIN_PATH, id='pin_path_absent'),
+        pytest.param(FIELD_DEFAULT_COMBO, id='default_combo_absent'),
+        pytest.param(FIELD_CURR_COMBO, id='curr_combo_absent'),
+        pytest.param(FIELD_SOURCE_MANIFEST_REPO, id='source_manifest_repo_absent'),
     ])
-    def test_init_field_defaults_to_none_when_absent(self, empty_config, field_name):
+    def test_init_field_defaults_to_none_when_absent(self, field_name):
         """When any optional child element is absent, __init__ must set the corresponding field to None."""
+        manifest_mod = importlib.import_module(self.__class__.manifest_module)
+        empty_config = manifest_mod._GeneralConfig(self._make_mock_element({}))
         assert getattr(empty_config, field_name) is None
 
 
 ATTRIB_OWNER = 'owner'
 ATTRIB_REVIEW_TYPE = 'reviewType'
-ATTRIB_PR_STRATEGY = 'prStrategy'
 ELEMENT_TAG_REMOTE_REPO = 'RemoteRepo'
 OWNER = 'Jane Doe'
 REVIEW_TYPE = 'gerrit'
@@ -1822,10 +1661,8 @@ FIELD_REVIEW_TYPE = 'review_type'
 FIELD_PR_STRATEGY = 'pr_strategy'
 ID_OWNER_ABSENT = 'owner_absent'
 ID_REVIEW_TYPE_ABSENT = 'review_type_absent'
-ID_PR_STRATEGY_ABSENT = 'pr_strategy_absent'
 ID_OWNER_PRESENT = 'owner_present'
 ID_REVIEW_TYPE_PRESENT = 'review_type_present'
-ID_PR_STRATEGY_PRESENT = 'pr_strategy_present'
 
 
 class BaseTestRemoteRepo:
@@ -1841,7 +1678,7 @@ class BaseTestRemoteRepo:
                 ATTRIB_NAME: REMOTE_NAME,
                 ATTRIB_OWNER: OWNER,
                 ATTRIB_REVIEW_TYPE: REVIEW_TYPE,
-                ATTRIB_PR_STRATEGY: PR_STRATEGY,
+                'prStrategy': PR_STRATEGY,
             },
             text=REMOTE_URL,
             tag=ELEMENT_TAG_REMOTE_REPO,
@@ -1901,7 +1738,7 @@ class BaseTestRemoteRepo:
     @pytest.mark.parametrize(PARAM_FIELD_AND_EXPECTED, [
         pytest.param(ATTRIB_OWNER, OWNER, id=ID_OWNER_PRESENT),
         pytest.param(FIELD_REVIEW_TYPE, REVIEW_TYPE, id=ID_REVIEW_TYPE_PRESENT),
-        pytest.param(FIELD_PR_STRATEGY, PR_STRATEGY, id=ID_PR_STRATEGY_PRESENT),
+        pytest.param(FIELD_PR_STRATEGY, PR_STRATEGY, id='pr_strategy_present'),
     ])
     def test_init_sets_optional_attrib_when_present(self, full_remote_repo, field_name, expected_value):
         """When any optional attribute is present, __init__ must set the corresponding field to its value."""
@@ -1910,7 +1747,7 @@ class BaseTestRemoteRepo:
     @pytest.mark.parametrize(PARAM_FIELD_NAME, [
         pytest.param(ATTRIB_OWNER, id=ID_OWNER_ABSENT),
         pytest.param(FIELD_REVIEW_TYPE, id=ID_REVIEW_TYPE_ABSENT),
-        pytest.param(FIELD_PR_STRATEGY, id=ID_PR_STRATEGY_ABSENT),
+        pytest.param(FIELD_PR_STRATEGY, id='pr_strategy_absent'),
     ])
     def test_init_optional_attrib_defaults_to_none_when_absent(self, field_name):
         """When any optional attribute is absent, __init__ must set the corresponding field to None."""
@@ -1928,12 +1765,6 @@ ELEMENT_TAG_CLIENT_GIT_HOOK = 'ClientGitHook'
 HOOK_SOURCE = '/scripts/pre-commit.sh'
 DEST_PATH = '.git/hooks'
 DEST_FILE = 'pre-commit'
-FIELD_REMOTE_URL = 'remote_url'
-FIELD_DEST_FILE = 'dest_file'
-ID_SOURCE_ABSENT = 'source_absent'
-ID_DESTINATION_ABSENT = 'destination_absent'
-ID_REMOTE_URL_FOUND = 'remote_url_found'
-ID_DEST_FILE_PRESENT = 'dest_file_present'
 
 
 class BaseTestRepoHook:
@@ -2011,8 +1842,8 @@ class BaseTestRepoHook:
         )
 
     @pytest.mark.parametrize(PARAM_MISSING_ATTRIB, [
-        pytest.param(ATTRIB_SOURCE, id=ID_SOURCE_ABSENT),
-        pytest.param(ATTRIB_DESTINATION, id=ID_DESTINATION_ABSENT),
+        pytest.param(ATTRIB_SOURCE, id='source_absent'),
+        pytest.param(ATTRIB_DESTINATION, id='destination_absent'),
     ])
     def test_parse_required_attribs_raises_key_error_when_missing(self, missing_attrib):
         """When any required attribute is absent, must raise KeyError with the required-attrib message."""
@@ -2028,8 +1859,8 @@ class BaseTestRepoHook:
         assert manifest_mod.REQUIRED_ATTRIB_ERROR_MSG.split(REQUIRED_ATTRIB_SPLIT_CHAR)[FIRST_ELEMENT_INDEX] in exc_info.value.args[FIRST_ELEMENT_INDEX]
 
     @pytest.mark.parametrize(PARAM_FIELD_AND_EXPECTED, [
-        pytest.param(FIELD_REMOTE_URL, REMOTE_URL, id=ID_REMOTE_URL_FOUND),
-        pytest.param(FIELD_DEST_FILE, DEST_FILE, id=ID_DEST_FILE_PRESENT),
+        pytest.param('remote_url', REMOTE_URL, id='remote_url_found'),
+        pytest.param('dest_file', DEST_FILE, id='dest_file_present'),
     ])
     def test_init_sets_optional_field_when_present(self, full_hook, field_name, expected_value):
         """When the optional attribute is present and resolved, __init__ must set the corresponding field to its value."""
@@ -2040,17 +1871,6 @@ ATTRIB_VENV_ENABLE = 'venv_enable'
 ELEMENT_TAG_COMBINATION = 'Combination'
 COMBINATION_NAME = 'TestCombo'
 COMBO_DESCRIPTION = 'A test combination'
-PARAM_MINIMAL_FIELD = '{}, {}'.format(PARAM_FIELD_NAME, PARAM_EXPECTED)
-PARAM_BOOL_FLAG = 'attrib_name, attrib_value, {}, {}'.format(PARAM_FIELD_NAME, PARAM_EXPECTED)
-ID_NAME_SET = 'name_set'
-ID_DESCRIPTION_ABSENT = 'description_absent'
-ID_ARCHIVED_TRUE_LOWER = 'archived_true_lower'
-ID_ARCHIVED_FALSE_LOWER = 'archived_false_lower'
-ID_ARCHIVED_MISSING = 'archived_missing'
-ID_ARCHIVED_TRUE_UPPER = 'archived_true_upper'
-ID_VENV_TRUE = 'venv_true'
-ID_VENV_FALSE = 'venv_false'
-ID_VENV_MISSING = 'venv_missing'
 
 
 class BaseTestCombination:
@@ -2109,9 +1929,9 @@ class BaseTestCombination:
             venv_enable=True,
         )
 
-    @pytest.mark.parametrize(PARAM_MINIMAL_FIELD, [
-        pytest.param(ATTRIB_NAME, COMBINATION_NAME, id=ID_NAME_SET),
-        pytest.param(ATTRIB_DESCRIPTION, None, id=ID_DESCRIPTION_ABSENT),
+    @pytest.mark.parametrize('{}, {}'.format(PARAM_FIELD_NAME, PARAM_EXPECTED), [
+        pytest.param(ATTRIB_NAME, COMBINATION_NAME, id='name_set'),
+        pytest.param(ATTRIB_DESCRIPTION, None, id='description_absent'),
     ])
     def test_init_sets_field_on_minimal_element(self, required_element, field_name, expected):
         """On an element with only the required name attribute, each field must equal the expected value after __init__."""
@@ -2119,14 +1939,14 @@ class BaseTestCombination:
         combo = manifest_mod._Combination(required_element)
         assert getattr(combo, field_name) == expected
 
-    @pytest.mark.parametrize(PARAM_BOOL_FLAG, [
-        pytest.param(ATTRIB_ARCHIVED, ATTRIB_BOOL_TRUE, ATTRIB_ARCHIVED, True, id=ID_ARCHIVED_TRUE_LOWER),
-        pytest.param(ATTRIB_ARCHIVED, ATTRIB_BOOL_FALSE, ATTRIB_ARCHIVED, False, id=ID_ARCHIVED_FALSE_LOWER),
-        pytest.param(ATTRIB_ARCHIVED, None, ATTRIB_ARCHIVED, False, id=ID_ARCHIVED_MISSING),
-        pytest.param(ATTRIB_ARCHIVED, ARCHIVED_TRUE_UPPER, ATTRIB_ARCHIVED, True, id=ID_ARCHIVED_TRUE_UPPER),
-        pytest.param(ATTRIB_VENV_ENABLE, ATTRIB_BOOL_TRUE, ATTRIB_VENV_ENABLE, True, id=ID_VENV_TRUE),
-        pytest.param(ATTRIB_VENV_ENABLE, ATTRIB_BOOL_FALSE, ATTRIB_VENV_ENABLE, False, id=ID_VENV_FALSE),
-        pytest.param(ATTRIB_VENV_ENABLE, None, ATTRIB_VENV_ENABLE, False, id=ID_VENV_MISSING),
+    @pytest.mark.parametrize('attrib_name, attrib_value, {}, {}'.format(PARAM_FIELD_NAME, PARAM_EXPECTED), [
+        pytest.param(ATTRIB_ARCHIVED, ATTRIB_BOOL_TRUE, ATTRIB_ARCHIVED, True, id='archived_true_lower'),
+        pytest.param(ATTRIB_ARCHIVED, ATTRIB_BOOL_FALSE, ATTRIB_ARCHIVED, False, id='archived_false_lower'),
+        pytest.param(ATTRIB_ARCHIVED, None, ATTRIB_ARCHIVED, False, id='archived_missing'),
+        pytest.param(ATTRIB_ARCHIVED, ARCHIVED_TRUE_UPPER, ATTRIB_ARCHIVED, True, id='archived_true_upper'),
+        pytest.param(ATTRIB_VENV_ENABLE, ATTRIB_BOOL_TRUE, ATTRIB_VENV_ENABLE, True, id='venv_true'),
+        pytest.param(ATTRIB_VENV_ENABLE, ATTRIB_BOOL_FALSE, ATTRIB_VENV_ENABLE, False, id='venv_false'),
+        pytest.param(ATTRIB_VENV_ENABLE, None, ATTRIB_VENV_ENABLE, False, id='venv_missing'),
     ])
     def test_init_sets_bool_flag(self, attrib_name, attrib_value, field_name, expected):
         """Each combination of attrib_name/attrib_value must produce the expected boolean on the named field."""
@@ -2146,29 +1966,11 @@ ATTRIB_BRANCH = 'branch'
 ATTRIB_COMMIT = 'commit'
 ATTRIB_TAG = 'tag'
 ATTRIB_PATCH_SET = 'patchSet'
-ATTRIB_ENABLE_SUB_LEGACY = 'enable_submodule'
 ATTRIB_VENV_CFG = 'venv_cfg'
 TAG = 'v1.0.0'
 PATCH_SET = 'ps-debug'
 VENV_CFG = 'venv.cfg'
-FIELD_PATCH_SET = 'patch_set'
 FIELD_ENABLE_SUB = 'enableSub'
-PARAM_PARSE_RAISES = 'attrib, remotes'
-PARAM_PATCH_SET_COMBO = 'ref_attrib_key, ref_attrib_val'
-ID_LOCAL_ROOT_MISSING = 'local_root_missing'
-ID_REMOTE_ATTRIB_MISSING = 'remote_attrib_missing'
-ID_REMOTE_NOT_IN_REMOTES = 'remote_not_in_remotes'
-ID_COMMIT_PRESENT = 'commit_present'
-ID_TAG_PRESENT = 'tag_present'
-ID_ENABLE_SUB_LEGACY_COMPAT = 'enable_sub_legacy_compat'
-ID_VENV_CFG_PRESENT = 'venv_cfg_present'
-ID_COMMIT_ABSENT = 'commit_absent'
-ID_TAG_ABSENT = 'tag_absent'
-ID_PATCH_SET_ABSENT = 'patch_set_absent'
-ID_VENV_CFG_ABSENT = 'venv_cfg_absent'
-ID_PATCH_SET_WITH_BRANCH = 'patch_set_with_branch'
-ID_PATCH_SET_WITH_COMMIT = 'patch_set_with_commit'
-ID_PATCH_SET_WITH_TAG = 'patch_set_with_tag'
 ATTRIB_SPARSE = 'sparseCheckout'
 ATTRIB_ENABLE_SUB = 'enableSubmodule'
 ATTRIB_BLOBLESS = 'blobless'
@@ -2300,17 +2102,17 @@ class BaseTestRepoSource:
             treeless=False,
         )
 
-    @pytest.mark.parametrize(PARAM_PARSE_RAISES, [
+    @pytest.mark.parametrize('attrib, remotes', [
         pytest.param(
             {ATTRIB_REMOTE: REMOTE_NAME}, make_mock_remotes(),
-            id=ID_LOCAL_ROOT_MISSING,
+            id='local_root_missing',
         ),
         pytest.param(
             {ATTRIB_LOCAL_ROOT: LOCAL_ROOT}, make_mock_remotes(),
-            id=ID_REMOTE_ATTRIB_MISSING,
+            id='remote_attrib_missing',
         ),
         pytest.param(
-            {ATTRIB_LOCAL_ROOT: LOCAL_ROOT, ATTRIB_REMOTE: REMOTE_NAME}, {}, id=ID_REMOTE_NOT_IN_REMOTES, ),
+            {ATTRIB_LOCAL_ROOT: LOCAL_ROOT, ATTRIB_REMOTE: REMOTE_NAME}, {}, id='remote_not_in_remotes', ),
     ])
     def test_parse_required_attribs_raises_key_error(self, attrib, remotes):
         """When any required attribute or remote lookup is missing, must raise KeyError with the required-attrib message."""
@@ -2323,10 +2125,10 @@ class BaseTestRepoSource:
         assert manifest_mod.REQUIRED_ATTRIB_ERROR_MSG.split(REQUIRED_ATTRIB_SPLIT_CHAR)[FIRST_ELEMENT_INDEX] in exc_info.value.args[FIRST_ELEMENT_INDEX]
 
     @pytest.mark.parametrize(PARAM_ATTRIB_VAL_FIELD_EXPECTED, [
-        pytest.param(ATTRIB_COMMIT, COMMIT, ATTRIB_COMMIT, COMMIT, id=ID_COMMIT_PRESENT),
-        pytest.param(ATTRIB_TAG, TAG, ATTRIB_TAG, TAG, id=ID_TAG_PRESENT),
-        pytest.param(ATTRIB_ENABLE_SUB_LEGACY, ATTRIB_BOOL_TRUE, FIELD_ENABLE_SUB, True, id=ID_ENABLE_SUB_LEGACY_COMPAT),
-        pytest.param(ATTRIB_VENV_CFG, VENV_CFG, ATTRIB_VENV_CFG, VENV_CFG, id=ID_VENV_CFG_PRESENT),
+        pytest.param(ATTRIB_COMMIT, COMMIT, ATTRIB_COMMIT, COMMIT, id='commit_present'),
+        pytest.param(ATTRIB_TAG, TAG, ATTRIB_TAG, TAG, id='tag_present'),
+        pytest.param('enable_submodule', ATTRIB_BOOL_TRUE, FIELD_ENABLE_SUB, True, id='enable_sub_legacy_compat'),
+        pytest.param(ATTRIB_VENV_CFG, VENV_CFG, ATTRIB_VENV_CFG, VENV_CFG, id='venv_cfg_present'),
     ])
     def test_init_sets_optional_field_when_present(self, base_attrib, default_remotes, attrib_key, attrib_val, field_name, expected):
         """When an optional attribute is present, __init__ must set the corresponding field to its value."""
@@ -2337,19 +2139,19 @@ class BaseTestRepoSource:
         assert getattr(rs, field_name) == expected
 
     @pytest.mark.parametrize(PARAM_FIELD_NAME, [
-        pytest.param(ATTRIB_COMMIT, id=ID_COMMIT_ABSENT),
-        pytest.param(ATTRIB_TAG, id=ID_TAG_ABSENT),
-        pytest.param(FIELD_PATCH_SET, id=ID_PATCH_SET_ABSENT),
-        pytest.param(ATTRIB_VENV_CFG, id=ID_VENV_CFG_ABSENT),
+        pytest.param(ATTRIB_COMMIT, id='commit_absent'),
+        pytest.param(ATTRIB_TAG, id='tag_absent'),
+        pytest.param('patch_set', id='patch_set_absent'),
+        pytest.param(ATTRIB_VENV_CFG, id='venv_cfg_absent'),
     ])
     def test_init_sets_optional_field_to_none_when_absent(self, base_source, field_name):
         """When any optional attribute is absent, __init__ must set the corresponding field to None."""
         assert getattr(base_source, field_name) is None
 
-    @pytest.mark.parametrize(PARAM_PATCH_SET_COMBO, [
-        pytest.param(ATTRIB_BRANCH, BRANCH, id=ID_PATCH_SET_WITH_BRANCH),
-        pytest.param(ATTRIB_COMMIT, COMMIT, id=ID_PATCH_SET_WITH_COMMIT),
-        pytest.param(ATTRIB_TAG, TAG, id=ID_PATCH_SET_WITH_TAG),
+    @pytest.mark.parametrize('ref_attrib_key, ref_attrib_val', [
+        pytest.param(ATTRIB_BRANCH, BRANCH, id='patch_set_with_branch'),
+        pytest.param(ATTRIB_COMMIT, COMMIT, id='patch_set_with_commit'),
+        pytest.param(ATTRIB_TAG, TAG, id='patch_set_with_tag'),
     ])
     def test_init_raises_value_error_when_patch_set_combined_with_ref(self, default_remotes, ref_attrib_key, ref_attrib_val):
         """When patchSet is specified alongside any other ref attribute, __init__ must raise ValueError."""
@@ -2390,26 +2192,11 @@ class BaseTestRepoSource:
 
 
 ATTRIB_SPARSE_BY_DEFAULT = 'sparseByDefault'
-PARAM_SPARSE_BY_DEFAULT = 'attrib, expected'
-ID_SPARSE_BY_DEFAULT_ABSENT = 'sparse_by_default_absent'
-ID_SPARSE_BY_DEFAULT_TRUE = 'sparse_by_default_true'
-ID_SPARSE_BY_DEFAULT_FALSE = 'sparse_by_default_false'
 
 
 class BaseTestSparseSettings:
 
     manifest_module: str = None
-
-    @pytest.mark.parametrize(PARAM_SPARSE_BY_DEFAULT, [
-        pytest.param({}, False, id=ID_SPARSE_BY_DEFAULT_ABSENT),
-        pytest.param({ATTRIB_SPARSE_BY_DEFAULT: ATTRIB_BOOL_TRUE}, True, id=ID_SPARSE_BY_DEFAULT_TRUE),
-        pytest.param({ATTRIB_SPARSE_BY_DEFAULT: ATTRIB_BOOL_FALSE}, False, id=ID_SPARSE_BY_DEFAULT_FALSE),
-    ])
-    def test_init_sets_sparse_by_default(self, attrib, expected):
-        """When sparseByDefault is absent, 'true', or 'false', __init__ must set self.sparse_by_default correctly."""
-        manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        element = make_mock_element_with_iter(attrib)
-        assert manifest_mod._SparseSettings(element).sparse_by_default is expected
 
     def test_tuple_returns_correct_sparse_settings_namedtuple(self):
         """The tuple property must return a SparseSettings namedtuple with the correct sparse_by_default value."""
@@ -2418,6 +2205,17 @@ class BaseTestSparseSettings:
         ss = manifest_mod._SparseSettings(element)
 
         assert ss.tuple == manifest_mod.SparseSettings(sparse_by_default=True)
+
+    @pytest.mark.parametrize('attrib, expected', [
+        pytest.param({}, False, id='sparse_by_default_absent'),
+        pytest.param({ATTRIB_SPARSE_BY_DEFAULT: ATTRIB_BOOL_TRUE}, True, id='sparse_by_default_true'),
+        pytest.param({ATTRIB_SPARSE_BY_DEFAULT: ATTRIB_BOOL_FALSE}, False, id='sparse_by_default_false'),
+    ])
+    def test_init_sets_sparse_by_default(self, attrib, expected):
+        """When sparseByDefault is absent, 'true', or 'false', __init__ must set self.sparse_by_default correctly."""
+        manifest_mod = importlib.import_module(self.__class__.manifest_module)
+        element = make_mock_element_with_iter(attrib)
+        assert manifest_mod._SparseSettings(element).sparse_by_default is expected
 
 
 TAG_ALWAYS_INCLUDE = 'AlwaysInclude'
@@ -2431,9 +2229,6 @@ PIPE_SEPARATOR = '|'
 FIELD_ALWAYS_INCLUDE = 'always_include'
 FIELD_ALWAYS_EXCLUDE = 'always_exclude'
 PARAM_LIST_FIELD = 'tag, text_value, {}, {}'.format(PARAM_FIELD_NAME, PARAM_EXPECTED)
-ID_COMBINATION_PRESENT = 'combination_present'
-ID_ALWAYS_INCLUDE_SPLIT = 'always_include_split'
-ID_ALWAYS_EXCLUDE_SPLIT = 'always_exclude_split'
 
 
 class BaseTestSparseData:
@@ -2477,7 +2272,7 @@ class BaseTestSparseData:
         )
 
     @pytest.mark.parametrize(PARAM_ATTRIB_VAL_FIELD_EXPECTED, [
-        pytest.param(ATTRIB_COMBINATION, COMBINATION, ATTRIB_COMBINATION, COMBINATION, id=ID_COMBINATION_PRESENT),
+        pytest.param(ATTRIB_COMBINATION, COMBINATION, ATTRIB_COMBINATION, COMBINATION, id='combination_present'),
         pytest.param(ATTRIB_REMOTE, REMOTE_NAME, FIELD_REMOTE_NAME, REMOTE_NAME, id=ID_REMOTE_NAME_PRESENT),
     ])
     def test_init_sets_optional_attrib_when_present(self, attrib_key, attrib_val, field_name, expected):
@@ -2496,8 +2291,8 @@ class BaseTestSparseData:
         self._assert_child_list_field(tag, text_value, field_name, expected)
 
     @pytest.mark.parametrize(PARAM_LIST_FIELD, [
-        pytest.param(TAG_ALWAYS_INCLUDE, INCLUDE_MULTI, FIELD_ALWAYS_INCLUDE, INCLUDE_MULTI.split(PIPE_SEPARATOR), id=ID_ALWAYS_INCLUDE_SPLIT),
-        pytest.param(TAG_ALWAYS_EXCLUDE, EXCLUDE_MULTI, FIELD_ALWAYS_EXCLUDE, EXCLUDE_MULTI.split(PIPE_SEPARATOR), id=ID_ALWAYS_EXCLUDE_SPLIT),
+        pytest.param(TAG_ALWAYS_INCLUDE, INCLUDE_MULTI, FIELD_ALWAYS_INCLUDE, INCLUDE_MULTI.split(PIPE_SEPARATOR), id='always_include_split'),
+        pytest.param(TAG_ALWAYS_EXCLUDE, EXCLUDE_MULTI, FIELD_ALWAYS_EXCLUDE, EXCLUDE_MULTI.split(PIPE_SEPARATOR), id='always_exclude_split'),
     ])
     def test_init_splits_pipe_separated_values(self, tag, text_value, field_name, expected):
         """When a child element contains pipe-separated paths, __init__ must add each path as a separate entry."""
@@ -2530,12 +2325,6 @@ class BaseTestFolderToFolderMappingFolderExclude:
         """The tuple property must return a FolderToFolderMappingFolderExclude namedtuple with the correct path."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
         assert full_folder_exclude.tuple == manifest_mod.FolderToFolderMappingFolderExclude(path=EXCLUDE_PATH)
-
-
-FIELD_PROJECT1_FOLDER = 'project1_folder'
-FIELD_PROJECT2_FOLDER = 'project2_folder'
-ID_PROJECT1_FOLDER_PRESENT = 'project1_folder_present'
-ID_PROJECT2_FOLDER_PRESENT = 'project2_folder_present'
 
 
 class BaseTestFolderToFolderMappingFolder:
@@ -2577,8 +2366,8 @@ class BaseTestFolderToFolderMappingFolder:
         assert result.excludes[FIRST_ELEMENT_INDEX].path == EXCLUDE_PATH
 
     @pytest.mark.parametrize(PARAM_ATTRIB_VALUE_FIELD, [
-        pytest.param(ATTRIB_PROJECT1, PROJECT1_FOLDER, FIELD_PROJECT1_FOLDER, id=ID_PROJECT1_FOLDER_PRESENT),
-        pytest.param(ATTRIB_PROJECT2, PROJECT2_FOLDER, FIELD_PROJECT2_FOLDER, id=ID_PROJECT2_FOLDER_PRESENT),
+        pytest.param(ATTRIB_PROJECT1, PROJECT1_FOLDER, 'project1_folder', id='project1_folder_present'),
+        pytest.param(ATTRIB_PROJECT2, PROJECT2_FOLDER, 'project2_folder', id='project2_folder_present'),
     ])
     def test_init_sets_project_folder_when_present(self, attrib_key, attrib_value, field_name):
         """When a project folder attribute is present, __init__ must set the corresponding field to its value."""
@@ -2593,11 +2382,6 @@ class BaseTestFolderToFolderMappingFolder:
 
 TAG_FOLDER = 'Folder'
 TAG_FILE = 'File'
-ID_PROJECT1_PRESENT = 'project1_present'
-ID_PROJECT2_PRESENT = 'project2_present'
-PARAM_CHILD_SLOT = 'folder_children_count, file_children_count'
-ID_FOLDER_CHILD = 'folder_child'
-ID_FILE_CHILD = 'file_child'
 
 
 class BaseTestFolderToFolderMapping:
@@ -2656,8 +2440,8 @@ class BaseTestFolderToFolderMapping:
         assert len(result.folders) == ONE_ITEM
 
     @pytest.mark.parametrize(PARAM_ATTRIB_VALUE_FIELD, [
-        pytest.param(ATTRIB_PROJECT1, PROJECT1_NAME, ATTRIB_PROJECT1, id=ID_PROJECT1_PRESENT),
-        pytest.param(ATTRIB_PROJECT2, PROJECT2_NAME, ATTRIB_PROJECT2, id=ID_PROJECT2_PRESENT),
+        pytest.param(ATTRIB_PROJECT1, PROJECT1_NAME, ATTRIB_PROJECT1, id='project1_present'),
+        pytest.param(ATTRIB_PROJECT2, PROJECT2_NAME, ATTRIB_PROJECT2, id='project2_present'),
         pytest.param(ATTRIB_REMOTE, REMOTE_NAME, FIELD_REMOTE_NAME, id=ID_REMOTE_NAME_PRESENT),
     ])
     def test_init_sets_optional_attrib_when_present(self, attrib_key, attrib_value, field_name):
@@ -2667,9 +2451,9 @@ class BaseTestFolderToFolderMapping:
         mapping = manifest_mod._FolderToFolderMapping(element)
         assert getattr(mapping, field_name) == attrib_value
 
-    @pytest.mark.parametrize(PARAM_CHILD_SLOT, [
-        pytest.param(ONE_ITEM, FIRST_ELEMENT_INDEX, id=ID_FOLDER_CHILD),
-        pytest.param(FIRST_ELEMENT_INDEX, ONE_ITEM, id=ID_FILE_CHILD),
+    @pytest.mark.parametrize('folder_children_count, file_children_count', [
+        pytest.param(ONE_ITEM, FIRST_ELEMENT_INDEX, id='folder_child'),
+        pytest.param(FIRST_ELEMENT_INDEX, ONE_ITEM, id='file_child'),
     ])
     def test_init_populates_folders_from_single_child_tag(self, folder_children_count, file_children_count):
         """When one child element is present under either the Folder or File tag, __init__ must add one _FolderToFolderMappingFolder with the correct project folder values."""
@@ -2688,9 +2472,6 @@ ATTRIB_ORIGINAL_URL = 'originalUrl'
 ELEMENT_TAG_SUBMODULE_ALT = 'edk_manifest.SubmoduleAlternateRemote'
 ORIGINAL_URL = 'https://original.example.com/repo.git'
 ALT_URL = 'https://alt.example.com/repo.git'
-FIELD_ALT_URL = 'altUrl'
-NO_REMOTE_SPLIT_CHAR = '{'
-ID_ORIGINAL_URL_MISSING = 'original_url_missing'
 
 
 class BaseTestSubmoduleAlternateRemote:
@@ -2732,13 +2513,13 @@ class BaseTestSubmoduleAlternateRemote:
         with pytest.raises(KeyError) as exc_info:
             manifest_mod._parse_submodule_alternate_remote_attribs(full_element, {})
 
-        assert manifest_mod.NO_REMOTE_EXISTS_WITH_NAME.split(NO_REMOTE_SPLIT_CHAR)[FIRST_ELEMENT_INDEX] in exc_info.value.args[FIRST_ELEMENT_INDEX]
+        assert manifest_mod.NO_REMOTE_EXISTS_WITH_NAME.split('{')[FIRST_ELEMENT_INDEX] in exc_info.value.args[FIRST_ELEMENT_INDEX]
 
     def test_init_sets_all_fields(self, full_sar):
         """When all required attributes are valid, __init__ must correctly set remote_name, originalUrl, and altUrl."""
         assert getattr(full_sar, FIELD_REMOTE_NAME) == REMOTE_NAME
         assert getattr(full_sar, ATTRIB_ORIGINAL_URL) == ORIGINAL_URL
-        assert getattr(full_sar, FIELD_ALT_URL) == ALT_URL
+        assert getattr(full_sar, 'altUrl') == ALT_URL
 
     def test_tuple_returns_correct_submodule_alternate_remote_namedtuple(self, full_sar):
         """The tuple property must return a SubmoduleAlternateRemote namedtuple with all field values correct."""
@@ -2751,7 +2532,7 @@ class BaseTestSubmoduleAlternateRemote:
 
     @pytest.mark.parametrize(FIELD_ATTRIB, [
         pytest.param({ATTRIB_ORIGINAL_URL: ORIGINAL_URL}, id=ID_REMOTE_MISSING),
-        pytest.param({ATTRIB_REMOTE: REMOTE_NAME}, id=ID_ORIGINAL_URL_MISSING),
+        pytest.param({ATTRIB_REMOTE: REMOTE_NAME}, id='original_url_missing'),
     ])
     def test_parse_raises_when_required_attrib_missing(self, default_remotes, attrib):
         """When any required attribute is absent, must raise KeyError with the required-attrib message."""
@@ -2762,14 +2543,9 @@ class BaseTestSubmoduleAlternateRemote:
         assert manifest_mod.REQUIRED_ATTRIB_ERROR_MSG.split(REQUIRED_ATTRIB_SPLIT_CHAR)[FIRST_ELEMENT_INDEX] in exc_info.value.args[FIRST_ELEMENT_INDEX]
 
 
-ATTRIB_COMBO = 'combo'
-ATTRIB_RECURSIVE = 'recursive'
 ELEMENT_TAG_SUBMODULE_INIT = 'SubmoduleInitEntry'
 SUBMODULE_PATH_VALUE = 'some/submodule/path'
 SUBMODULE_COMBO = 'combo_a'
-PARAM_RECURSIVE_FLAG = 'attrib_val, {}'.format(PARAM_EXPECTED)
-ID_RECURSIVE_TRUE = 'recursive_true'
-ID_RECURSIVE_FALSE = 'recursive_false'
 
 
 class BaseTestSubmoduleInitEntry:
@@ -2821,7 +2597,7 @@ class BaseTestSubmoduleInitEntry:
     def test_combo_when_present(self):
         """When the combo attribute is present, __init__ must set self.combo to its value."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        element = self._make_required_element(**{ATTRIB_COMBO: SUBMODULE_COMBO})
+        element = self._make_required_element(**{'combo': SUBMODULE_COMBO})
         sie = manifest_mod._SubmoduleInitEntry(element)
         assert sie.combo == SUBMODULE_COMBO
 
@@ -2835,13 +2611,13 @@ class BaseTestSubmoduleInitEntry:
             path=SUBMODULE_PATH_VALUE,
         )
 
-    @pytest.mark.parametrize(PARAM_RECURSIVE_FLAG, [
-        pytest.param(ATTRIB_BOOL_TRUE, True, id=ID_RECURSIVE_TRUE),
-        pytest.param(ATTRIB_BOOL_FALSE, False, id=ID_RECURSIVE_FALSE),
+    @pytest.mark.parametrize('attrib_val, {}'.format(PARAM_EXPECTED), [
+        pytest.param(ATTRIB_BOOL_TRUE, True, id='recursive_true'),
+        pytest.param(ATTRIB_BOOL_FALSE, False, id='recursive_false'),
     ])
     def test_init_sets_recursive_flag(self, attrib_val, expected):
         """When recursive is 'true' or 'false', __init__ must set self.recursive to the expected boolean."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        element = self._make_required_element(**{ATTRIB_RECURSIVE: attrib_val})
+        element = self._make_required_element(**{'recursive': attrib_val})
         sie = manifest_mod._SubmoduleInitEntry(element)
         assert sie.recursive is expected

@@ -6,7 +6,7 @@
 Tests `_SparseData.__init__` which parses optional attributes and iterates `AlwaysInclude` / `AlwaysExclude` children from a `<SparseData>` element.
 
 #### 1. All Fields Default When All Attributes and Children Absent
-- **Test Name**: `test_all_fields_default_when_all_attribs_and_children_absent`
+- **Test Name**: `test_all_fields_default_when_absent`
 - **Description**: When all optional attributes (`combination`, `remote`) and all child elements (`AlwaysInclude`, `AlwaysExclude`) are absent.
 - **Expected Outcome**: `self.combination` is `None`, `self.remote_name` is `None`, `self.always_include` is `[]`, and `self.always_exclude` is `[]`.
 
@@ -16,27 +16,27 @@ Tests `_SparseData.__init__` which parses optional attributes and iterates `Alwa
 - **Expected Outcome**: `self.combination` equals the attribute value.
 
 #### 3. Sets remote_name When remote Attribute Present
-- **Test Name**: `test_init_sets_optional_attrib_when_present[remote_present]`
+- **Test Name**: `test_init_sets_optional_attrib_when_present[remote_name_present]`
 - **Description**: When the `remote` attribute is present.
 - **Expected Outcome**: `self.remote_name` equals the attribute value.
 
 #### 4. Populates always_include From Single AlwaysInclude Child
-- **Test Name**: `test_populates_always_include_from_always_include_child[single_always_include]`
+- **Test Name**: `test_init_populates_list_field_from_single_child[always_include]`
 - **Description**: When one `AlwaysInclude` child is present with a single path.
 - **Expected Outcome**: `self.always_include` contains that path as its sole entry.
 
 #### 5. Populates always_exclude From Single AlwaysExclude Child
-- **Test Name**: `test_populates_always_exclude_from_always_exclude_child[single_always_exclude]`
+- **Test Name**: `test_init_populates_list_field_from_single_child[always_exclude]`
 - **Description**: When one `AlwaysExclude` child is present with a single path.
 - **Expected Outcome**: `self.always_exclude` contains that path as its sole entry.
 
 #### 6. Splits Pipe-Separated Values for always_include
-- **Test Name**: `test_populates_always_include_from_always_include_child[pipe_separated_always_include]`
+- **Test Name**: `test_init_splits_pipe_separated_values[always_include_split]`
 - **Description**: When an `AlwaysInclude` child contains multiple paths separated by `|`.
 - **Expected Outcome**: Each path is added as a separate entry in `self.always_include`.
 
 #### 7. Splits Pipe-Separated Values for always_exclude
-- **Test Name**: `test_populates_always_exclude_from_always_exclude_child[pipe_separated_always_exclude]`
+- **Test Name**: `test_init_splits_pipe_separated_values[always_exclude_split]`
 - **Description**: When an `AlwaysExclude` child contains multiple paths separated by `|`.
 - **Expected Outcome**: Each path is added as a separate entry in `self.always_exclude`.
 

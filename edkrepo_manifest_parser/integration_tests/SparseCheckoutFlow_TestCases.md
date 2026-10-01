@@ -20,40 +20,40 @@ Integration tests for sparse checkout configuration and data retrieval from mani
 - **Description**: When accessing the sparse_data property.
 - **Expected Outcome**: Returns list of SparseData objects with correct count.
 
-#### 4. Sparse Data Attribute Has Correct Value
-- **Test Name**: `test_sparse_data_has_attribute[combination]`
-- **Description**: When accessing the combination attribute of sparse data (parametrized case).
-- **Expected Outcome**: Returns the combination name matching the manifest configuration.
-
-#### 5. Sparse Data Attribute Has Correct Value
-- **Test Name**: `test_sparse_data_has_attribute[remote_name]`
-- **Description**: When accessing the remote_name attribute of sparse data (parametrized case).
-- **Expected Outcome**: Returns the remote name matching the manifest configuration.
-
-#### 6. Sparse Data List Attribute Has Correct Count
-- **Test Name**: `test_sparse_data_has_list_attribute[always_include]`
-- **Description**: When accessing the always_include attribute of sparse data (parametrized case).
-- **Expected Outcome**: Returns a list of paths with correct count.
-
-#### 7. Sparse Data List Attribute Has Correct Count
-- **Test Name**: `test_sparse_data_has_list_attribute[always_exclude]`
-- **Description**: When accessing the always_exclude attribute of sparse data (parametrized case).
-- **Expected Outcome**: Returns a list with correct count.
-
-#### 8. Always Include Contains All Configured Paths
+#### 4. Always Include Contains All Configured Paths
 - **Test Name**: `test_sparse_data_always_include_contains_correct_paths`
 - **Description**: When checking paths in the always_include list.
 - **Expected Outcome**: List contains all paths specified in the manifest configuration.
 
-#### 9. Returns Only Matching Combination Entries
+#### 5. Returns Only Matching Combination Entries
 - **Test Name**: `test_filter_sparse_data_by_combination`
 - **Description**: When filtering sparse data entries by combination name.
 - **Expected Outcome**: Returns only entries where combination matches the specified name.
 
-#### 10. Returns Only Matching Remote Entries
+#### 6. Returns Only Matching Remote Entries
 - **Test Name**: `test_filter_sparse_data_by_remote`
 - **Description**: When filtering sparse data entries by remote name.
 - **Expected Outcome**: Returns only entries where remote_name matches the specified name.
+
+#### 7. Sparse Data Attribute Has Correct Value
+- **Test Name**: `test_sparse_data_has_attribute[combination]`
+- **Description**: When accessing the combination attribute of sparse data (parametrized case).
+- **Expected Outcome**: Returns the combination name matching the manifest configuration.
+
+#### 8. Sparse Data Attribute Has Correct Value
+- **Test Name**: `test_sparse_data_has_attribute[remote_name]`
+- **Description**: When accessing the remote_name attribute of sparse data (parametrized case).
+- **Expected Outcome**: Returns the remote name matching the manifest configuration.
+
+#### 9. Sparse Data List Attribute Has Correct Count
+- **Test Name**: `test_sparse_data_has_list_attribute[always_include]`
+- **Description**: When accessing the always_include attribute of sparse data (parametrized case).
+- **Expected Outcome**: Returns a list of paths with correct count.
+
+#### 10. Sparse Data List Attribute Has Correct Count
+- **Test Name**: `test_sparse_data_has_list_attribute[always_exclude]`
+- **Description**: When accessing the always_exclude attribute of sparse data (parametrized case).
+- **Expected Outcome**: Returns a list with correct count.
 
 
 ## Running the Tests
