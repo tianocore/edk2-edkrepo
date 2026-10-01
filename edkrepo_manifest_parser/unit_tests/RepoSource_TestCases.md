@@ -149,18 +149,22 @@ Tests `_RepoSource.__init__` which parses a `<Source>` XML element including req
 - **Expected Outcome**: `self.treeless` is `False`.
 
 #### 25. Raises KeyError When No Reference Attribute Provided
+- **Test Name**: `test_init_raises_key_error_when_no_ref_specified`
 - **Description**: When the element has no `branch`, `commit`, `tag`, or `patchSet` attribute.
 - **Expected Outcome**: Raises `KeyError` indicating that a reference attribute is required.
 
 #### 26. Raises ValueError When patchSet and branch Are Both Present
+- **Test Name**: `test_init_raises_value_error_when_patch_set_combined_with_ref[patch_set_with_branch]`
 - **Description**: When the element has both a `patchSet` attribute and a `branch` attribute.
 - **Expected Outcome**: Raises `ValueError` indicating mutual exclusivity violation.
 
 #### 27. Raises ValueError When patchSet and commit Are Both Present
+- **Test Name**: `test_init_raises_value_error_when_patch_set_combined_with_ref[patch_set_with_commit]`
 - **Description**: When the element has both a `patchSet` attribute and a `commit` attribute.
 - **Expected Outcome**: Raises `ValueError` indicating mutual exclusivity violation.
 
 #### 28. Raises ValueError When patchSet and tag Are Both Present
+- **Test Name**: `test_init_raises_value_error_when_patch_set_combined_with_ref[patch_set_with_tag]`
 - **Description**: When the element has both a `patchSet` attribute and a `tag` attribute.
 - **Expected Outcome**: Raises `ValueError` indicating mutual exclusivity violation.
 

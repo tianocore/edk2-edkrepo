@@ -26,14 +26,9 @@ MANIFEST_WITH_INCLUDE_XML = os.path.join(FIXTURES_DIR, 'manifest_with_include.xm
 
 # Complete manifest project info
 COMPLETE_PROJECT_CODENAME = 'CompleteTestProject'
-COMPLETE_PROJECT_DESCRIPTION = 'Complete test project with all features for integration testing'
-COMPLETE_PROJECT_SHORT_NAME = 'CTP'
-COMPLETE_PROJECT_ORG = 'TestOrg'
 
 # Minimal manifest project info
 MINIMAL_PROJECT_CODENAME = 'MinimalTestProject'
-MINIMAL_PROJECT_DESCRIPTION = 'Minimal test project with only required fields'
-MINIMAL_PROJECT_SHORT_NAME = 'MTP'
 
 # Complete manifest combinations
 COMBO_NAME_MAIN = 'main'
@@ -41,43 +36,23 @@ COMBO_NAME_DEV = 'dev'
 COMBO_NAME_ARCHIVED = 'archived'
 COMBO_DESC_MAIN = 'Main combination'
 
-# Complete manifest remotes
-COMPLETE_REMOTE_ORIGIN = 'origin'
-COMPLETE_REMOTE_UPSTREAM = 'upstream'
-COMPLETE_REMOTE_ORIGIN_URL = 'https://github.com/test/repo.git'
+# Remote names
+REMOTE_NAME_ORIGIN = 'origin'
+REMOTE_NAME_UPSTREAM = 'upstream'
 
 # Complete manifest repo sources
 REPO_ROOT_MAIN = 'MainRepo'
 REPO_ROOT_SUB = 'SubRepo'
-REPO_ROOT_TEST = 'TestRepo'
-
-# Complete manifest general config
-PIN_PATH_VALUE = 'pins'
 
 # Complete manifest patch sets
 PATCHSET_NAME_TEST = 'test-patch'
-PATCHSET_REMOTE_ORIGIN = 'origin'
 PATCHSET_FETCH_REF = 'refs/changes/01/1001/1'
-PATCHSET_NAME_NONEXISTENT = 'nonexistent'
-PATCHSET_REMOTE_WRONG = 'wrong-remote'
-
-# Complete manifest git hooks
-GIT_HOOK_SOURCE = 'hooks/pre-commit'
-GIT_HOOK_DEST_PATH = '.git/hooks'
 
 # Expected counts
-EXPECTED_COMPLETE_REMOTE_COUNT = 2
-EXPECTED_MINIMAL_REMOTE_COUNT = 1
 EXPECTED_COMPLETE_COMBO_COUNT = 2
-EXPECTED_MINIMAL_COMBO_COUNT = 1
 EXPECTED_COMPLETE_REPO_SOURCES_COUNT = 2
-EXPECTED_MINIMAL_REPO_SOURCES_COUNT = 1
-EXPECTED_ARCHIVED_COMBO_COUNT_WITH_ARCHIVED = 1
 EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED = 0
 EXPECTED_MINIMUM_SPARSE_DATA_COUNT = 1
-
-# Manifest with include
-EXPECTED_INCLUDE_REMOTE_COUNT = 2
 
 PARAM_MANIFEST_FILE_PATH = 'manifest_file'
 PARAM_ID_COMPLETE_MANIFEST_XML = 'complete_xml'
@@ -87,11 +62,6 @@ PARAM_ID_MANIFEST_WITH_INCLUDE = 'with_include'
 
 # Sparse checkout
 SPARSE_BY_DEFAULT_FALSE = False
-SPARSE_ALWAYS_INCLUDE_PATH_1 = 'src/core'
-SPARSE_ALWAYS_INCLUDE_PATH_2 = 'docs'
-EXPECTED_SPARSE_DATA_COUNT = 1
-EXPECTED_ALWAYS_INCLUDE_COUNT = 2
-EXPECTED_ALWAYS_EXCLUDE_COUNT = 0
 
 
 class _ManifestFixtureMixin:
@@ -137,17 +107,17 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
         project_info = complete_manifest.project_info
         assert project_info is not None
         assert project_info.codename == COMPLETE_PROJECT_CODENAME
-        assert project_info.description == COMPLETE_PROJECT_DESCRIPTION
-        assert project_info.short_name == COMPLETE_PROJECT_SHORT_NAME
-        assert project_info.org == COMPLETE_PROJECT_ORG
+        assert project_info.description == 'Complete test project with all features for integration testing'
+        assert project_info.short_name == 'CTP'
+        assert project_info.org == 'TestOrg'
 
     def test_minimal_manifest_has_project_info(self, minimal_manifest):
         """When loading a minimal manifest, project_info property must return ProjectInfo with required fields."""
         project_info = minimal_manifest.project_info
         assert project_info is not None
         assert project_info.codename == MINIMAL_PROJECT_CODENAME
-        assert project_info.description == MINIMAL_PROJECT_DESCRIPTION
-        assert project_info.short_name == MINIMAL_PROJECT_SHORT_NAME
+        assert project_info.description == 'Minimal test project with only required fields'
+        assert project_info.short_name == 'MTP'
 
     def test_complete_manifest_has_general_config(self, complete_manifest):
         """When loading a complete manifest, general_config property must return GeneralConfig with correct values."""
@@ -155,7 +125,7 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
         assert general_config is not None
         assert general_config.default_combo == COMBO_NAME_MAIN
         assert general_config.current_combo == COMBO_NAME_DEV
-        assert general_config.pin_path == PIN_PATH_VALUE
+        assert general_config.pin_path == 'pins'
 
     def test_minimal_manifest_has_general_config(self, minimal_manifest):
         """When loading a minimal manifest, general_config property must return GeneralConfig with required values."""
@@ -167,17 +137,17 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
     def test_complete_manifest_has_remotes(self, complete_manifest):
         """When loading a complete manifest with remotes, remotes property must return list of RemoteRepo tuples."""
         remotes = complete_manifest.remotes
-        assert len(remotes) == EXPECTED_COMPLETE_REMOTE_COUNT
+        assert len(remotes) == 2
         remote_names = [r.name for r in remotes]
-        assert COMPLETE_REMOTE_ORIGIN in remote_names
-        assert COMPLETE_REMOTE_UPSTREAM in remote_names
+        assert REMOTE_NAME_ORIGIN in remote_names
+        assert REMOTE_NAME_UPSTREAM in remote_names
 
     def test_minimal_manifest_has_remotes(self, minimal_manifest):
         """When loading a minimal manifest with one remote, remotes property must return list with one RemoteRepo."""
         remotes = minimal_manifest.remotes
-        assert len(remotes) == EXPECTED_MINIMAL_REMOTE_COUNT
-        assert remotes[LIST_INDEX_FIRST].name == COMPLETE_REMOTE_ORIGIN
-        assert remotes[LIST_INDEX_FIRST].url == COMPLETE_REMOTE_ORIGIN_URL
+        assert len(remotes) == 1
+        assert remotes[LIST_INDEX_FIRST].name == REMOTE_NAME_ORIGIN
+        assert remotes[LIST_INDEX_FIRST].url == 'https://github.com/test/repo.git'
 
     def test_complete_manifest_has_combinations(self, complete_manifest):
         """When loading a complete manifest, combinations property must return list of non-archived combinations."""
@@ -191,7 +161,7 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
     def test_minimal_manifest_has_combinations(self, minimal_manifest):
         """When loading a minimal manifest, combinations property must return list with required combination."""
         combinations = minimal_manifest.combinations
-        assert len(combinations) == EXPECTED_MINIMAL_COMBO_COUNT
+        assert len(combinations) == 1
         assert combinations[LIST_INDEX_FIRST].name == COMBO_NAME_MAIN
         assert combinations[LIST_INDEX_FIRST].description == COMBO_DESC_MAIN
 
@@ -216,9 +186,9 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
     def test_minimal_manifest_get_repo_sources_for_main_combo(self, minimal_manifest):
         """When requesting sources for main combination in minimal manifest, get_repo_sources must return one source."""
         sources = minimal_manifest.get_repo_sources(COMBO_NAME_MAIN)
-        assert len(sources) == EXPECTED_MINIMAL_REPO_SOURCES_COUNT
-        assert sources[LIST_INDEX_FIRST].root == REPO_ROOT_TEST
-        assert sources[LIST_INDEX_FIRST].remote_name == COMPLETE_REMOTE_ORIGIN
+        assert len(sources) == 1
+        assert sources[LIST_INDEX_FIRST].root == 'TestRepo'
+        assert sources[LIST_INDEX_FIRST].remote_name == REMOTE_NAME_ORIGIN
         assert sources[LIST_INDEX_FIRST].branch == COMBO_NAME_MAIN
 
     def test_complete_manifest_has_sparse_settings(self, complete_manifest):
@@ -236,10 +206,10 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
 
     def test_complete_manifest_has_patch_sets(self, complete_manifest):
         """When loading a manifest with patch sets, get_patchset method must return PatchSet for valid name and remote."""
-        patch_set = complete_manifest.get_patchset(PATCHSET_NAME_TEST, PATCHSET_REMOTE_ORIGIN)
+        patch_set = complete_manifest.get_patchset(PATCHSET_NAME_TEST, REMOTE_NAME_ORIGIN)
         assert patch_set is not None
         assert patch_set.name == PATCHSET_NAME_TEST
-        assert patch_set.remote == PATCHSET_REMOTE_ORIGIN
+        assert patch_set.remote == REMOTE_NAME_ORIGIN
         assert patch_set.fetch_branch == PATCHSET_FETCH_REF
 
     def test_complete_manifest_has_folder_mappings(self, complete_manifest):
@@ -253,8 +223,8 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
         """When loading a manifest with git hooks, repo_hooks property must return list of hooks."""
         hooks = complete_manifest.repo_hooks
         assert len(hooks) > EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED
-        assert hooks[LIST_INDEX_FIRST].source == GIT_HOOK_SOURCE
-        assert hooks[LIST_INDEX_FIRST].dest_path == GIT_HOOK_DEST_PATH
+        assert hooks[LIST_INDEX_FIRST].source == 'hooks/pre-commit'
+        assert hooks[LIST_INDEX_FIRST].dest_path == '.git/hooks'
 
     def test_json_manifest_parses_project_info_correctly(self, json_manifest):
         """When loading a JSON manifest, project_info property must return correct ProjectInfo."""
@@ -270,7 +240,7 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
     def test_complete_manifest_get_archived_combinations(self, complete_manifest):
         """When requesting archived combinations, archived_combinations property must return archived entries."""
         archived = complete_manifest.archived_combinations
-        assert len(archived) == EXPECTED_ARCHIVED_COMBO_COUNT_WITH_ARCHIVED
+        assert len(archived) == 1
         archived_names = [c.name for c in archived]
         assert COMBO_NAME_ARCHIVED in archived_names
 
@@ -282,7 +252,7 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
     def test_manifest_with_include_merges_remotes(self, manifest_with_include):
         """When loading a manifest with includes, remotes property must include remotes from included file."""
         remotes = manifest_with_include.remotes
-        assert len(remotes) >= EXPECTED_INCLUDE_REMOTE_COUNT
+        assert len(remotes) >= 2
 
     @pytest.mark.parametrize(PARAM_MANIFEST_FILE_PATH, [
         pytest.param(COMPLETE_MANIFEST_XML, id=PARAM_ID_COMPLETE_MANIFEST_XML),
@@ -297,9 +267,7 @@ class BaseTestManifestParsingFlow(_ManifestFixtureMixin):
         assert manifest is not None
 
 
-ATTRIB_ROOT = 'root'
 ATTRIB_REMOTE_NAME = 'remote_name'
-ATTRIB_BRANCH = 'branch'
 PARAM_ATTR_EXPECTED = 'attr,expected'
 
 
@@ -321,9 +289,9 @@ class BaseTestCombinationResolutionFlow(_ManifestFixtureMixin):
         """When retrieving sources for combination, each source must have root, remote_name, and branch."""
         sources = complete_manifest.get_repo_sources(COMBO_NAME_MAIN)
         for source in sources:
-            assert hasattr(source, ATTRIB_ROOT)
+            assert hasattr(source, 'root')
             assert hasattr(source, ATTRIB_REMOTE_NAME)
-            assert hasattr(source, ATTRIB_BRANCH)
+            assert hasattr(source, 'branch')
             assert source.root is not None
             assert source.remote_name is not None
             assert source.branch is not None
@@ -331,32 +299,29 @@ class BaseTestCombinationResolutionFlow(_ManifestFixtureMixin):
 
 ATTRIB_REMOTE = 'remote'
 ATTRIB_FETCH_BRANCH = 'fetch_branch'
-PARAM_PATCHSET_INVALID_LOOKUP = 'name,remote'
-PARAM_ID_NONEXISTENT_PATCHSET = 'nonexistent_name'
-PARAM_ID_WRONG_REMOTE_PATCHSET = 'wrong_remote'
 
 
 class BaseTestPatchSetResolutionFlow(_ManifestFixtureMixin):
 
     def test_get_patchset_by_name_and_remote(self, complete_manifest):
         """When requesting patchset by name and remote, get_patchset must return matching PatchSet."""
-        patch_set = complete_manifest.get_patchset(PATCHSET_NAME_TEST, PATCHSET_REMOTE_ORIGIN)
+        patch_set = complete_manifest.get_patchset(PATCHSET_NAME_TEST, REMOTE_NAME_ORIGIN)
         assert patch_set is not None
         assert patch_set.name == PATCHSET_NAME_TEST
 
     @pytest.mark.parametrize(PARAM_ATTR_EXPECTED, [
-        pytest.param(ATTRIB_REMOTE, PATCHSET_REMOTE_ORIGIN, id=ATTRIB_REMOTE),
+        pytest.param(ATTRIB_REMOTE, REMOTE_NAME_ORIGIN, id=ATTRIB_REMOTE),
         pytest.param(ATTRIB_FETCH_BRANCH, PATCHSET_FETCH_REF, id=ATTRIB_FETCH_BRANCH),
     ])
     def test_patchset_has_attribute(self, complete_manifest, attr, expected):
         """When retrieving patchset, required attribute must be present with correct value."""
-        patch_set = complete_manifest.get_patchset(PATCHSET_NAME_TEST, PATCHSET_REMOTE_ORIGIN)
+        patch_set = complete_manifest.get_patchset(PATCHSET_NAME_TEST, REMOTE_NAME_ORIGIN)
         assert hasattr(patch_set, attr)
         assert getattr(patch_set, attr) == expected
 
-    @pytest.mark.parametrize(PARAM_PATCHSET_INVALID_LOOKUP, [
-        pytest.param(PATCHSET_NAME_NONEXISTENT, PATCHSET_REMOTE_ORIGIN, id=PARAM_ID_NONEXISTENT_PATCHSET),
-        pytest.param(PATCHSET_NAME_TEST, PATCHSET_REMOTE_WRONG, id=PARAM_ID_WRONG_REMOTE_PATCHSET),
+    @pytest.mark.parametrize('name,remote', [
+        pytest.param('nonexistent', REMOTE_NAME_ORIGIN, id='nonexistent_name'),
+        pytest.param(PATCHSET_NAME_TEST, 'wrong-remote', id='wrong_remote'),
     ])
     def test_invalid_patchset_lookup_raises_key_error(self, complete_manifest, name, remote):
         """When requesting patchset with nonexistent name or wrong remote, get_patchset must raise KeyError."""
@@ -364,11 +329,9 @@ class BaseTestPatchSetResolutionFlow(_ManifestFixtureMixin):
             complete_manifest.get_patchset(name, remote)
 
 
-ATTRIB_SPARSE_BY_DEFAULT = 'sparse_by_default'
 ATTRIB_COMBINATION = 'combination'
 ATTRIB_ALWAYS_INCLUDE = 'always_include'
 ATTRIB_ALWAYS_EXCLUDE = 'always_exclude'
-PARAM_ATTR_EXPECTED_COUNT = 'attr,expected_count'
 
 
 class BaseTestSparseCheckoutFlow(_ManifestFixtureMixin):
@@ -381,21 +344,21 @@ class BaseTestSparseCheckoutFlow(_ManifestFixtureMixin):
     def test_sparse_settings_has_sparse_by_default_attribute(self, complete_manifest):
         """When retrieving sparse settings, sparse_by_default attribute must be present and correct."""
         sparse_settings = complete_manifest.sparse_settings
-        assert hasattr(sparse_settings, ATTRIB_SPARSE_BY_DEFAULT)
+        assert hasattr(sparse_settings, 'sparse_by_default')
         assert sparse_settings.sparse_by_default == SPARSE_BY_DEFAULT_FALSE
 
     def test_get_sparse_data_from_manifest(self, complete_manifest):
         """When loading manifest with sparse data, sparse_data property must return list of SparseData objects."""
         sparse_data = complete_manifest.sparse_data
         assert isinstance(sparse_data, list)
-        assert len(sparse_data) == EXPECTED_SPARSE_DATA_COUNT
+        assert len(sparse_data) == 1
 
     def test_sparse_data_always_include_contains_correct_paths(self, complete_manifest):
         """When retrieving sparse data, always_include list must contain configured paths."""
         sparse_data = complete_manifest.sparse_data
         first_data = sparse_data[EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
-        assert SPARSE_ALWAYS_INCLUDE_PATH_1 in first_data.always_include
-        assert SPARSE_ALWAYS_INCLUDE_PATH_2 in first_data.always_include
+        assert 'src/core' in first_data.always_include
+        assert 'docs' in first_data.always_include
 
     def test_filter_sparse_data_by_combination(self, complete_manifest):
         """When filtering sparse data by combination, only matching entries must be returned."""
@@ -408,14 +371,14 @@ class BaseTestSparseCheckoutFlow(_ManifestFixtureMixin):
     def test_filter_sparse_data_by_remote(self, complete_manifest):
         """When filtering sparse data by remote, only matching entries must be returned."""
         sparse_data = complete_manifest.sparse_data
-        origin_sparse = [sd for sd in sparse_data if sd.remote_name == COMPLETE_REMOTE_ORIGIN]
+        origin_sparse = [sd for sd in sparse_data if sd.remote_name == REMOTE_NAME_ORIGIN]
         assert len(origin_sparse) >= EXPECTED_MINIMUM_SPARSE_DATA_COUNT
         for sd in origin_sparse:
-            assert sd.remote_name == COMPLETE_REMOTE_ORIGIN
+            assert sd.remote_name == REMOTE_NAME_ORIGIN
 
     @pytest.mark.parametrize(PARAM_ATTR_EXPECTED, [
         pytest.param(ATTRIB_COMBINATION, COMBO_NAME_MAIN, id=ATTRIB_COMBINATION),
-        pytest.param(ATTRIB_REMOTE_NAME, COMPLETE_REMOTE_ORIGIN, id=ATTRIB_REMOTE_NAME),
+        pytest.param(ATTRIB_REMOTE_NAME, REMOTE_NAME_ORIGIN, id=ATTRIB_REMOTE_NAME),
     ])
     def test_sparse_data_has_attribute(self, complete_manifest, attr, expected):
         """When retrieving sparse data, specified attribute must be present and match configured value."""
@@ -424,9 +387,9 @@ class BaseTestSparseCheckoutFlow(_ManifestFixtureMixin):
         assert hasattr(first_data, attr)
         assert getattr(first_data, attr) == expected
 
-    @pytest.mark.parametrize(PARAM_ATTR_EXPECTED_COUNT, [
-        pytest.param(ATTRIB_ALWAYS_INCLUDE, EXPECTED_ALWAYS_INCLUDE_COUNT, id=ATTRIB_ALWAYS_INCLUDE),
-        pytest.param(ATTRIB_ALWAYS_EXCLUDE, EXPECTED_ALWAYS_EXCLUDE_COUNT, id=ATTRIB_ALWAYS_EXCLUDE),
+    @pytest.mark.parametrize('attr,expected_count', [
+        pytest.param(ATTRIB_ALWAYS_INCLUDE, 2, id=ATTRIB_ALWAYS_INCLUDE),
+        pytest.param(ATTRIB_ALWAYS_EXCLUDE, 0, id=ATTRIB_ALWAYS_EXCLUDE),
     ])
     def test_sparse_data_has_list_attribute(self, complete_manifest, attr, expected_count):
         """When retrieving sparse data, list attribute must be present and have correct item count."""
@@ -437,20 +400,12 @@ class BaseTestSparseCheckoutFlow(_ManifestFixtureMixin):
         assert len(getattr(first_data, attr)) == expected_count
 
 
-FOLDER_MAPPING_PROJECT1_FOLDER = 'shared/lib'
-FOLDER_MAPPING_PROJECT2_FOLDER = 'vendor/lib'
-FOLDER_MAPPING_EXCLUDE_PATH = '*.tmp'
 EXPECTED_FOLDER_MAPPING_COUNT = 1
-EXPECTED_FOLDER_COUNT_IN_MAPPING = 1
-EXPECTED_EXCLUDE_COUNT_IN_FOLDER = 1
 
 ATTRIB_PROJECT1 = 'project1'
 ATTRIB_PROJECT2 = 'project2'
-ATTRIB_FOLDERS = 'folders'
 ATTRIB_PROJECT1_FOLDER = 'project1_folder'
 ATTRIB_PROJECT2_FOLDER = 'project2_folder'
-ATTRIB_EXCLUDES = 'excludes'
-ATTRIB_PATH = 'path'
 
 
 class BaseTestFolderMappingFlow(_ManifestFixtureMixin):
@@ -465,18 +420,18 @@ class BaseTestFolderMappingFlow(_ManifestFixtureMixin):
         """When retrieving folder mapping, folders attribute must be a list of folder objects."""
         mappings = complete_manifest.folder_to_folder_mappings
         first_mapping = mappings[EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
-        assert hasattr(first_mapping, ATTRIB_FOLDERS)
+        assert hasattr(first_mapping, 'folders')
         assert isinstance(first_mapping.folders, list)
-        assert len(first_mapping.folders) == EXPECTED_FOLDER_COUNT_IN_MAPPING
+        assert len(first_mapping.folders) == 1
 
     def test_folder_has_excludes_list(self, complete_manifest):
         """When retrieving folder from mapping, excludes attribute must be a list."""
         mappings = complete_manifest.folder_to_folder_mappings
         first_mapping = mappings[EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
         first_folder = first_mapping.folders[EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
-        assert hasattr(first_folder, ATTRIB_EXCLUDES)
+        assert hasattr(first_folder, 'excludes')
         assert isinstance(first_folder.excludes, list)
-        assert len(first_folder.excludes) == EXPECTED_EXCLUDE_COUNT_IN_FOLDER
+        assert len(first_folder.excludes) == 1
 
     def test_folder_exclude_has_path_attribute(self, complete_manifest):
         """When retrieving exclude from folder, path attribute must match configured pattern."""
@@ -484,8 +439,8 @@ class BaseTestFolderMappingFlow(_ManifestFixtureMixin):
         first_mapping = mappings[EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
         first_folder = first_mapping.folders[EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
         first_exclude = first_folder.excludes[EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
-        assert hasattr(first_exclude, ATTRIB_PATH)
-        assert first_exclude.path == FOLDER_MAPPING_EXCLUDE_PATH
+        assert hasattr(first_exclude, 'path')
+        assert first_exclude.path == '*.tmp'
 
     def test_filter_folder_mappings_by_project(self, complete_manifest):
         """When filtering folder mappings by project, only matching entries must be returned."""
@@ -498,7 +453,7 @@ class BaseTestFolderMappingFlow(_ManifestFixtureMixin):
     @pytest.mark.parametrize(PARAM_ATTR_EXPECTED, [
         pytest.param(ATTRIB_PROJECT1, REPO_ROOT_MAIN, id=ATTRIB_PROJECT1),
         pytest.param(ATTRIB_PROJECT2, REPO_ROOT_SUB, id=ATTRIB_PROJECT2),
-        pytest.param(ATTRIB_REMOTE_NAME, COMPLETE_REMOTE_ORIGIN, id=ATTRIB_REMOTE_NAME),
+        pytest.param(ATTRIB_REMOTE_NAME, REMOTE_NAME_ORIGIN, id=ATTRIB_REMOTE_NAME),
     ])
     def test_folder_mapping_has_attribute(self, complete_manifest, attr, expected):
         """When retrieving folder mapping, specified attribute must be present and match configured value."""
@@ -508,8 +463,8 @@ class BaseTestFolderMappingFlow(_ManifestFixtureMixin):
         assert getattr(first_mapping, attr) == expected
 
     @pytest.mark.parametrize(PARAM_ATTR_EXPECTED, [
-        pytest.param(ATTRIB_PROJECT1_FOLDER, FOLDER_MAPPING_PROJECT1_FOLDER, id=ATTRIB_PROJECT1_FOLDER),
-        pytest.param(ATTRIB_PROJECT2_FOLDER, FOLDER_MAPPING_PROJECT2_FOLDER, id=ATTRIB_PROJECT2_FOLDER),
+        pytest.param(ATTRIB_PROJECT1_FOLDER, 'shared/lib', id=ATTRIB_PROJECT1_FOLDER),
+        pytest.param(ATTRIB_PROJECT2_FOLDER, 'vendor/lib', id=ATTRIB_PROJECT2_FOLDER),
     ])
     def test_folder_has_project_folder_attribute(self, complete_manifest, attr, expected):
         """When retrieving folder from mapping, specified project folder attribute must match configured path."""
@@ -527,9 +482,7 @@ VALIDATION_STATUS_FAILURE = False
 VALIDATION_RESULT_INDEX_TYPE = 0
 VALIDATION_RESULT_INDEX_STATUS = 1
 VALIDATION_RESULT_INDEX_MESSAGE = 2
-RSPLIT_MAXSPLIT_ONE = 1
 LIST_INDEX_FIRST = 0
-VALIDATION_MODULE_SUFFIX = '.edk_manifest_validation'
 PARAM_MANIFEST_PATH = 'manifest_path'
 PARAM_ID_COMPLETE_MANIFEST = 'complete'
 PARAM_ID_MINIMAL_MANIFEST = 'minimal'
@@ -552,7 +505,7 @@ class BaseTestValidationFlow:
     @pytest.fixture
     def _validation_mod(self):
         """Return the validation module derived from the manifest module."""
-        validation_module_name = self.__class__.manifest_module.rsplit('.', RSPLIT_MAXSPLIT_ONE)[LIST_INDEX_FIRST] + VALIDATION_MODULE_SUFFIX
+        validation_module_name = self.__class__.manifest_module.rsplit('.', 1)[LIST_INDEX_FIRST] + '.edk_manifest_validation'
         return importlib.import_module(validation_module_name)
 
     @pytest.fixture
@@ -616,34 +569,16 @@ class BaseTestValidationFlow:
 
 
 CI_INDEX_MULTIPLE_PROJECTS_XML = os.path.join(FIXTURES_DIR, 'ci_index_multiple_projects.xml')
-CI_INDEX_EMPTY_XML = os.path.join(FIXTURES_DIR, 'ci_index_empty.xml')
-CI_INDEX_SET_A_XML = os.path.join(FIXTURES_DIR, 'ci_index_set_a.xml')
-CI_INDEX_SET_B_XML = os.path.join(FIXTURES_DIR, 'ci_index_set_b.xml')
 
 CI_PROJECT_NAME_PROJECT1 = 'Project1'
 CI_PROJECT_NAME_PROJECT2 = 'Project2'
 CI_PROJECT_NAME_PROJECT3 = 'Project3'
-CI_PROJECT_NAME_PROJECTA = 'ProjectA'
-CI_PROJECT_NAME_PROJECTB = 'ProjectB'
-CI_PROJECT_NAME_PROJECTC = 'ProjectC'
-CI_PROJECT_NAME_PROJECTD = 'ProjectD'
 CI_PROJECT_NAME_NONEXISTENT = 'NonExistentProject'
 
-CI_XML_PATH_PROJECT1 = 'manifests/project1.xml'
-CI_XML_PATH_PROJECT2 = 'manifests/project2.xml'
 CI_XML_PATH_PROJECT3 = 'manifests/project3.xml'
 
-PARAM_CI_PROJECT_MANIFEST_PATH = 'project,expected_path'
 
-EXPECTED_MULTIPLE_PROJECTS_ACTIVE_COUNT = 2
-EXPECTED_MULTIPLE_PROJECTS_ARCHIVED_COUNT = 1
 EXPECTED_EMPTY_PROJECT_COUNT = 0
-EXPECTED_SET_A_PROJECT_COUNT = 2
-EXPECTED_SET_B_ACTIVE_COUNT = 1
-EXPECTED_SET_B_ARCHIVED_COUNT = 1
-EXPECTED_MERGED_ACTIVE_COUNT = 3
-EXPECTED_MERGED_ARCHIVED_COUNT = 1
-EXPECTED_MERGED_TOTAL_COUNT = 4
 
 
 class BaseTestCiIndexIntegrationFlow:
@@ -660,28 +595,28 @@ class BaseTestCiIndexIntegrationFlow:
     def ci_index_empty(self):
         """Return a CiIndexXml instance loaded from ci_index_empty.xml."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        return manifest_mod.CiIndexXml(CI_INDEX_EMPTY_XML)
+        return manifest_mod.CiIndexXml(os.path.join(FIXTURES_DIR, 'ci_index_empty.xml'))
 
     @pytest.fixture
     def ci_index_set_a(self):
         """Return a CiIndexXml instance loaded from ci_index_set_a.xml."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        return manifest_mod.CiIndexXml(CI_INDEX_SET_A_XML)
+        return manifest_mod.CiIndexXml(os.path.join(FIXTURES_DIR, 'ci_index_set_a.xml'))
 
     @pytest.fixture
     def ci_index_set_b(self):
         """Return a CiIndexXml instance loaded from ci_index_set_b.xml."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        return manifest_mod.CiIndexXml(CI_INDEX_SET_B_XML)
+        return manifest_mod.CiIndexXml(os.path.join(FIXTURES_DIR, 'ci_index_set_b.xml'))
 
     def test_load_ci_index_with_multiple_projects(self, ci_index_multiple_projects):
         """When loading CI index with multiple projects, all projects must be indexed by name."""
         projects = ci_index_multiple_projects.project_list
         archived_projects = ci_index_multiple_projects.archived_project_list
 
-        assert len(projects) == EXPECTED_MULTIPLE_PROJECTS_ACTIVE_COUNT
+        assert len(projects) == 2
 
-        assert len(archived_projects) == EXPECTED_MULTIPLE_PROJECTS_ARCHIVED_COUNT
+        assert len(archived_projects) == 1
 
         assert CI_PROJECT_NAME_PROJECT1 in projects
         assert CI_PROJECT_NAME_PROJECT2 in projects
@@ -719,27 +654,27 @@ class BaseTestCiIndexIntegrationFlow:
     def test_multiple_ci_indexes_merge(self, ci_index_set_a, ci_index_set_b):
         """When loading multiple CI indexes, projects from all indexes must be accessible."""
         projects_a = ci_index_set_a.project_list
-        assert len(projects_a) == EXPECTED_SET_A_PROJECT_COUNT
-        assert CI_PROJECT_NAME_PROJECTA in projects_a
-        assert CI_PROJECT_NAME_PROJECTB in projects_a
+        assert len(projects_a) == 2
+        assert 'ProjectA' in projects_a
+        assert 'ProjectB' in projects_a
 
         projects_b = ci_index_set_b.project_list
         archived_b = ci_index_set_b.archived_project_list
-        assert len(projects_b) == EXPECTED_SET_B_ACTIVE_COUNT
-        assert len(archived_b) == EXPECTED_SET_B_ARCHIVED_COUNT
-        assert CI_PROJECT_NAME_PROJECTC in projects_b
-        assert CI_PROJECT_NAME_PROJECTD in archived_b
+        assert len(projects_b) == 1
+        assert len(archived_b) == 1
+        assert 'ProjectC' in projects_b
+        assert 'ProjectD' in archived_b
 
         all_active_projects = set(projects_a + projects_b)
         all_archived_projects = set(archived_b)
 
-        assert len(all_active_projects) == EXPECTED_MERGED_ACTIVE_COUNT
-        assert len(all_archived_projects) == EXPECTED_MERGED_ARCHIVED_COUNT
-        assert len(all_active_projects) + len(all_archived_projects) == EXPECTED_MERGED_TOTAL_COUNT
+        assert len(all_active_projects) == 3
+        assert len(all_archived_projects) == 1
+        assert len(all_active_projects) + len(all_archived_projects) == 4
 
-    @pytest.mark.parametrize(PARAM_CI_PROJECT_MANIFEST_PATH, [
-        pytest.param(CI_PROJECT_NAME_PROJECT1, CI_XML_PATH_PROJECT1, id=CI_PROJECT_NAME_PROJECT1),
-        pytest.param(CI_PROJECT_NAME_PROJECT2, CI_XML_PATH_PROJECT2, id=CI_PROJECT_NAME_PROJECT2),
+    @pytest.mark.parametrize('project,expected_path', [
+        pytest.param(CI_PROJECT_NAME_PROJECT1, 'manifests/project1.xml', id=CI_PROJECT_NAME_PROJECT1),
+        pytest.param(CI_PROJECT_NAME_PROJECT2, 'manifests/project2.xml', id=CI_PROJECT_NAME_PROJECT2),
         pytest.param(CI_PROJECT_NAME_PROJECT3, CI_XML_PATH_PROJECT3, id=CI_PROJECT_NAME_PROJECT3),
     ])
     def test_resolve_project_manifest_from_ci_index(self, ci_index_multiple_projects, project, expected_path):
@@ -748,25 +683,11 @@ class BaseTestCiIndexIntegrationFlow:
         assert manifest_path == expected_path
 
 
-NO_SUBMODULES_MANIFEST_XML = os.path.join(FIXTURES_DIR, 'no_submodules_manifest.xml')
 SUBMODULE_PATH_CORE = 'submodules/core'
 SUBMODULE_PATH_UTILS = 'submodules/utils'
-SUBMODULE_PATH_PLATFORM = 'submodules/platform'
 SUBMODULE_PATH_SHARED = 'submodules/shared'
-SUBMODULE_REMOTE_ORIGIN = 'origin'
-SUBMODULE_COMBO_MAIN = 'main'
-SUBMODULE_RECURSIVE_TRUE = True
-SUBMODULE_RECURSIVE_FALSE = False
-SUBMODULE_ORIGINAL_URL = 'https://github.com/original/repo.git'
-SUBMODULE_ALTERNATE_URL = 'https://mirror.example.com/repo.git'
-EXPECTED_SUBMODULE_COUNT_FOR_ORIGIN = 3
-EXPECTED_SUBMODULE_COUNT_FOR_MAIN_COMBO = 3
-EXPECTED_SUBMODULE_COUNT_FOR_ORIGIN_MAIN = 3
 EXPECTED_SUBMODULE_COUNT_NO_SUBMODULES = 0
 EXPECTED_ALTERNATE_REMOTE_COUNT = 1
-EXPECTED_SUBMODULE_COUNT_ALL_COMBOS = 4
-
-PARAM_SUBMODULE_PATH_RECURSIVE = 'path,expected_recursive'
 
 
 class BaseTestSubmoduleFlow(_ManifestFixtureMixin):
@@ -775,13 +696,13 @@ class BaseTestSubmoduleFlow(_ManifestFixtureMixin):
     def no_submodules_manifest(self):
         """Return a ManifestXml instance loaded from no_submodules_manifest.xml."""
         manifest_mod = importlib.import_module(self.__class__.manifest_module)
-        return manifest_mod.ManifestXml(NO_SUBMODULES_MANIFEST_XML)
+        return manifest_mod.ManifestXml(os.path.join(FIXTURES_DIR, 'no_submodules_manifest.xml'))
 
     def test_get_submodule_init_paths_for_combo(self, complete_manifest):
         """When requesting submodule paths for specific combo, only matching paths must be returned."""
-        submodules = complete_manifest.get_submodule_init_paths(combo=SUBMODULE_COMBO_MAIN)
+        submodules = complete_manifest.get_submodule_init_paths(combo=COMBO_NAME_MAIN)
 
-        assert len(submodules) == EXPECTED_SUBMODULE_COUNT_FOR_MAIN_COMBO
+        assert len(submodules) == 3
 
         paths = [sub.path for sub in submodules]
         assert SUBMODULE_PATH_CORE in paths
@@ -790,12 +711,12 @@ class BaseTestSubmoduleFlow(_ManifestFixtureMixin):
 
     def test_filter_submodules_by_remote(self, complete_manifest):
         """When filtering submodules by remote name, only matching entries must be returned."""
-        submodules = complete_manifest.get_submodule_init_paths(remote_name=SUBMODULE_REMOTE_ORIGIN)
+        submodules = complete_manifest.get_submodule_init_paths(remote_name=REMOTE_NAME_ORIGIN)
 
-        assert len(submodules) == EXPECTED_SUBMODULE_COUNT_FOR_ORIGIN
+        assert len(submodules) == 3
 
         for sub in submodules:
-            assert sub.remote_name == SUBMODULE_REMOTE_ORIGIN
+            assert sub.remote_name == REMOTE_NAME_ORIGIN
 
         paths = [sub.path for sub in submodules]
         assert SUBMODULE_PATH_CORE in paths
@@ -805,15 +726,15 @@ class BaseTestSubmoduleFlow(_ManifestFixtureMixin):
     def test_filter_submodules_by_remote_and_combo(self, complete_manifest):
         """When filtering by both remote and combo, only matching entries must be returned."""
         submodules = complete_manifest.get_submodule_init_paths(
-            remote_name=SUBMODULE_REMOTE_ORIGIN,
-            combo=SUBMODULE_COMBO_MAIN
+            remote_name=REMOTE_NAME_ORIGIN,
+            combo=COMBO_NAME_MAIN
         )
 
-        assert len(submodules) == EXPECTED_SUBMODULE_COUNT_FOR_ORIGIN_MAIN
+        assert len(submodules) == 3
 
         for sub in submodules:
-            assert sub.remote_name == SUBMODULE_REMOTE_ORIGIN
-            assert sub.combo == SUBMODULE_COMBO_MAIN or sub.combo is None
+            assert sub.remote_name == REMOTE_NAME_ORIGIN
+            assert sub.combo == COMBO_NAME_MAIN or sub.combo is None
 
     def test_get_submodule_alternate_remotes(self, complete_manifest):
         """When retrieving alternate remotes, must return configured alternates."""
@@ -822,11 +743,11 @@ class BaseTestSubmoduleFlow(_ManifestFixtureMixin):
         assert len(alternates) == EXPECTED_ALTERNATE_REMOTE_COUNT
 
         first_alternate = alternates[EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
-        assert first_alternate.remote_name == SUBMODULE_REMOTE_ORIGIN
-        assert first_alternate.original_url == SUBMODULE_ORIGINAL_URL
-        assert first_alternate.alternate_url == SUBMODULE_ALTERNATE_URL
+        assert first_alternate.remote_name == REMOTE_NAME_ORIGIN
+        assert first_alternate.original_url == 'https://github.com/original/repo.git'
+        assert first_alternate.alternate_url == 'https://mirror.example.com/repo.git'
 
-        origin_alternates = complete_manifest.get_submodule_alternates_for_remote(SUBMODULE_REMOTE_ORIGIN)
+        origin_alternates = complete_manifest.get_submodule_alternates_for_remote(REMOTE_NAME_ORIGIN)
         assert len(origin_alternates) == EXPECTED_ALTERNATE_REMOTE_COUNT
 
     def test_no_submodules_configured(self, no_submodules_manifest):
@@ -843,36 +764,29 @@ class BaseTestSubmoduleFlow(_ManifestFixtureMixin):
         """When retrieving all submodule paths, must return union of all paths."""
         all_submodules = complete_manifest.get_submodule_init_paths()
 
-        assert len(all_submodules) == EXPECTED_SUBMODULE_COUNT_ALL_COMBOS
+        assert len(all_submodules) == 4
 
         paths = [sub.path for sub in all_submodules]
         assert SUBMODULE_PATH_CORE in paths
         assert SUBMODULE_PATH_UTILS in paths
-        assert SUBMODULE_PATH_PLATFORM in paths
+        assert 'submodules/platform' in paths
         assert SUBMODULE_PATH_SHARED in paths
 
-    @pytest.mark.parametrize(PARAM_SUBMODULE_PATH_RECURSIVE, [
-        pytest.param(SUBMODULE_PATH_CORE, SUBMODULE_RECURSIVE_TRUE, id=SUBMODULE_PATH_CORE),
-        pytest.param(SUBMODULE_PATH_UTILS, SUBMODULE_RECURSIVE_FALSE, id=SUBMODULE_PATH_UTILS),
+    @pytest.mark.parametrize('path,expected_recursive', [
+        pytest.param(SUBMODULE_PATH_CORE, True, id=SUBMODULE_PATH_CORE),
+        pytest.param(SUBMODULE_PATH_UTILS, False, id=SUBMODULE_PATH_UTILS),
     ])
     def test_submodule_has_recursive_config(self, complete_manifest, path, expected_recursive):
         """When accessing the recursive flag of a submodule, it must match the value configured in the manifest."""
-        submodules = complete_manifest.get_submodule_init_paths(combo=SUBMODULE_COMBO_MAIN)
+        submodules = complete_manifest.get_submodule_init_paths(combo=COMBO_NAME_MAIN)
         submodule = [sub for sub in submodules if sub.path == path][EXPECTED_ARCHIVED_COMBO_COUNT_WITHOUT_ARCHIVED]
         assert submodule.recursive == expected_recursive
 
 
 PIN_DESCRIPTION_TEST = 'Test pin file generated for integration testing'
-PIN_COMBO_MAIN = 'main'
-PIN_COMBO_DEV = 'dev'
 PIN_FILENAME_XML = 'test_pin.xml'
-PIN_FILENAME_JSON = 'test_pin.json'
 PIN_COMMIT_SHA_1 = 'abc123def456789012345678901234567890abcd'
-PIN_COMMIT_SHA_2 = 'def456abc789012345678901234567890123cdef'
-PIN_REMOTE_ORIGIN = 'origin'
-PIN_REMOTE_UPSTREAM = 'upstream'
 PIN_EXPECTED_SOURCE_COUNT_MAIN = 2
-PIN_EXPECTED_SOURCE_COUNT_DEV = 2
 PIN_EXPECTED_REMOTE_COUNT_MAIN = 2
 PIN_TAG_PIN = 'Pin'
 PIN_TAG_COMBINATION = 'Combination'
@@ -881,15 +795,10 @@ PIN_TAG_REMOTE = 'Remote'
 PIN_TAG_PROJECT_INFO = 'ProjectInfo'
 PIN_ATTRIB_COMMIT = 'commit'
 PIN_ATTRIB_NAME = 'name'
-EXPECTED_MIN_JSON_KEYS = 1
 PIN_TAG_CODENAME = 'CodeName'
 PIN_TAG_DESCRIPTION = 'Description'
 PIN_TAG_REMOTELIST = 'RemoteList'
 PIN_TAG_PATCHSETS = 'PatchSets'
-PIN_COMMIT_SHA_LENGTH = 40
-PIN_HEX_CHARS = '0123456789abcdefABCDEF'
-PIN_MIN_COMMIT_LENGTH = 0
-FILE_MODE_READ = 'r'
 
 
 class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
@@ -897,9 +806,9 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
     @pytest.fixture
     def pin_repo_sources(self, complete_manifest):
         """Return a list of RepoSource tuples with commit SHAs for pin generation."""
-        sources = complete_manifest.get_repo_sources(PIN_COMBO_MAIN)
+        sources = complete_manifest.get_repo_sources(COMBO_NAME_MAIN)
         pin_sources = []
-        commit_shas = [PIN_COMMIT_SHA_1, PIN_COMMIT_SHA_2]
+        commit_shas = [PIN_COMMIT_SHA_1, 'def456abc789012345678901234567890123cdef']
         for idx, src in enumerate(sources):
             pin_src = src._replace(commit=commit_shas[idx % len(commit_shas)])
             pin_sources.append(pin_src)
@@ -911,7 +820,7 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
         complete_manifest.generate_pin_xml(
             PIN_DESCRIPTION_TEST,
-            PIN_COMBO_MAIN,
+            COMBO_NAME_MAIN,
             pin_repo_sources,
             filename=str(pin_file)
         )
@@ -933,22 +842,22 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
     def test_generate_pin_json_from_manifest(self, complete_manifest, pin_repo_sources, tmp_path):
         """When generating pin JSON from manifest, JSON file must be created with same data as XML pin."""
-        pin_file = tmp_path / PIN_FILENAME_JSON
+        pin_file = tmp_path / 'test_pin.json'
 
         complete_manifest.generate_pin_json(
             PIN_DESCRIPTION_TEST,
-            PIN_COMBO_MAIN,
+            COMBO_NAME_MAIN,
             pin_repo_sources,
             filename=str(pin_file)
         )
 
         assert pin_file.exists()
 
-        with open(str(pin_file), FILE_MODE_READ) as f:
+        with open(str(pin_file), 'r') as f:
             pin_data = json.load(f)
 
         assert isinstance(pin_data, dict)
-        assert len(pin_data) >= EXPECTED_MIN_JSON_KEYS
+        assert len(pin_data) >= 1
         assert PIN_ATTRIB_NAME in pin_data
         assert pin_data[PIN_ATTRIB_NAME] == PIN_TAG_PIN
 
@@ -958,7 +867,7 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
         complete_manifest.generate_pin_xml(
             PIN_DESCRIPTION_TEST,
-            PIN_COMBO_MAIN,
+            COMBO_NAME_MAIN,
             pin_repo_sources,
             filename=str(pin_file)
         )
@@ -982,8 +891,8 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
         assert len(remotes) == PIN_EXPECTED_REMOTE_COUNT_MAIN
 
         remote_names = [r.attrib[PIN_ATTRIB_NAME] for r in remotes]
-        assert PIN_REMOTE_ORIGIN in remote_names
-        assert PIN_REMOTE_UPSTREAM in remote_names
+        assert REMOTE_NAME_ORIGIN in remote_names
+        assert REMOTE_NAME_UPSTREAM in remote_names
 
     def test_pin_file_replaces_branches_with_commits(self, complete_manifest, pin_repo_sources, tmp_path):
         """When generating pin, branch references must be replaced with commit SHAs."""
@@ -991,7 +900,7 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
         complete_manifest.generate_pin_xml(
             PIN_DESCRIPTION_TEST,
-            PIN_COMBO_MAIN,
+            COMBO_NAME_MAIN,
             pin_repo_sources,
             filename=str(pin_file)
         )
@@ -1004,17 +913,17 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
         for source in sources:
             assert PIN_ATTRIB_COMMIT in source.attrib
-            assert len(source.attrib[PIN_ATTRIB_COMMIT]) > PIN_MIN_COMMIT_LENGTH
+            assert len(source.attrib[PIN_ATTRIB_COMMIT]) > 0
 
             commit_sha = source.attrib[PIN_ATTRIB_COMMIT]
-            assert len(commit_sha) == PIN_COMMIT_SHA_LENGTH
-            assert all(c in PIN_HEX_CHARS for c in commit_sha)
+            assert len(commit_sha) == 40
+            assert all(c in '0123456789abcdefABCDEF' for c in commit_sha)
 
     def test_generate_pin_for_specific_combination(self, complete_manifest, tmp_path):
         """When generating pin for specific combination, pin must contain only repos for that combo."""
         pin_file = tmp_path / PIN_FILENAME_XML
 
-        dev_sources = complete_manifest.get_repo_sources(PIN_COMBO_DEV)
+        dev_sources = complete_manifest.get_repo_sources(COMBO_NAME_DEV)
         pin_sources = []
         for src in dev_sources:
             pin_src = src._replace(commit=PIN_COMMIT_SHA_1)
@@ -1022,7 +931,7 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
         complete_manifest.generate_pin_xml(
             PIN_DESCRIPTION_TEST,
-            PIN_COMBO_DEV,
+            COMBO_NAME_DEV,
             pin_sources,
             filename=str(pin_file)
         )
@@ -1032,10 +941,10 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
         combination = root.find(PIN_TAG_COMBINATION)
         assert combination is not None
-        assert combination.attrib[PIN_ATTRIB_NAME] == PIN_COMBO_DEV
+        assert combination.attrib[PIN_ATTRIB_NAME] == COMBO_NAME_DEV
 
         sources = list(combination.findall(PIN_TAG_SOURCE))
-        assert len(sources) == PIN_EXPECTED_SOURCE_COUNT_DEV
+        assert len(sources) == 2
 
     def test_pin_file_includes_patchsets(self, complete_manifest, pin_repo_sources, tmp_path):
         """When generating pin from manifest with patchsets, pin must include patchset information."""
@@ -1043,7 +952,7 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
         complete_manifest.generate_pin_xml(
             PIN_DESCRIPTION_TEST,
-            PIN_COMBO_MAIN,
+            COMBO_NAME_MAIN,
             pin_repo_sources,
             filename=str(pin_file)
         )
@@ -1061,7 +970,7 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
 
         complete_manifest.generate_pin_xml(
             PIN_DESCRIPTION_TEST,
-            PIN_COMBO_MAIN,
+            COMBO_NAME_MAIN,
             pin_repo_sources,
             filename=str(pin_file)
         )
@@ -1075,7 +984,7 @@ class BaseTestPinGenerationFlow(_ManifestFixtureMixin):
         assert project_info is not None
         assert project_info.codename == COMPLETE_PROJECT_CODENAME
 
-        sources = pin_manifest.get_repo_sources(PIN_COMBO_MAIN)
+        sources = pin_manifest.get_repo_sources(COMBO_NAME_MAIN)
         assert len(sources) == PIN_EXPECTED_SOURCE_COUNT_MAIN
 
         for source in sources:
