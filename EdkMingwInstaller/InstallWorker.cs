@@ -21,6 +21,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace TianoCore.EdkMingwInstaller
 {
@@ -202,99 +203,94 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
-        public int GetFileCount(string sourceDirectory)
-        {
-            int fileCount = 0;
-            DirectoryInfo sourceDir = new DirectoryInfo(sourceDirectory);
-            if (!sourceDir.Exists)
-            {
-                throw new DirectoryNotFoundException(string.Format("{0} Not Found", sourceDir.FullName));
-            }
-            fileCount += sourceDir.EnumerateFiles().Count();
-
-            foreach (DirectoryInfo SubDir in sourceDir.EnumerateDirectories())
-            {
-                fileCount += GetFileCount(Path.Combine(sourceDirectory, SubDir.Name));
-            }
-            return fileCount;
-        }
+        [ThreadStatic]
+        private static byte[] CopyBuffer;
 
         public void CopyFile(string SourceFile, string DestinationFile)
         {
-            byte[] buffer = new byte[0x100000]; //1 MB
-            int bytesRead = 0;
-
-            using (FileStream src = new FileStream(SourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            const int BufferSize = 0x100000; //1 MB
+            // Reuse CopyBuffer on a per-thread basis to prevent a 1 MB heap
+            // allocation on every file copied, which will result in a large
+            // number of garbage collections.
+            if (CopyBuffer == null)
             {
-                using (BufferedStream srcBuffer = new BufferedStream(src))
+                CopyBuffer = new byte[BufferSize];
+            }
+            byte[] buffer = CopyBuffer;
+
+            using (FileStream src = new FileStream(SourceFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1, FileOptions.SequentialScan))
+            {
+                using (FileStream dest = new FileStream(DestinationFile, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, 1))
                 {
-                    using (FileStream dest = new FileStream(DestinationFile, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                    dest.SetLength(src.Length);
+                    int bytesRead = 1;
+                    while (bytesRead > 0)
                     {
-                        using (BufferedStream destBuffer = new BufferedStream(dest))
+                        bytesRead = src.Read(buffer, 0, buffer.Length);
+                        if (bytesRead > 0)
                         {
-                            bytesRead = 1;
-                            while (bytesRead > 0)
-                            {
-                                bytesRead = srcBuffer.Read(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    destBuffer.Write(buffer, 0, bytesRead);
-                                }
-                            }
-                            destBuffer.Flush();
-                            dest.Flush();
+                            dest.Write(buffer, 0, bytesRead);
                         }
                     }
+                    dest.Flush();
                 }
             }
         }
 
-        public void CopyDirectory(string source, string destination, ref int CurrentCount, Action<int> ReportProgress, Func<bool> CancelPending)
+        public List<Tuple<string, string>> BuildFileCopyManifest(string source, string destination)
+        {
+            List<Tuple<string, string>> manifest = new List<Tuple<string, string>>();
+            AddFilesToCopyManifest(source, destination, manifest);
+            return manifest;
+        }
+
+        private void AddFilesToCopyManifest(string source, string destination, List<Tuple<string, string>> manifest)
         {
             DirectoryInfo sourceDir = new DirectoryInfo(source);
             if (!sourceDir.Exists)
             {
-                throw new DirectoryNotFoundException(string.Format("{0} Not Found",sourceDir.FullName));
+                throw new DirectoryNotFoundException(string.Format("{0} Not Found", sourceDir.FullName));
             }
-            if(!Directory.Exists(destination))
+            if (!Directory.Exists(destination))
             {
                 Directory.CreateDirectory(destination);
             }
             foreach (FileInfo file in sourceDir.EnumerateFiles())
             {
-                string destinationFile = Path.Combine(destination, file.Name);
-                string sourceFile = Path.Combine(source, file.Name);
-
-                // Copy file contents
-                CopyFile(sourceFile, destinationFile);
-
-                if(ReportProgress != null)
-                {
-                    CurrentCount++;
-                    ReportProgress(CurrentCount);
-                }
-                if (CancelPending != null)
-                {
-                    bool cancel = CancelPending();
-                    if (cancel)
-                    {
-                        break;
-                    }
-                }
+                manifest.Add(Tuple.Create(file.FullName, Path.Combine(destination, file.Name)));
             }
-            foreach(DirectoryInfo SubDir in sourceDir.EnumerateDirectories())
+            foreach (DirectoryInfo SubDir in sourceDir.EnumerateDirectories())
             {
-                if (CancelPending != null)
+                AddFilesToCopyManifest(SubDir.FullName, Path.Combine(destination, SubDir.Name), manifest);
+            }
+        }
+
+        public void CopyFiles(List<Tuple<string, string>> FileCopyManifest, ref int CurrentCount, Action<int> ReportProgress, Func<bool> CancelPending)
+        {
+            int LocalCount = CurrentCount;
+            object ProgressLock = new object();
+            ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = Math.Min(8, Environment.ProcessorCount * 2) };
+
+            Parallel.ForEach(FileCopyManifest, options, (FileToCopy, LoopState) =>
+            {
+                if (CancelPending != null && CancelPending())
                 {
-                    bool cancel = CancelPending();
-                    if (cancel)
+                    LoopState.Stop();
+                    return;
+                }
+                CopyFile(FileToCopy.Item1, FileToCopy.Item2);
+                if (ReportProgress != null)
+                {
+                    int NewCount = Interlocked.Increment(ref LocalCount);
+                    // Serialize callback invocations since the caller's delegate mutates shared progress state.
+                    lock (ProgressLock)
                     {
-                        break;
+                        ReportProgress(NewCount);
                     }
                 }
-                string destinationDir = Path.Combine(destination, SubDir.Name);
-                CopyDirectory(SubDir.FullName, destinationDir, ref CurrentCount, ReportProgress, CancelPending);
-            }
+            });
+
+            CurrentCount = LocalCount;
         }
 
         public void ClearReadOnlyAttribute(string directory)
@@ -450,9 +446,10 @@ namespace TianoCore.EdkMingwInstaller
             int LastCompletionPercent = 0;
             int CurrentCount = 0;
             InstallLogger.Log(string.Format("Copying files..."));
-            int FileCount = GetFileCount(sourcePath);
             CreateInstallDirectory(installPath);
-            CopyDirectory(sourcePath, installPath, ref CurrentCount, delegate(int CurrentFileCount)
+            List<Tuple<string, string>> FileCopyManifest = BuildFileCopyManifest(sourcePath, installPath);
+            int FileCount = FileCopyManifest.Count;
+            CopyFiles(FileCopyManifest, ref CurrentCount, delegate(int CurrentFileCount)
             {
                 CompletionPercent = (CurrentFileCount * 100) / FileCount;
                 if (CompletionPercent > LastCompletionPercent)

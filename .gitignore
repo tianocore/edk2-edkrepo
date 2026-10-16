@@ -1,0 +1,15 @@
+# Visual Studio / MSBuild
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.cache
+
+# Installer build output
+dist/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
