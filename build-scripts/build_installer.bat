@@ -2,7 +2,7 @@
 REM @file
 REM build_installer.bat
 REM
-REM Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+REM Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 REM SPDX-License-Identifier: BSD-2-Clause-Patent
 REM
 
@@ -192,6 +192,12 @@ if errorlevel 1 (
 popd
 
 copy /B /Y ..\EdkMingwInstaller\bin\Release\EdkMingwInstaller.exe ..\dist\self_extract
+if errorlevel 1 (
+  set SCRIPT_ERROR=1
+  goto End
+)
+
+copy /B /Y ..\lib\WPF-UI\THIRD-PARTY-NOTICES.txt ..\dist\self_extract
 if errorlevel 1 (
   set SCRIPT_ERROR=1
   goto End

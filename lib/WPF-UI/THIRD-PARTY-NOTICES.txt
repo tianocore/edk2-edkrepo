@@ -1,0 +1,12 @@
+This software embeds the following third-party libraries, all licensed
+under the MIT License (https://licenses.nuget.org/MIT):
+
+  WPF-UI (lepo.co)                               https://github.com/lepoco/wpfui
+  WPF-UI.Abstractions (lepo.co)                  https://github.com/lepoco/wpfui
+  System.Memory (Microsoft)                      https://github.com/dotnet/maintenance-packages
+  System.Buffers (Microsoft)                     https://github.com/dotnet/maintenance-packages
+  System.Numerics.Vectors (Microsoft)            https://github.com/dotnet/maintenance-packages
+  System.Runtime.CompilerServices.Unsafe (Microsoft) https://github.com/dotnet/maintenance-packages
+  System.ValueTuple (Microsoft)                  https://github.com/dotnet/maintenance-packages
+
+The full text of the MIT License is available at the URL above.
