@@ -2,7 +2,7 @@
   VendorCustomizer.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -15,6 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using Microsoft.CSharp.RuntimeBinder;
 
 namespace TianoCore.EdkMingwInstaller
 {
@@ -28,7 +29,7 @@ namespace TianoCore.EdkMingwInstaller
         {
             gVendorCustomizerObject = VendorCustomizerObj;
         }
-  
+
         public static VendorCustomizer Instance
         {
             get
@@ -71,6 +72,28 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
+        //
+        // Returns null if the vendor plugin does not implement a dark mode
+        // logo, in which case the light logo is used instead.
+        //
+        public Viewbox VendorLogoDark
+        {
+            get
+            {
+                lock (padlock)
+                {
+                    try
+                    {
+                        return gVendorCustomizerObject.VendorLogoDark;
+                    }
+                    catch (RuntimeBinderException)
+                    {
+                        return null;
+                    }
+                }
+            }
+        }
+
         public Viewbox WelcomeSplash
         {
             get
@@ -80,6 +103,54 @@ namespace TianoCore.EdkMingwInstaller
                     return gVendorCustomizerObject.WelcomeSplash;
                 }
             }
+        }
+
+        //
+        // Returns null if the vendor plugin does not implement a dark mode
+        // splash, in which case the light splash is used instead.
+        //
+        public Viewbox WelcomeSplashDark
+        {
+            get
+            {
+                lock (padlock)
+                {
+                    try
+                    {
+                        return gVendorCustomizerObject.WelcomeSplashDark;
+                    }
+                    catch (RuntimeBinderException)
+                    {
+                        return null;
+                    }
+                }
+            }
+        }
+
+        //
+        // Get the logo for the given theme, or the default TianoCore logo if no
+        // vendor plugin is loaded.
+        //
+        public static Viewbox GetLogo(bool dark)
+        {
+            if (Instance == null)
+            {
+                return TianoCoreBranding.GetDefaultLogo(dark);
+            }
+            return (dark ? Instance.VendorLogoDark : null) ?? Instance.VendorLogo;
+        }
+
+        //
+        // Get the welcome splash for the given theme, or the default TianoCore
+        // splash if no vendor plugin is loaded.
+        //
+        public static Viewbox GetWelcomeSplash(bool dark)
+        {
+            if (Instance == null)
+            {
+                return TianoCoreBranding.GetDefaultWelcomeSplash(dark);
+            }
+            return (dark ? Instance.WelcomeSplashDark : null) ?? Instance.WelcomeSplash;
         }
 
         public string ProductName
