@@ -33,6 +33,8 @@ namespace TianoCore.EdkMingwInstaller
             DispatcherUnhandledException += App_DispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
+            Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+
             bool uninstall = false;
             bool passive = false;
             bool silent = false;

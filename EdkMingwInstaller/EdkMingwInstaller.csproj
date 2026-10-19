@@ -5,7 +5,7 @@
     EdkMingwInstaller.csproj
 
   @copyright
-    Copyright 2025 Intel Corporation. All rights reserved.<BR>
+    Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
     SPDX-License-Identifier: BSD-2-Clause-Patent
   -->
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -17,7 +17,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TianoCore.EdkMingwInstaller</RootNamespace>
     <AssemblyName>EdkMingwInstaller</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
@@ -67,7 +67,7 @@
     <ApplicationIcon>SetupIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>TianoCore.EdkMingwInstaller.App</StartupObject>
+    <StartupObject>TianoCore.EdkMingwInstaller.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Interop.Wshom">
@@ -85,6 +85,65 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <!-- Resolved at runtime from embedded resources by Program.ResolveEmbeddedAssembly -->
+    <Reference Include="Wpf.Ui">
+      <HintPath>..\lib\WPF-UI\Wpf.Ui.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Wpf.Ui.Abstractions">
+      <HintPath>..\lib\WPF-UI\Wpf.Ui.Abstractions.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>..\lib\WPF-UI\System.Memory.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>..\lib\WPF-UI\System.Buffers.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>..\lib\WPF-UI\System.Numerics.Vectors.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>..\lib\WPF-UI\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.ValueTuple">
+      <HintPath>..\lib\WPF-UI\System.ValueTuple.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\lib\WPF-UI\Wpf.Ui.dll">
+      <Link>EmbeddedAssemblies\Wpf.Ui.dll</Link>
+      <LogicalName>EmbeddedAssemblies.Wpf.Ui.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\lib\WPF-UI\Wpf.Ui.Abstractions.dll">
+      <Link>EmbeddedAssemblies\Wpf.Ui.Abstractions.dll</Link>
+      <LogicalName>EmbeddedAssemblies.Wpf.Ui.Abstractions.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\lib\WPF-UI\System.Memory.dll">
+      <Link>EmbeddedAssemblies\System.Memory.dll</Link>
+      <LogicalName>EmbeddedAssemblies.System.Memory.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\lib\WPF-UI\System.Buffers.dll">
+      <Link>EmbeddedAssemblies\System.Buffers.dll</Link>
+      <LogicalName>EmbeddedAssemblies.System.Buffers.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\lib\WPF-UI\System.Numerics.Vectors.dll">
+      <Link>EmbeddedAssemblies\System.Numerics.Vectors.dll</Link>
+      <LogicalName>EmbeddedAssemblies.System.Numerics.Vectors.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\lib\WPF-UI\System.Runtime.CompilerServices.Unsafe.dll">
+      <Link>EmbeddedAssemblies\System.Runtime.CompilerServices.Unsafe.dll</Link>
+      <LogicalName>EmbeddedAssemblies.System.Runtime.CompilerServices.Unsafe.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\lib\WPF-UI\System.ValueTuple.dll">
+      <Link>EmbeddedAssemblies\System.ValueTuple.dll</Link>
+      <LogicalName>EmbeddedAssemblies.System.ValueTuple.dll</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -94,6 +153,7 @@
     <Compile Include="InstallLogger.cs" />
     <Compile Include="InstallWorker.cs" />
     <Compile Include="InstallerStrings.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
