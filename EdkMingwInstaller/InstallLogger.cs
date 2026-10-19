@@ -2,7 +2,7 @@
   InstallLogger.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -46,7 +46,7 @@ namespace TianoCore.EdkMingwInstaller
                 {
                     LogFilePath = Path.Combine(
                         Environment.GetEnvironmentVariable("temp"),
-                        string.Format("EdkRepoInstaller-{0}.log", Guid.NewGuid().ToString()));
+                        string.Format("EdkMingwInstaller-{0}.log", Guid.NewGuid().ToString()));
                 }
                 string[] lines = LogMessage.Split('\n');
                 List<string> trimmedLines = new List<string>();
