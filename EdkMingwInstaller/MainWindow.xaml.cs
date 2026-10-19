@@ -2,7 +2,7 @@
   MainWindow.xaml.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -28,24 +28,41 @@ namespace TianoCore.EdkMingwInstaller
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
+        private Viewbox currentSplash;
+
         public MainWindow()
         {
             InitializeComponent();
-            Viewbox WelcomeSplash = null;
-            if (VendorCustomizer.Instance != null)
-            {
-                WelcomeSplash = VendorCustomizer.Instance.WelcomeSplash;
-            }
-            if (WelcomeSplash == null)
-            {
-                TianoCoreBranding TianoBranding = new TianoCoreBranding();
-                TianoBranding.Children.Remove(TianoBranding.WelcomeSplash);
-                WelcomeSplash = TianoBranding.WelcomeSplash;
-            }
-            RootGrid.Children.Add(WelcomeSplash);
+            currentSplash = VendorCustomizer.GetWelcomeSplash(ThemeHelper.IsDarkTheme());
+            ContentGrid.Children.Insert(0, currentSplash);
             Title = string.Format("{0} Installer", InstallerStrings.ProductName);
+
+            Wpf.Ui.Appearance.ApplicationThemeManager.Changed += OnApplicationThemeChanged;
+            Closing += delegate
+            {
+                Wpf.Ui.Appearance.SystemThemeWatcher.UnWatch(this);
+            };
+            Closed += delegate
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.Changed -= OnApplicationThemeChanged;
+            };
+        }
+
+        private void MainWindow_SourceInitialized(object sender, EventArgs e)
+        {
+            Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this, Wpf.Ui.Controls.WindowBackdropType.None, true);
+        }
+
+        private void OnApplicationThemeChanged(Wpf.Ui.Appearance.ApplicationTheme currentApplicationTheme, Color systemAccent)
+        {
+            Dispatcher.Invoke(delegate
+            {
+                ContentGrid.Children.Remove(currentSplash);
+                currentSplash = VendorCustomizer.GetWelcomeSplash(ThemeHelper.IsDarkTheme());
+                ContentGrid.Children.Insert(0, currentSplash);
+            });
         }
 
         private void cmdInstall_Click(object sender, RoutedEventArgs e)
@@ -58,6 +75,17 @@ namespace TianoCore.EdkMingwInstaller
         private void cmdCancel_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
+        }
+
+        private void RootGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                DragMove();
+            }
+            catch (InvalidOperationException)
+            {
+            }
         }
     }
 }

@@ -2,7 +2,7 @@
   ProgressWindow.xaml.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -31,7 +31,7 @@ namespace TianoCore.EdkMingwInstaller
     /// <summary>
     /// Interaction logic for ProgressWindow.xaml
     /// </summary>
-    public partial class ProgressWindow : Window
+    public partial class ProgressWindow : Wpf.Ui.Controls.FluentWindow
     {
         private bool AllowClose = false;
         private bool FirstLoad = true;
@@ -42,34 +42,50 @@ namespace TianoCore.EdkMingwInstaller
         private readonly object CancelPendingLock = new object();
         private bool CancelPending = false;
         private int ExitCode = 0;
+        private Viewbox currentLogo;
 
         public ProgressWindow()
         {
             PassiveMode = false;
             InitializeComponent();
-            InitializeComponent();
-            Viewbox VendorLogo = null;
-            if (VendorCustomizer.Instance != null)
-            {
-                VendorLogo = VendorCustomizer.Instance.VendorLogo;
-            }
-            if (VendorLogo == null)
-            {
-                TianoCoreBranding TianoBranding = new TianoCoreBranding();
-                TianoBranding.Children.Remove(TianoBranding.TianoCoreLogo);
-                VendorLogo = TianoBranding.TianoCoreLogo;
-            }
-            double Ratio = VendorLogo.Width / VendorLogo.Height;
-            VendorLogo.Height = 48;
-            VendorLogo.Width = Ratio * 48;
-            VendorLogo.HorizontalAlignment = HorizontalAlignment.Right;
-            VendorLogo.VerticalAlignment = VerticalAlignment.Top;
-            VendorLogo.Margin = new Thickness(0, 5, 11, 0);
-            RootGrid.Children.Add(VendorLogo);
+            currentLogo = VendorCustomizer.GetLogo(ThemeHelper.IsDarkTheme());
+            double Ratio = currentLogo.Width / currentLogo.Height;
+            currentLogo.Height = 48;
+            currentLogo.Width = Ratio * 48;
+            currentLogo.HorizontalAlignment = HorizontalAlignment.Right;
+            currentLogo.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(currentLogo, 1);
+            HeaderGrid.Children.Add(currentLogo);
             string ProductName = InstallerStrings.ProductName;
             Title = string.Format("{0} Installer", ProductName);
-            InstallingLabel.Content = string.Format("Installing {0}", ProductName);
-            ActionLabel.Content = string.Format("Please wait while the Setup Wizard installs {0}.", ProductName);
+            InstallingLabel.Text = string.Format("Installing {0}", ProductName);
+
+            Wpf.Ui.Appearance.ApplicationThemeManager.Changed += OnApplicationThemeChanged;
+            Closing += delegate
+            {
+                Wpf.Ui.Appearance.SystemThemeWatcher.UnWatch(this);
+            };
+            Closed += delegate
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.Changed -= OnApplicationThemeChanged;
+            };
+        }
+
+        private void OnApplicationThemeChanged(Wpf.Ui.Appearance.ApplicationTheme currentApplicationTheme, Color systemAccent)
+        {
+            Dispatcher.Invoke(delegate
+            {
+                WindowsHelpers.SetTitleBarTheme(this, ThemeHelper.IsDarkTheme());
+                HeaderGrid.Children.Remove(currentLogo);
+                currentLogo = VendorCustomizer.GetLogo(ThemeHelper.IsDarkTheme());
+                double Ratio = currentLogo.Width / currentLogo.Height;
+                currentLogo.Height = 48;
+                currentLogo.Width = Ratio * 48;
+                currentLogo.HorizontalAlignment = HorizontalAlignment.Right;
+                currentLogo.VerticalAlignment = VerticalAlignment.Center;
+                Grid.SetColumn(currentLogo, 1);
+                HeaderGrid.Children.Add(currentLogo);
+            });
         }
 
         public bool PassiveMode { get; set; }
@@ -88,8 +104,7 @@ namespace TianoCore.EdkMingwInstaller
                     {
                         uninstallMode = true;
                     }
-                    InstallingLabel.Content = string.Format("Uninstalling {0}", ProductName);
-                    ActionLabel.Content = string.Format("Please wait while the Setup Wizard uninstalls {0}.", ProductName);
+                    InstallingLabel.Text = string.Format("Uninstalling {0}", ProductName);
                 }
                 else
                 {
@@ -97,32 +112,36 @@ namespace TianoCore.EdkMingwInstaller
                     {
                         uninstallMode = false;
                     }
-                    InstallingLabel.Content = string.Format("Installing {0}", ProductName);
-                    ActionLabel.Content = string.Format("Please wait while the Setup Wizard installs {0}.", ProductName);
+                    InstallingLabel.Text = string.Format("Installing {0}", ProductName);
                 }
             }
         }
 
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void ActionButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!InstallDone)
+            if (InstallDone)
+            {
+                CloseWindow();
+            }
+            else
             {
                 lock (CancelPendingLock)
                 {
                     CancelPending = true;
                 }
-                CancelButton.IsEnabled = false;
-            }
-            else
-            {
-                CloseWindow();
+                ActionButton.IsEnabled = false;
             }
         }
-        private void NextButton_Click(object sender, RoutedEventArgs e)
+
+        private void HeaderGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if(InstallDone)
+            try
             {
-                CloseWindow();
+                DragMove();
+            }
+            catch (InvalidOperationException)
+            {
+                // The left button event can already be triggered by the time DragMove() checks it on a fast click.
             }
         }
 
@@ -133,6 +152,8 @@ namespace TianoCore.EdkMingwInstaller
             {
                 HwndSource.AddHook(new HwndSourceHook(this.HwndSourceHook));
             }
+            Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this, Wpf.Ui.Controls.WindowBackdropType.None, true);
+            WindowsHelpers.SetTitleBarTheme(this, ThemeHelper.IsDarkTheme());
         }
 
         private IntPtr HwndSourceHook (IntPtr Hwnd, int Msg, IntPtr wParam, IntPtr lParam, ref bool Handled)
@@ -202,7 +223,7 @@ namespace TianoCore.EdkMingwInstaller
                         logString.Append(delegateText);
                         logString.Append("\r\n");
                         ProgressTextBox.Text = logString.ToString();
-                        ProgressTextBox.ScrollToEnd();
+                        ProgressTextScrollViewer.ScrollToEnd();
                     }
                 }), text);
         }
@@ -225,17 +246,21 @@ namespace TianoCore.EdkMingwInstaller
                             InstallDone = true;
                             InstallProgress.IsIndeterminate = false;
                             InstallProgress.Value = 100;
-                            FrameworkElement animation = InstallProgress.Template.FindName("PART_GlowRect", InstallProgress) as FrameworkElement;
-                            if (animation != null) animation.Visibility = Visibility.Hidden;
                             if (PassiveMode)
                             {
                                 CloseWindow();
                             }
                             else
                             {
-                                NextButton.Content = "Finish";
-                                NextButton.IsEnabled = true;
-                                CancelButton.IsEnabled = false;
+                                ResultInfoBar.Severity = Wpf.Ui.Controls.InfoBarSeverity.Success;
+                                ResultInfoBar.Title = UninstallMode ? "Uninstallation Successful" : "Installation Successful";
+                                ResultInfoBar.Message = string.Empty;
+                                InstallProgress.Visibility = Visibility.Collapsed;
+                                ResultInfoBar.IsOpen = true;
+                                ActionButton.Content = "Finish";
+                                ActionButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Primary;
+                                ActionButton.IsDefault = true;
+                                ActionButton.IsEnabled = true;
                             }
                         }));
                 }
@@ -273,15 +298,13 @@ namespace TianoCore.EdkMingwInstaller
                     }
                     else
                     {
-                        if (uninstall)
-                        {
-                            MessageBox.Show("Uninstallation Failed.", "Uninstallation Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Installation Failed.", "Installation Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        }
-                        CancelButton.IsEnabled = true;
+                        ResultInfoBar.Severity = Wpf.Ui.Controls.InfoBarSeverity.Error;
+                        ResultInfoBar.Title = uninstall ? "Uninstallation failed" : "Installation failed";
+                        ResultInfoBar.Message = "See details below.";
+                        InstallProgress.Visibility = Visibility.Collapsed;
+                        ResultInfoBar.IsOpen = true;
+                        ActionButton.Content = "Close";
+                        ActionButton.IsEnabled = true;
                     }
                 }));
         }
@@ -299,7 +322,7 @@ namespace TianoCore.EdkMingwInstaller
         {
             Dispatcher.Invoke(new Action(delegate()
             {
-                CancelButton.IsEnabled = AllowCancel;
+                ActionButton.IsEnabled = AllowCancel;
             }));
         }
 

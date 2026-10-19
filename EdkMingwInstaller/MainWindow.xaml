@@ -1,17 +1,28 @@
-﻿<Window x:Class="TianoCore.EdkMingwInstaller.MainWindow"
+﻿<ui:FluentWindow x:Class="TianoCore.EdkMingwInstaller.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="EdkRepo Installer" Height="398" Width="509" ResizeMode="CanMinimize" Icon="SetupIcon.ico" WindowStartupLocation="CenterScreen">
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Edk2Clang Installer" Height="370" Width="503" MinHeight="370" MaxHeight="370" MinWidth="503" MaxWidth="503"
+        ResizeMode="NoResize" Icon="SetupIcon.ico" WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource ControlFillColorDefaultBrush}"
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="None"
+        SourceInitialized="MainWindow_SourceInitialized">
     <!--
     @file
       MainWindow.xaml
 
     @copyright
-      Copyright 2025 Intel Corporation. All rights reserved.<BR>
+      Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
       SPDX-License-Identifier: BSD-2-Clause-Patent
     -->
-    <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Name="RootGrid">
-        <Button x:Name="cmdInstall" Height="21" Width="104" Margin="0,0,31,16" Content="Install" IsDefault="True" Click="cmdInstall_Click" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
-        <Button x:Name="cmdCancel" Height="21" Width="72" Margin="0,0,138,16" HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Cancel" Click="cmdCancel_Click"/>
+    <Grid Name="RootGrid" Width="503" Height="370" MouseLeftButtonDown="RootGrid_MouseLeftButtonDown">
+        <Grid Name="ContentGrid">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,16">
+                <ui:Button x:Name="cmdCancel" Content="Cancel" Width="72" Margin="0,0,12,0" Click="cmdCancel_Click"/>
+                <ui:Button x:Name="cmdInstall" Content="Install" Width="104" IsDefault="True"
+                           Appearance="Primary" Click="cmdInstall_Click"/>
+            </StackPanel>
+        </Grid>
+        <ui:TitleBar Title="" Background="Transparent" VerticalAlignment="Top" ShowMaximize="False"/>
     </Grid>
-</Window>
+</ui:FluentWindow>

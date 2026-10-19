@@ -2,7 +2,7 @@
   WindowsHelpers.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -13,11 +13,45 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
+using System.Windows.Interop;
 
 namespace TianoCore.EdkMingwInstaller
 {
     public class WindowsHelpers
     {
+        //
+        // DWMWA_USE_IMMERSIVE_DARK_MODE is 20 on Windows 10 20H1+ and 19 on older Windows 10 builds.
+        //
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_OLD = 19;
+
+        //
+        // DWMWA_SYSTEMBACKDROP_TYPE (Windows 11 22H2+) / DWMSBT_NONE: Windows otherwise applies a Mica
+        // backdrop behind the non-client caption area.
+        //
+        private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
+        private const int DWMSBT_NONE = 1;
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
+
+        public static void SetTitleBarTheme(Window window, bool dark)
+        {
+            IntPtr hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+            int useDark = dark ? 1 : 0;
+            if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDark, sizeof(int)) != 0)
+            {
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_OLD, ref useDark, sizeof(int));
+            }
+            int noBackdrop = DWMSBT_NONE;
+            DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref noBackdrop, sizeof(int));
+        }
+
         public static string GetApplicationPath()
         {
             //Note: The .NET libraries won't tell you the true .exe path

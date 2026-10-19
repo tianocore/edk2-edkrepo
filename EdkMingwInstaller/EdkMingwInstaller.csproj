@@ -150,6 +150,7 @@
     <Compile Include="InstallWorker.cs" />
     <Compile Include="InstallerStrings.cs" />
     <Compile Include="FluentDialogs.cs" />
+    <Compile Include="ThemeHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
