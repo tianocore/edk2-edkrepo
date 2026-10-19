@@ -70,10 +70,6 @@
     <StartupObject>TianoCore.EdkMingwInstaller.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Interop.Wshom">
-      <HintPath>..\lib\Interop.Wshom.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -153,6 +149,7 @@
     <Compile Include="InstallLogger.cs" />
     <Compile Include="InstallWorker.cs" />
     <Compile Include="InstallerStrings.cs" />
+    <Compile Include="FluentDialogs.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>

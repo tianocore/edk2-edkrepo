@@ -2,7 +2,7 @@
   InstallWorker.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -408,13 +408,16 @@ namespace TianoCore.EdkMingwInstaller
             {
                 if (!SilentMode)
                 {
-                    Interop.Wshom.IWshShell_Class WScriptShell = new Interop.Wshom.IWshShell_Class();
-                    int ret = WScriptShell.Popup(
+                    bool proceed = FluentDialogs.AskYesNo(
+                        InstallerStrings.InstallerName,
                         string.Format("The contents of the folder {0} will be overwritten by {1}, would you like to continue installation?", installPath, InstallerStrings.ProductName),
-                        120, string.Format("{0} Installer", InstallerStrings.InstallerName), 0x34);
-                    if (ret != 6) //Yes button
+                        TimeSpan.FromSeconds(120));
+                    if (!proceed)
                     {
-                        throw new OperationCanceledException("Installation was cancelled by the user.");
+                        InstallLogger.Log(string.Format("Installation cancelled: the overwrite of {0} was not allowed.", installPath));
+                        InstallLogger.Log("No new files were copied. Run the installer again and choose Yes to replace the existing contents.");
+                        ReportComplete(false, false);
+                        return;
                     }
                 }
                 InstallLogger.Log(string.Format("Deleting contents of {0}", installPath));

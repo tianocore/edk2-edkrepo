@@ -87,13 +87,10 @@ namespace TianoCore.EdkMingwInstaller
                 }
                 else
                 {
-                    MessageBoxResult Confirm = MessageBox.Show(
-                        string.Format(InstallerStrings.UninstallQuestion, InstallerStrings.ProductName),
+                    bool confirmed = FluentDialogs.AskYesNo(
                         InstallerStrings.InstallerName,
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question
-                        );
-                    if (Confirm == MessageBoxResult.Yes)
+                        string.Format(InstallerStrings.UninstallQuestion, InstallerStrings.ProductName));
+                    if (confirmed)
                     {
                         ProgressWindow progressWindow = new ProgressWindow();
                         progressWindow.UninstallMode = true;
@@ -252,14 +249,10 @@ namespace TianoCore.EdkMingwInstaller
                 }
                 else
                 {
-                    MessageBoxResult Uninstall = MessageBox.Show(
-                        string.Format("{0} is a third party version of {1}, {0} is already installed. To install this version of {1}, {0} must be uninstalled first.\r\n\r\nUninstall {0} now?", DisplayName, ProductName),
+                    bool uninstall = FluentDialogs.AskYesNo(
                         InstallerStrings.InstallerName,
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Exclamation,
-                        MessageBoxResult.No
-                        );
-                    if (Uninstall == MessageBoxResult.Yes)
+                        string.Format("{0} is a third party version of {1}, {0} is already installed. To install this version of {1}, {0} must be uninstalled first.\r\n\r\nUninstall {0} now?", DisplayName, ProductName));
+                    if (uninstall)
                     {
                         InstallLogger.Log(string.Format("{0} is a third party version of {1}. {0} is already installed.", DisplayName, ProductName));
                         InstallLogger.Log(string.Format("To install this version of {1}, {0} will be uninstalled first.", DisplayName, ProductName));
