@@ -2,7 +2,7 @@
   App.xaml.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -16,6 +16,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace TianoCore.EdkMingwInstaller
 {
@@ -29,6 +30,9 @@ namespace TianoCore.EdkMingwInstaller
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+            DispatcherUnhandledException += App_DispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
             bool uninstall = false;
             bool passive = false;
             bool silent = false;
@@ -298,6 +302,39 @@ namespace TianoCore.EdkMingwInstaller
             }
             FoundVendorUninstallKey = null;
             return false;
+        }
+
+        private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            LogUnhandledException("UI thread", e.Exception);
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            LogUnhandledException("background thread", e.ExceptionObject as Exception);
+        }
+
+        // InstallLogger may be nonfunctional depending on what crashed, so also
+        // write directly to a standalone crash log that doesn't depend on any
+        // other part of the app still working.
+        private static void LogUnhandledException(string origin, Exception ex)
+        {
+            string details = string.Format("Unhandled exception on {0}:\n{1}", origin, ex != null ? ex.ToString() : "(no exception object)");
+            try
+            {
+                InstallLogger.Log(details);
+            }
+            catch
+            {
+            }
+            try
+            {
+                string crashLogPath = Path.Combine(Path.GetTempPath(), string.Format("EdkMingwInstaller-crash-{0}.log", Guid.NewGuid()));
+                File.WriteAllText(crashLogPath, details);
+            }
+            catch
+            {
+            }
         }
     }
 }
