@@ -48,6 +48,18 @@ namespace TianoCore.EdkMingwInstaller
             {
                 Wpf.Ui.Appearance.ApplicationThemeManager.Changed -= OnApplicationThemeChanged;
             };
+            bool chooseDefault = false;
+            try
+            {
+                chooseDefault = InstallWorker.GetVersionsAfterInstall(InstallWorker.GetDefaultInstallRoot()).Count > 1;
+            }
+            catch (Exception ex)
+            {
+                InstallLogger.Log(string.Format("Could not list the installed versions: {0}", ex.Message));
+            }
+            if (chooseDefault) {
+                cmdInstall.Content = "Next";
+            }
         }
 
         private void MainWindow_SourceInitialized(object sender, EventArgs e)
@@ -67,8 +79,18 @@ namespace TianoCore.EdkMingwInstaller
 
         private void cmdInstall_Click(object sender, RoutedEventArgs e)
         {
-            ProgressWindow progressWindow = new ProgressWindow();
-            progressWindow.Show();
+            // The options page only matters when there is a choice of default version.
+            bool chooseDefault = false;
+            try
+            {
+                chooseDefault = InstallWorker.GetVersionsAfterInstall(InstallWorker.GetDefaultInstallRoot()).Count > 1;
+            }
+            catch (Exception ex)
+            {
+                InstallLogger.Log(string.Format("Could not list the installed versions: {0}", ex.Message));
+            }
+            Window next = chooseDefault ? (Window)new OptionsWindow() : new ProgressWindow();
+            next.Show();
             this.Close();
         }
 

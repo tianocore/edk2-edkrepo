@@ -120,11 +120,6 @@ namespace TianoCore.EdkMingwInstaller
             return ret;
         }
 
-        public static void SendEnvironmentVariableChangedMessage()
-        {
-            SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, "Environment");
-        }
-
         //
         // These Win32 API definitions are copied from P/Invoke.net
         //
@@ -150,11 +145,6 @@ namespace TianoCore.EdkMingwInstaller
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool CloseHandle(IntPtr hObject);
-
-        private static readonly IntPtr HWND_BROADCAST = new IntPtr(0xffff);
-        private const int WM_SETTINGCHANGE = 0x001A;
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, [MarshalAs(UnmanagedType.LPWStr)] string lParam);
 
         //
         // These are wrappers that translate error codes

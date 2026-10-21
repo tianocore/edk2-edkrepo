@@ -17,6 +17,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
+using TianoCore.EdkClang;
 
 namespace TianoCore.EdkMingwInstaller
 {
@@ -33,18 +34,34 @@ namespace TianoCore.EdkMingwInstaller
             DispatcherUnhandledException += App_DispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
+            // Prevent any dialogs shown before the first window from queuing an implicit shutdown.
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
 
             bool uninstall = false;
             bool passive = false;
             bool silent = false;
-            foreach (string arg in Environment.GetCommandLineArgs())
+            bool keepOldVersions = false;
+            string requestedVersion = null;
+            string[] commandLine = Environment.GetCommandLineArgs();
+            for (int i = 0; i < commandLine.Length; i++)
             {
+                string arg = commandLine[i];
                 if ((string.Compare(arg,"/uninstall",true) == 0) ||
                     (string.Compare(arg,"-uninstall",true) == 0) ||
                     (string.Compare(arg,"--uninstall",true) == 0))
                 {
                     uninstall = true;
+                }
+                if ((string.Compare(arg, "/version", true) == 0) ||
+                    (string.Compare(arg, "-version", true) == 0) ||
+                    (string.Compare(arg, "--version", true) == 0))
+                {
+                    if (i + 1 < commandLine.Length)
+                    {
+                        requestedVersion = commandLine[++i];
+                    }
                 }
                 if ((string.Compare(arg, "/passive", true) == 0) ||
                     (string.Compare(arg, "-passive", true) == 0) ||
@@ -58,6 +75,12 @@ namespace TianoCore.EdkMingwInstaller
                 {
                     silent = true;
                     passive = true;
+                }
+                if ((string.Compare(arg, "/keepoldversions", true) == 0) ||
+                    (string.Compare(arg, "-keepoldversions", true) == 0) ||
+                    (string.Compare(arg, "--keepoldversions", true) == 0))
+                {
+                    keepOldVersions = true;
                 }
             }
             if(silent)
@@ -73,6 +96,12 @@ namespace TianoCore.EdkMingwInstaller
             }
             if (uninstall)
             {
+                string uninstallVersion;
+                if (!ResolveUninstallVersion(requestedVersion, silent, passive, out uninstallVersion))
+                {
+                    return;
+                }
+                InstallWorker.UninstallVersion = uninstallVersion;
                 if (silent)
                 {
                     SilentInstallHandler silentInstallHandler = new SilentInstallHandler();
@@ -89,7 +118,9 @@ namespace TianoCore.EdkMingwInstaller
                 {
                     bool confirmed = FluentDialogs.AskYesNo(
                         InstallerStrings.InstallerName,
-                        string.Format(InstallerStrings.UninstallQuestion, InstallerStrings.ProductName));
+                        string.Format(
+                            InstallerStrings.UninstallQuestion,
+                            uninstallVersion == null ? InstallerStrings.ProductName : InstallerStrings.VersionDisplayName(uninstallVersion)));
                     if (confirmed)
                     {
                         ProgressWindow progressWindow = new ProgressWindow();
@@ -115,6 +146,7 @@ namespace TianoCore.EdkMingwInstaller
                     Console.WriteLine(string.Format("Please wait while we install {0}...", InstallerStrings.ProductName));
                     Console.WriteLine();
                     silentInstallHandler = new SilentInstallHandler();
+                    silentInstallHandler.RemoveOlderSameMajorVersions = !keepOldVersions;
                     InstallLogger.SetLogHook(silentInstallHandler.UpdateLog);
                 }
                 CheckForVendorCustomizedEdkRepoAlreadyInstalled(passive);
@@ -126,6 +158,7 @@ namespace TianoCore.EdkMingwInstaller
                 {
                     ProgressWindow progressWindow = new ProgressWindow();
                     progressWindow.PassiveMode = true;
+                    progressWindow.RemoveOlderSameMajorVersions = !keepOldVersions;
                     progressWindow.Show();
                 }
                 else
@@ -133,6 +166,7 @@ namespace TianoCore.EdkMingwInstaller
                     new MainWindow().Show();
                 }
             }
+            ShutdownMode = ShutdownMode.OnLastWindowClose;
         }
 
         //
@@ -230,72 +264,158 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
+        private sealed class OtherVariantInstall
+        {
+            public string DisplayName;
+            public string UninstallString;
+        }
+
+        private static bool IsKnownVendorProductCode(string productCode)
+        {
+            foreach (string known in InstallerStrings.KnownVendorProductCodes)
+            {
+                if (string.Compare(known, productCode, true) == 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        //
+        // Every installed version of another product variant. Older variants wrote a single entry named after
+        // their ProductCode, newer ones write one entry per version, each recording the ProductCode it derives from.
+        //
+        private List<OtherVariantInstall> FindOtherVariantInstalls()
+        {
+            List<OtherVariantInstall> found = new List<OtherVariantInstall>();
+            string ourProductCode = InstallerStrings.ProductCode;
+            using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+            using (RegistryKey uninstall = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"))
+            {
+                if (uninstall == null)
+                {
+                    return found;
+                }
+                foreach (string subKeyName in uninstall.GetSubKeyNames())
+                {
+                    using (RegistryKey key = uninstall.OpenSubKey(subKeyName))
+                    {
+                        if (key == null)
+                        {
+                            continue;
+                        }
+                        string baseProductCode = key.GetValue("EdkClangBaseProductCode") as string ?? subKeyName;
+                        if (string.Compare(baseProductCode, ourProductCode, true) == 0 || !IsKnownVendorProductCode(baseProductCode))
+                        {
+                            continue;
+                        }
+                        string uninstallString = key.GetValue("UninstallString") as string;
+                        if (string.IsNullOrWhiteSpace(uninstallString))
+                        {
+                            continue;
+                        }
+                        found.Add(new OtherVariantInstall
+                        {
+                            DisplayName = key.GetValue("DisplayName") as string ?? subKeyName,
+                            UninstallString = uninstallString
+                        });
+                    }
+                }
+            }
+            return found;
+        }
+
+        private void UninstallOtherVariants(List<OtherVariantInstall> others, int settleMilliseconds)
+        {
+            foreach (OtherVariantInstall other in others)
+            {
+                string uninstallString = string.Format("{0} /Passive", other.UninstallString);
+                SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", uninstallString));
+                p.WaitForExit();
+                Thread.Sleep(settleMilliseconds);
+                InstallLogger.Log(string.Format("{0} uninstalled.", other.DisplayName));
+            }
+        }
+
         private void CheckForVendorCustomizedEdkRepoAlreadyInstalled(bool Passive)
         {
-            RegistryKey VendorUninstallKey;
-            if (FoundVendorCustomizedEdkRepoAlreadyInstalled(out VendorUninstallKey))
+            List<OtherVariantInstall> others = FindOtherVariantInstalls();
+            if (others.Count == 0)
             {
-                string ProductName = InstallerStrings.ProductName;
-                string DisplayName = VendorUninstallKey.GetValue("DisplayName").ToString();
-                string UninstallString = string.Format("{0} /Passive", VendorUninstallKey.GetValue("UninstallString"));
-                if (Passive)
+                return;
+            }
+            string ProductName = InstallerStrings.ProductName;
+            string DisplayName = others.Count == 1
+                ? others[0].DisplayName
+                : string.Format("{0} (and {1} more)", others[0].DisplayName, others.Count - 1);
+            if (Passive)
+            {
+                InstallLogger.Log(string.Format("{0} is a third party version of {1}. {0} is already installed.", DisplayName, ProductName));
+                InstallLogger.Log(string.Format("To install this version of {1}, {0} will be uninstalled first.", DisplayName, ProductName));
+                UninstallOtherVariants(others, 4000);
+            }
+            else
+            {
+                bool uninstall = FluentDialogs.AskYesNo(
+                    InstallerStrings.InstallerName,
+                    string.Format("{0} is a third party version of {1}, {0} is already installed. To install this version of {1}, {0} must be uninstalled first.\r\n\r\nUninstall {0} now?", DisplayName, ProductName));
+                if (uninstall)
                 {
                     InstallLogger.Log(string.Format("{0} is a third party version of {1}. {0} is already installed.", DisplayName, ProductName));
                     InstallLogger.Log(string.Format("To install this version of {1}, {0} will be uninstalled first.", DisplayName, ProductName));
-                    SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", UninstallString));
-                    p.WaitForExit();
-                    Thread.Sleep(4000);
-                    InstallLogger.Log(string.Format("{0} uninstalled.", DisplayName));
+                    UninstallOtherVariants(others, 1000);
                 }
                 else
                 {
-                    bool uninstall = FluentDialogs.AskYesNo(
-                        InstallerStrings.InstallerName,
-                        string.Format("{0} is a third party version of {1}, {0} is already installed. To install this version of {1}, {0} must be uninstalled first.\r\n\r\nUninstall {0} now?", DisplayName, ProductName));
-                    if (uninstall)
-                    {
-                        InstallLogger.Log(string.Format("{0} is a third party version of {1}. {0} is already installed.", DisplayName, ProductName));
-                        InstallLogger.Log(string.Format("To install this version of {1}, {0} will be uninstalled first.", DisplayName, ProductName));
-                        SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", UninstallString));
-                        p.WaitForExit();
-                        Thread.Sleep(1000);
-                        InstallLogger.Log(string.Format("{0} uninstalled.", DisplayName));
-                    }
-                    else
-                    {
-                        Application.Current.Shutdown(0);
-                    }
+                    Application.Current.Shutdown(0);
                 }
             }
         }
 
-        private bool FoundVendorCustomizedEdkRepoAlreadyInstalled(out RegistryKey FoundVendorUninstallKey)
+        //
+        // Decides which version of EDK II Clang to uninstall. If the /Version argument is not specified then there can
+        // only be one EDK II Clang version currently installed. If there are multiple versions of EDK II Clang
+        // installed then the /Version argument is mandatory.
+        //
+        private bool ResolveUninstallVersion(string requested, bool silent, bool passive, out string version)
         {
-            string ProductCode = null;
-            if (VendorCustomizer.Instance != null)
+            version = requested;
+            string error = null;
+            if (requested != null && !EdkClangLayout.IsVersionName(requested))
             {
-                ProductCode = VendorCustomizer.Instance.ProductCode;
+                error = string.Format("'{0}' is not a version number such as 20.1.8.", requested);
             }
-            else
+            else if (requested == null)
             {
-                ProductCode = InstallerStrings.ProductCode;
-            }
-            RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            RegistryKey winUninstallRegistryKey = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", true);
-            foreach (string VendorCustomizerProductCode in InstallerStrings.KnownVendorProductCodes)
-            {
-                if(!string.IsNullOrWhiteSpace(ProductCode) && string.Compare(VendorCustomizerProductCode, ProductCode, true) == 0)
+                List<InstalledVersion> installed =
+                    EdkClangLayout.EnumerateInstalledVersions(Path.GetDirectoryName(WindowsHelpers.GetApplicationPath()));
+                if (installed.Count > 1)
                 {
-                    continue;
+                    error = string.Format(
+                        "More than one version of {0} is installed ({1}). Uninstall a version from Settings > Apps, or run EdkMingwInstaller.exe /Uninstall /Version <version>.",
+                        InstallerStrings.ProductName,
+                        string.Join(", ", installed.ConvertAll(v => v.Name)));
                 }
-                RegistryKey vendorUninstallKey = winUninstallRegistryKey.OpenSubKey(VendorCustomizerProductCode, true);
-                if (vendorUninstallKey != null)
+                else if (installed.Count == 1)
                 {
-                    FoundVendorUninstallKey = vendorUninstallKey;
-                    return true;
+                    version = installed[0].Name;
                 }
             }
-            FoundVendorUninstallKey = null;
+            if (error == null)
+            {
+                return true;
+            }
+            InstallLogger.Log(error);
+            if (silent)
+            {
+                Console.WriteLine(error);
+            }
+            else if (!passive)
+            {
+                MessageBox.Show(error, InstallerStrings.InstallerName, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            Application.Current.Shutdown(1);
             return false;
         }
 

@@ -158,28 +158,7 @@ if exist ..\dist (
 )
 
 REM
-REM Step 3 - Set Version Numbers
-REM
-py -3 set_version.py
-if errorlevel 1 (
-  set SCRIPT_ERROR=1
-  goto End
-)
-
-REM
-REM Step 4 - Build C++/C# installer code
-REM
-pushd ..
-MSBuild edk2mingw-installer.sln /m /t:Rebuild /p:Configuration=Release /p:Platform="Any CPU"
-if errorlevel 1 (
-  popd
-  set SCRIPT_ERROR=1
-  goto End
-)
-popd
-
-REM
-REM Step 5 - All other needed files
+REM Step 3 - Extract the clang toolchain
 REM
 mkdir ..\dist\self_extract
 pushd ..\dist\self_extract
@@ -191,6 +170,30 @@ if errorlevel 1 (
 )
 popd
 
+REM
+REM Step 4 - Set Version Numbers, the LLVM version comes from the packaged clang.exe
+REM
+py -3 set_version.py ..\dist\self_extract\clang64\bin\clang.exe
+if errorlevel 1 (
+  set SCRIPT_ERROR=1
+  goto End
+)
+
+REM
+REM Step 5 - Build C++/C# installer code
+REM
+pushd ..
+MSBuild edk2mingw-installer.sln /m /t:Rebuild /p:Configuration=Release /p:Platform="Any CPU"
+if errorlevel 1 (
+  popd
+  set SCRIPT_ERROR=1
+  goto End
+)
+popd
+
+REM
+REM Step 6 - All other needed files
+REM
 copy /B /Y ..\EdkMingwInstaller\bin\Release\EdkMingwInstaller.exe ..\dist\self_extract
 if errorlevel 1 (
   set SCRIPT_ERROR=1
@@ -204,7 +207,7 @@ if errorlevel 1 (
 )
 
 REM
-REM Step 6 - Create 7-Zip archive
+REM Step 7 - Create 7-Zip archive
 REM
 del /F ..\SelfExtract\setup-package.7z
 ..\SelfExtract\7za a -mx9 -ms=on -m0=LZMA2 -mmt=off ..\SelfExtract\setup-package.7z ..\dist\self_extract\*
@@ -215,7 +218,7 @@ if errorlevel 1 (
 rmdir /S /Q ..\dist\self_extract
 
 REM
-REM Step 7 - Generate packed .exe
+REM Step 8 - Generate packed .exe
 REM
 cd ..\SelfExtract
 call build_selfextract.bat
@@ -226,7 +229,7 @@ if errorlevel 1 (
 )
 
 REM
-REM Step 8 - Rename setup.exe to EdkClangSetup-x.x.x.exe
+REM Step 9 - Rename setup.exe to EdkClangSetup-x.x.x.exe
 REM
 if exist final_copy.bat (
   call final_copy.bat

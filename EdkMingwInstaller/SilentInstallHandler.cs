@@ -2,7 +2,7 @@
   SilentInstallHandler.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -21,6 +21,8 @@ namespace TianoCore.EdkMingwInstaller
     {
         private bool uninstall = false;
 
+        public bool RemoveOlderSameMajorVersions { get; set; } = true;
+
         internal void UpdateLog(string text)
         {
             if (!string.IsNullOrEmpty(text))
@@ -34,10 +36,7 @@ namespace TianoCore.EdkMingwInstaller
             {
                 if (uninstall)
                 {
-                    SilentProcess.StartConsoleProcessSilently(
-                        "cmd.exe",
-                        string.Format("/c choice /d y /t 3 > nul & rmdir /S /Q \"{0}\"",
-                        System.IO.Path.GetDirectoryName(WindowsHelpers.GetApplicationPath())));
+                    InstallWorker.StartSelfCleanupIfLastVersionRemoved();
                 }
                 System.Windows.Application.Current.Shutdown(0);
             }
@@ -71,6 +70,7 @@ namespace TianoCore.EdkMingwInstaller
             {
                 InstallWorker.SilentMode = true;
                 InstallWorker installWorker = new InstallWorker();
+                installWorker.RemoveOlderSameMajorVersions = RemoveOlderSameMajorVersions;
                 installWorker.PerformInstall(WorkerComplete, WorkerProgress, WorkerAllowCancel, WorkerCancelPending);
             }
             catch (Exception e)

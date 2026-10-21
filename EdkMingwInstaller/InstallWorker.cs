@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -22,6 +23,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using TianoCore.EdkClang;
 
 namespace TianoCore.EdkMingwInstaller
 {
@@ -29,47 +31,313 @@ namespace TianoCore.EdkMingwInstaller
     {
         public static bool SilentMode { get; set; }
 
-        public void SetBaseToolsMingwPathEnvironmentVariable(string path)
+        private const string UninstallRegistryPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+
+        //
+        // The version selected with /Version for an uninstall, or null when the caller did not specify one.
+        //
+        public static string UninstallVersion { get; set; }
+
+        //
+        // Set by PerformUninstall when it removed the last installed version. The uninstaller then deletes
+        // itself and the installation directory, which is now empty.
+        //
+        public static bool RemovedLastVersion { get; private set; }
+
+        //
+        // The version to make the system default, chosen on the options page. When null, the default
+        // switches to this installer's version if it is newer than the current default.
+        //
+        public string DefaultVersionChoice { get; set; }
+
+        //
+        // The LLVM version this package contains.
+        //
+        public static string ToolchainVersion
         {
-            RegistryKey Hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            RegistryKey EnvironmentRegistryKey = Hklm.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Environment", RegistryKeyPermissionCheck.ReadWriteSubTree);
-            string MingwPathValueName = null;
-            foreach (string ValueName in EnvironmentRegistryKey.GetValueNames())
+            get
             {
-                if (string.Compare(ValueName, InstallerStrings.BaseToolsMingwPath, StringComparison.OrdinalIgnoreCase) == 0)
+                AssemblyInformationalVersionAttribute attribute =
+                    (AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(
+                        Assembly.GetExecutingAssembly(), typeof(AssemblyInformationalVersionAttribute));
+                string version = attribute == null ? null : attribute.InformationalVersion;
+                if (!EdkClangLayout.IsVersionName(version))
                 {
-                    MingwPathValueName = ValueName;
-                    break;
+                    throw new InvalidOperationException(
+                        string.Format("The installer's toolchain version '{0}' is not a version number such as 20.1.8.", version));
                 }
+                return version;
             }
-            if (!string.IsNullOrEmpty(MingwPathValueName))
-            {
-                EnvironmentRegistryKey.DeleteValue(MingwPathValueName);
-            }
-            EnvironmentRegistryKey.SetValue(InstallerStrings.BaseToolsMingwPath, path);
-            WindowsHelpers.SendEnvironmentVariableChangedMessage();
-            InstallLogger.Log(string.Format("Created {0} environment variable.", InstallerStrings.BaseToolsMingwPath));
         }
 
-        public void DeleteBaseToolsMingwPathEnvironmentVariable()
+        //
+        // Version of the install/uninstall engine, independent of the toolchain. A newer engine
+        // replaces the shared uninstaller on disk, an older one does not.
+        //
+        public static Version EngineVersion
         {
-            RegistryKey Hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            RegistryKey EnvironmentRegistryKey = Hklm.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Environment", RegistryKeyPermissionCheck.ReadWriteSubTree);
-            string MingwPathValueName = null;
-            foreach (string ValueName in EnvironmentRegistryKey.GetValueNames())
+            get
             {
-                if (string.Compare(ValueName, InstallerStrings.BaseToolsMingwPath, StringComparison.OrdinalIgnoreCase) == 0)
+                AssemblyFileVersionAttribute attribute =
+                    (AssemblyFileVersionAttribute)Attribute.GetCustomAttribute(
+                        Assembly.GetExecutingAssembly(), typeof(AssemblyFileVersionAttribute));
+                return Version.Parse(attribute.Version);
+            }
+        }
+
+        //
+        // Programs and Features entry for one installed toolchain version. The name is derived from
+        // ProductCode, so the same version always maps to the same key.
+        //
+        public static string VersionProductCode(string toolchainVersion)
+        {
+            return EdkClangLayout.FormatProductCode(
+                EdkClangLayout.CreateNameBasedGuid(Guid.Parse(InstallerStrings.ProductCode), toolchainVersion));
+        }
+
+        //
+        // Whether older versions with the same major number as this installer's (for example 22.1.3 when
+        // installing 22.2.1) are uninstalled once the new version is installed.
+        // In /Passive or /Silent mode this is false only when /KeepOldVersions is given.
+        //
+        public bool RemoveOlderSameMajorVersions { get; set; } = true;
+
+        public static string GetDefaultInstallRoot()
+        {
+            return Path.Combine(
+                Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.Windows)),
+                InstallerStrings.InstallationDirectory);
+        }
+
+        private static RegistryKey OpenUninstallKey(bool writable = true)
+        {
+            using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+            {
+                return hklm.OpenSubKey(UninstallRegistryPath, writable);
+            }
+        }
+
+        private static string LegacyClangPath(string root)
+        {
+            return Path.Combine(root, "bin", "clang.exe");
+        }
+
+        //
+        // Older installers put clang directly in the installation directory instead of a version folder.
+        //
+        public static bool IsLegacyLayout(string root)
+        {
+            return File.Exists(LegacyClangPath(root));
+        }
+
+        public static string DetectLegacyVersion(string root)
+        {
+            string clang = LegacyClangPath(root);
+            if (File.Exists(clang))
+            {
+                try
                 {
-                    MingwPathValueName = ValueName;
-                    break;
+                    ProcessStartInfo start = new ProcessStartInfo(clang, "--version")
+                    {
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    };
+                    using (Process process = Process.Start(start))
+                    {
+                        Task<string> output = process.StandardOutput.ReadToEndAsync();
+                        if (process.WaitForExit(15000))
+                        {
+                            Match match = Regex.Match(output.Result, @"clang version (\d+\.\d+\.\d+)");
+                            if (match.Success && EdkClangLayout.IsVersionName(match.Groups[1].Value))
+                            {
+                                return match.Groups[1].Value;
+                            }
+                        }
+                        else
+                        {
+                            process.Kill();
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    InstallLogger.Log(string.Format("Could not run {0}: {1}", clang, e.Message));
                 }
             }
-            if (!string.IsNullOrEmpty(MingwPathValueName))
+
+            using (RegistryKey uninstall = OpenUninstallKey(false))
+            using (RegistryKey legacyKey = uninstall.OpenSubKey(InstallerStrings.ProductCode))
             {
-                EnvironmentRegistryKey.DeleteValue(MingwPathValueName);
+                string displayVersion = legacyKey == null ? null : legacyKey.GetValue("DisplayVersion") as string;
+                Match match = Regex.Match(displayVersion ?? string.Empty, @"^(\d+\.\d+\.\d+)");
+                if (match.Success && EdkClangLayout.IsVersionName(match.Groups[1].Value))
+                {
+                    return match.Groups[1].Value;
+                }
             }
-            WindowsHelpers.SendEnvironmentVariableChangedMessage();
-            InstallLogger.Log(string.Format("Deleted {0} environment variable.", InstallerStrings.BaseToolsMingwPath));
+            return null;
+        }
+
+        //
+        // The version that BASETOOLS_MINGW_PATH currently selects system wide, or null if unset or invalid.
+        //
+        public static string GetCurrentSystemDefaultVersion(string root)
+        {
+            string value;
+            using (RegistryKey machine = EdkClangLayout.OpenMachineEnvironment(false))
+            {
+                value = machine == null ? null : EdkClangLayout.GetEnvironmentValue(machine, EdkClangLayout.BaseToolsMingwPathName);
+            }
+            string name;
+            if (EdkClangLayout.TryGetVersionName(value, root, out name))
+            {
+                return File.Exists(Path.Combine(root, name, "bin", "clang.exe")) ? name : null;
+            }
+            if (EdkClangLayout.IsSamePath(value, root) && IsLegacyLayout(root))
+            {
+                return DetectLegacyVersion(root);
+            }
+            return null;
+        }
+
+        //
+        // Used by /Passive and /Silent installs, and to prepopulate the options page. The new
+        // version becomes the default if no default is usable, or if it is newer than the current one.
+        //
+        public static string ChooseDefaultAutomatically(string root, string newVersion)
+        {
+            string current = GetCurrentSystemDefaultVersion(root);
+            Version currentVersion;
+            Version newVersionNumber;
+            if (current != null &&
+                EdkClangLayout.TryParseVersion(current, out currentVersion) &&
+                EdkClangLayout.TryParseVersion(newVersion, out newVersionNumber) &&
+                currentVersion >= newVersionNumber)
+            {
+                return current;
+            }
+            return newVersion;
+        }
+
+        //
+        // Every version that will exist once this installer finishes, newest first.
+        //
+        public static List<string> GetVersionsAfterInstall(string root)
+        {
+            HashSet<string> names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (InstalledVersion installed in EdkClangLayout.EnumerateInstalledVersions(root))
+            {
+                if (installed.IsComplete)
+                {
+                    names.Add(installed.Name);
+                }
+            }
+            if (IsLegacyLayout(root))
+            {
+                string legacyVersion = DetectLegacyVersion(root);
+                if (legacyVersion != null)
+                {
+                    names.Add(legacyVersion);
+                }
+            }
+            names.Add(ToolchainVersion);
+            return names.OrderByDescending(n => Version.Parse(n)).ToList();
+        }
+
+        //
+        // Installed versions with the same major number as newVersion and a
+        // lower minor or patch number, newest first.
+        //
+        public static List<string> GetOlderSameMajorVersions(string root, string newVersion)
+        {
+            Version newest;
+            if (!EdkClangLayout.TryParseVersion(newVersion, out newest))
+            {
+                return new List<string>();
+            }
+            return GetVersionsAfterInstall(root)
+                .Where(name =>
+                {
+                    Version version = Version.Parse(name);
+                    return version.Major == newest.Major &&
+                        (version.Minor < newest.Minor || (version.Minor == newest.Minor && version.Build < newest.Build));
+                })
+                .ToList();
+        }
+
+        public static List<string> GetVersionsAfterInstall(string root, bool removeOlderSameMajorVersions)
+        {
+            List<string> versions = GetVersionsAfterInstall(root);
+            if (removeOlderSameMajorVersions)
+            {
+                List<string> older = GetOlderSameMajorVersions(root, ToolchainVersion);
+                versions.RemoveAll(v => older.Contains(v));
+            }
+            return versions;
+        }
+
+        //
+        // Registry functions for the default version. In addition to a system wide BASETOOLS_MINGW_PATH environment
+        // variable, each user could have their own copy of BASETOOLS_MINGW_PATH.
+        // All copies of this environment variable must point to a version that exists.
+        //
+
+        // The retarget() delegate should return the new value,
+        // string.Empty to delete the variable, or null to leave it alone.
+        private static void RetargetDefaults(Func<string, string> retarget)
+        {
+            using (RegistryKey machine = EdkClangLayout.OpenMachineEnvironment(true))
+            {
+                ApplyRetarget(machine, "the system", retarget);
+            }
+            UserEnvironments.ForEach(
+                delegate (RegistryKey environment, string description) { ApplyRetarget(environment, description, retarget); },
+                InstallLogger.Log);
+            EdkClangLayout.BroadcastEnvironmentChange();
+        }
+
+        private static void ApplyRetarget(RegistryKey environment, string description, Func<string, string> retarget)
+        {
+            string current = EdkClangLayout.GetEnvironmentValue(environment, EdkClangLayout.BaseToolsMingwPathName);
+            if (string.IsNullOrEmpty(current))
+            {
+                return;
+            }
+            string updated = retarget(current);
+            if (updated == null)
+            {
+                return;
+            }
+            if (updated.Length == 0)
+            {
+                EdkClangLayout.DeleteEnvironmentValue(environment, EdkClangLayout.BaseToolsMingwPathName);
+                InstallLogger.Log(string.Format("Removed {0} for {1}: it pointed at {2}, which is no longer installed.",
+                    EdkClangLayout.BaseToolsMingwPathName, description, DescribeVersionPath(current)));
+            }
+            else
+            {
+                EdkClangLayout.SetEnvironmentValue(environment, EdkClangLayout.BaseToolsMingwPathName, updated);
+                InstallLogger.Log(string.Format("Changed {0} for {1} from {2} to {3}.",
+                    EdkClangLayout.BaseToolsMingwPathName, description, DescribeVersionPath(current), DescribeVersionPath(updated)));
+            }
+        }
+
+        private static string DescribeVersionPath(string path)
+        {
+            string name = Path.GetFileName(EdkClangLayout.NormalizePath(path));
+            return EdkClangLayout.IsVersionName(name) ? name : path;
+        }
+
+        private static void SetSystemDefault(string versionDirectory)
+        {
+            using (RegistryKey machine = EdkClangLayout.OpenMachineEnvironment(true))
+            {
+                EdkClangLayout.SetEnvironmentValue(machine, EdkClangLayout.BaseToolsMingwPathName, versionDirectory);
+            }
+            EdkClangLayout.BroadcastEnvironmentChange();
+            InstallLogger.Log(string.Format("Set the system default {0} to {1}.", EdkClangLayout.BaseToolsMingwPathName, DescribeVersionPath(versionDirectory)));
         }
 
         private void InsertAdminOnlyAcl(DirectorySecurity security)
@@ -328,6 +596,304 @@ namespace TianoCore.EdkMingwInstaller
             Directory.Delete(directory, true);
         }
 
+        // Remove a registry key if it has nothing in it.
+        private static void DeleteRegistryKeyIfEmpty(RegistryKey baseKey, string path)
+        {
+            try
+            {
+                using (RegistryKey key = baseKey.OpenSubKey(path))
+                {
+                    if (key == null || key.SubKeyCount != 0 || key.ValueCount != 0)
+                    {
+                        return;
+                    }
+                }
+                baseKey.DeleteSubKey(path, false);
+            }
+            catch (InvalidOperationException)
+            {
+                // Something was added to the key after it was checked.
+            }
+        }
+
+        private static bool IsInstalledVersion(string root, string version)
+        {
+            return EdkClangLayout.IsVersionName(version) && File.Exists(Path.Combine(root, version, "bin", "clang.exe"));
+        }
+
+        private static bool IsVersionRegistered(string version)
+        {
+            using (RegistryKey uninstall = OpenUninstallKey(false))
+            using (RegistryKey entry = uninstall.OpenSubKey(VersionProductCode(version)))
+            {
+                return entry != null;
+            }
+        }
+
+        private void TryDeleteDirectory(string directory)
+        {
+            try
+            {
+                DeleteDirectory(directory);
+            }
+            catch (Exception e)
+            {
+                InstallLogger.Log(string.Format("Could not delete {0}: {1}", directory, e.Message));
+            }
+        }
+
+        //
+        // The installation directory is created with an administrators-only ACL. An existing directory that
+        // already holds files is left alone. Changing its ACL would also change the ACL of every installed version.
+        //
+        private void EnsureInstallRoot(string root)
+        {
+            if (!Directory.Exists(root) || !Directory.EnumerateFileSystemEntries(root).Any())
+            {
+                CreateInstallDirectory(root);
+            }
+        }
+
+        //
+        // Moves an install made by the legacy installer (which put clang directly in the installation directory)
+        // into its own version folder. Returns the version that was moved, or null if there was nothing to migrate.
+        //
+        private string MigrateLegacyInstall(string root)
+        {
+            if (!IsLegacyLayout(root))
+            {
+                return null;
+            }
+            string legacyVersion = DetectLegacyVersion(root);
+            if (legacyVersion == null)
+            {
+                throw new InvalidOperationException(string.Format(
+                    "An existing installation was found in {0}, but its version could not be determined. Uninstall it and run this installer again.", root));
+            }
+            string legacyDirectory = Path.Combine(root, legacyVersion);
+            if (Directory.Exists(legacyDirectory))
+            {
+                throw new InvalidOperationException(string.Format(
+                    "Cannot move the existing installation to {0} because that folder already exists.", legacyDirectory));
+            }
+
+            InstallLogger.Log(string.Format("Found legacy installation of edk2-clang {0}. Moving it to {1}...", legacyVersion, legacyDirectory));
+            string uninstallerName = Path.GetFileName(WindowsHelpers.GetApplicationPath());
+            string vendorPluginName = VendorCustomizer.Instance != null ? Path.GetFileName(VendorCustomizer.VendorPluginPath) : null;
+            List<FileSystemInfo> toMove = new List<FileSystemInfo>();
+            foreach (FileSystemInfo entry in new DirectoryInfo(root).EnumerateFileSystemInfos())
+            {
+                if (string.Equals(entry.Name, uninstallerName, StringComparison.OrdinalIgnoreCase) ||
+                    (vendorPluginName != null && string.Equals(entry.Name, vendorPluginName, StringComparison.OrdinalIgnoreCase)) ||
+                    string.Equals(entry.Name, InstallerStrings.ToolsDirectoryName, StringComparison.OrdinalIgnoreCase) ||
+                    EdkClangLayout.IsVersionName(entry.Name))
+                {
+                    continue;
+                }
+                toMove.Add(entry);
+            }
+
+            CreateInstallDirectory(legacyDirectory);
+            List<Tuple<string, string>> moved = new List<Tuple<string, string>>();
+            try
+            {
+                foreach (FileSystemInfo entry in toMove)
+                {
+                    string destination = Path.Combine(legacyDirectory, entry.Name);
+                    if (entry is DirectoryInfo)
+                    {
+                        Directory.Move(entry.FullName, destination);
+                    }
+                    else
+                    {
+                        File.Move(entry.FullName, destination);
+                    }
+                    moved.Add(Tuple.Create(entry.FullName, destination));
+                }
+            }
+            catch (Exception e)
+            {
+                for (int i = moved.Count - 1; i >= 0; i--)
+                {
+                    try
+                    {
+                        if (Directory.Exists(moved[i].Item2))
+                        {
+                            Directory.Move(moved[i].Item2, moved[i].Item1);
+                        }
+                        else
+                        {
+                            File.Move(moved[i].Item2, moved[i].Item1);
+                        }
+                    }
+                    catch (Exception undoError)
+                    {
+                        InstallLogger.Log(string.Format("Could not move {0} back: {1}", moved[i].Item2, undoError.Message));
+                    }
+                }
+                try
+                {
+                    Directory.Delete(legacyDirectory);
+                }
+                catch (IOException)
+                {
+                }
+                throw new IOException(string.Format(
+                    "Could not move the existing installation into {0}. Close any programs that are using files in {1} and try again. ({2})",
+                    legacyDirectory, root, e.Message), e);
+            }
+
+            RetargetDefaults(delegate (string value)
+            {
+                return EdkClangLayout.IsSamePath(value, root) ? legacyDirectory : null;
+            });
+            return legacyVersion;
+        }
+
+        private static Version ReadInstalledEngineVersion()
+        {
+            using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+            using (RegistryKey state = hklm.OpenSubKey(InstallerStrings.StateRegistryKeyPath))
+            {
+                Version version;
+                string text = state == null ? null : state.GetValue("EngineVersion") as string;
+                return Version.TryParse(text, out version) ? version : null;
+            }
+        }
+
+        //
+        // The uninstaller and the vendor plugin are shared by every installed version.
+        // They are only written when the engine on disk is older than the one packaged in the self-extracting
+        // archive, so an older installer won't replace a newer uninstaller.
+        //
+        private void InstallSharedFiles(string root, string packageDirectory, bool forceRefresh)
+        {
+            string applicationPath = WindowsHelpers.GetApplicationPath();
+            string uninstallerPath = Path.Combine(root, Path.GetFileName(applicationPath));
+            string vendorPluginPath = VendorCustomizer.Instance != null
+                ? Path.Combine(root, Path.GetFileName(VendorCustomizer.VendorPluginPath))
+                : null;
+
+            Version onDisk = ReadInstalledEngineVersion();
+            Version packaged = EngineVersion;
+            bool refresh = forceRefresh ||
+                onDisk == null ||
+                onDisk < packaged ||
+                !File.Exists(uninstallerPath) ||
+                (vendorPluginPath != null && !File.Exists(vendorPluginPath));
+            if (!refresh)
+            {
+                InstallLogger.Log(string.Format("The installed shared tools (v{0}) are up to date.", onDisk));
+                return;
+            }
+
+            InstallLogger.Log("Installing shared tools...");
+            CopyFile(applicationPath, uninstallerPath);
+            if (vendorPluginPath != null)
+            {
+                CopyFile(VendorCustomizer.VendorPluginPath, vendorPluginPath);
+            }
+
+            using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+            using (RegistryKey state = hklm.CreateSubKey(InstallerStrings.StateRegistryKeyPath))
+            {
+                state.SetValue("EngineVersion", packaged.ToString());
+            }
+        }
+
+        private static void WriteVersionUninstallKey(string root, string version, string displayVersion)
+        {
+            string uninstallerPath = Path.Combine(root, Path.GetFileName(WindowsHelpers.GetApplicationPath()));
+            using (RegistryKey uninstall = OpenUninstallKey())
+            using (RegistryKey key = uninstall.CreateSubKey(VersionProductCode(version)))
+            {
+                key.SetValue("DisplayName", InstallerStrings.VersionDisplayName(version));
+                key.SetValue("UninstallString", string.Format("\"{0}\" /Uninstall /Version {1}", uninstallerPath, version));
+                key.SetValue("DisplayIcon", uninstallerPath);
+                key.SetValue("Publisher", InstallerStrings.UninstallPublisher);
+                key.SetValue("DisplayVersion", displayVersion);
+                key.SetValue("NoModify", 1);
+                key.SetValue("NoRepair", 1);
+                key.SetValue("EstimatedSize", InstallerStrings.UninstallEstimatedSize);
+                key.SetValue("EdkClangBaseProductCode", InstallerStrings.ProductCode);
+                key.SetValue("EdkClangToolchainVersion", version);
+            }
+        }
+
+        //
+        // Ensure every installed version has a Programs and Features entry,
+        // and remove any entries created by the old installer.
+        //
+        private static void RegisterInstalledVersions(string root, string newVersion)
+        {
+            foreach (InstalledVersion installed in EdkClangLayout.EnumerateInstalledVersions(root))
+            {
+                if (!installed.IsComplete)
+                {
+                    continue;
+                }
+                bool hasEntry;
+                using (RegistryKey uninstall = OpenUninstallKey())
+                using (RegistryKey existing = uninstall.OpenSubKey(VersionProductCode(installed.Name)))
+                {
+                    hasEntry = existing != null;
+                }
+                if (installed.Name == newVersion)
+                {
+                    WriteVersionUninstallKey(root, installed.Name, InstallerStrings.UninstallDisplayVersion);
+                }
+                else if (!hasEntry)
+                {
+                    WriteVersionUninstallKey(root, installed.Name, installed.Name);
+                }
+            }
+            using (RegistryKey uninstall = OpenUninstallKey())
+            {
+                uninstall.DeleteSubKeyTree(InstallerStrings.ProductCode, false);
+            }
+        }
+
+        //
+        // Removes versions that the new version replaces. Any errors are logged
+        // but do not cause an installation failure since the new version is
+        // already in place. Defaults that selected a removed version move to
+        // the new version.
+        //
+        private void UninstallOlderVersions(string root, List<string> versions, string replacementVersion)
+        {
+            if (versions.Count == 0)
+            {
+                return;
+            }
+            string replacementDirectory = Path.Combine(root, replacementVersion);
+            List<string> removedDirectories = new List<string>();
+            foreach (string version in versions)
+            {
+                string directory = Path.Combine(root, version);
+                InstallLogger.Log(string.Format("Removing the older version {0}...", version));
+                removedDirectories.Add(directory);
+                try
+                {
+                    DeleteDirectory(directory);
+                }
+                catch (Exception e)
+                {
+                    InstallLogger.Log(string.Format(
+                        "Could not remove {0}: {1}.",
+                        directory, e.Message));
+                    continue;
+                }
+                using (RegistryKey uninstall = OpenUninstallKey())
+                {
+                    uninstall.DeleteSubKeyTree(VersionProductCode(version), false);
+                }
+            }
+            RetargetDefaults(delegate (string value)
+            {
+                return removedDirectories.Any(d => EdkClangLayout.IsSameOrUnder(value, d)) ? replacementDirectory : null;
+            });
+        }
+
         public void PerformInstall(Action<bool, bool> ReportComplete, Action<int> ReportProgress, Action<bool> AllowCancel, Func<bool> CancelPending)
         {
             if (ReportProgress == null || ReportComplete == null || AllowCancel == null || CancelPending == null)
@@ -340,17 +906,17 @@ namespace TianoCore.EdkMingwInstaller
             {
                 VendorCustomizer.Instance.WriteToInstallLog = new Action<string>(InstallLogger.Log);
             }
-            string installPath = Path.Combine(
-                Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.Windows)),
-                InstallerStrings.InstallationDirectory);
-            string sourcePath = Path.Combine(Path.GetDirectoryName(WindowsHelpers.GetApplicationPath()), InstallerStrings.SourceDirectory);
+            string toolchainVersion = ToolchainVersion;
+            string installRoot = GetDefaultInstallRoot();
+            string packageDirectory = Path.GetDirectoryName(WindowsHelpers.GetApplicationPath());
+            string sourcePath = Path.Combine(packageDirectory, InstallerStrings.SourceDirectory);
 
             //
             // Step 1 - Invoke the Pre-Install Event
             //
             if (VendorCustomizer.Instance != null)
             {
-                installPath = VendorCustomizer.Instance?.PreInstallEvent(installPath, ReportFailure);
+                installRoot = VendorCustomizer.Instance?.PreInstallEvent(installRoot, ReportFailure);
             }
             if (FailureReported)
             {
@@ -364,70 +930,64 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 2 - If EdkMingw is already installed, uninstall the currently installed version
+            // Step 2 - If an older installer put clang directly in the installation directory, move it into a
+            // versioned folder so side-by-side clang installs are possible. Once it is moved, only the new
+            // uninstaller can remove it, so cancelling is not allowed from here on.
             //
-            string ProductCode = null;
-            if (VendorCustomizer.Instance != null)
+            bool cancelLocked = IsLegacyLayout(installRoot);
+            if (cancelLocked)
             {
-                ProductCode = VendorCustomizer.Instance.ProductCode;
+                AllowCancel(false);
             }
-            else
-            {
-                ProductCode = InstallerStrings.ProductCode;
-            }
-            RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            RegistryKey winUninstallRegistryKey = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", true);
-            if (!string.IsNullOrWhiteSpace(ProductCode))
-            {
-                RegistryKey uninstallKey = winUninstallRegistryKey.OpenSubKey(ProductCode, true);
-                if (uninstallKey != null)
-                {
-                    InstallLogger.Log(string.Format("Uninstalling current version of {0}", InstallerStrings.ProductName));
-                    if (CancelPending())
-                    {
-                        ReportComplete(true, true);
-                        return;
-                    }
-                    string uninstallString = string.Format("{0} /Silent", uninstallKey.GetValue("UninstallString"));
-                    SilentProcess p = SilentProcess.StartConsoleProcessSilently("cmd.exe", string.Format("/S /C \"{0}\"", uninstallString));
-                    p.WaitForExit();
-                    Thread.Sleep(4000);
-                    InstallLogger.Log(string.Format("{0} uninstalled.", InstallerStrings.ProductName));
-                }
-            }
-
-            //
-            // Step 3 - Check if the installation path exists, if it does ask the user if it is OK to delete it
-            //
-            if (CancelPending())
+            Func<bool> CancelRequested = () => !cancelLocked && CancelPending();
+            string migratedVersion = MigrateLegacyInstall(installRoot);
+            List<string> olderVersions = RemoveOlderSameMajorVersions
+                ? GetOlderSameMajorVersions(installRoot, toolchainVersion)
+                : new List<string>();
+            if (CancelRequested())
             {
                 ReportComplete(true, true);
                 return;
             }
-            if (Directory.Exists(installPath))
+
+            //
+            // Step 3 - If this version's folder already exists, replace it.
+            //
+            string versionDirectory = Path.Combine(installRoot, toolchainVersion);
+            if (Directory.Exists(versionDirectory))
             {
-                if (!SilentMode)
+                bool known = migratedVersion == toolchainVersion || IsVersionRegistered(toolchainVersion);
+                if (!known && !SilentMode && !cancelLocked)
                 {
                     bool proceed = FluentDialogs.AskYesNo(
                         InstallerStrings.InstallerName,
-                        string.Format("The contents of the folder {0} will be overwritten by {1}, would you like to continue installation?", installPath, InstallerStrings.ProductName),
+                        string.Format("The folder {0} already exists, but {1} {2} is not registered as installed. Its contents will be replaced. Would you like to continue installation?", versionDirectory, InstallerStrings.ProductName, toolchainVersion),
                         TimeSpan.FromSeconds(120));
                     if (!proceed)
                     {
-                        InstallLogger.Log(string.Format("Installation cancelled: the overwrite of {0} was not allowed.", installPath));
+                        InstallLogger.Log(string.Format("Installation cancelled: replacing {0} was not allowed.", versionDirectory));
                         InstallLogger.Log("No new files were copied. Run the installer again and choose Yes to replace the existing contents.");
                         ReportComplete(false, false);
                         return;
                     }
                 }
-                InstallLogger.Log(string.Format("Deleting contents of {0}", installPath));
-                DeleteDirectory(installPath);
+                InstallLogger.Log(string.Format("Replacing the existing {0}...", versionDirectory));
+                try
+                {
+                    DeleteDirectory(versionDirectory);
+                }
+                catch (Exception e)
+                {
+                    throw new IOException(string.Format(
+                        "Could not remove the existing {0}. Close any programs that are using files in it and try again. ({1})",
+                        versionDirectory, e.Message), e);
+                }
             }
 
             //
             // Step 4 - Invoke the Pre-Copy Event
             //
-            if (CancelPending())
+            if (CancelRequested())
             {
                 ReportComplete(true, true);
                 return;
@@ -448,28 +1008,39 @@ namespace TianoCore.EdkMingwInstaller
             int CompletionPercent = 0;
             int LastCompletionPercent = 0;
             int CurrentCount = 0;
-            InstallLogger.Log(string.Format("Copying files..."));
-            CreateInstallDirectory(installPath);
-            List<Tuple<string, string>> FileCopyManifest = BuildFileCopyManifest(sourcePath, installPath);
-            int FileCount = FileCopyManifest.Count;
-            CopyFiles(FileCopyManifest, ref CurrentCount, delegate(int CurrentFileCount)
+            InstallLogger.Log(string.Format("Copying files to {0}...", versionDirectory));
+            EnsureInstallRoot(installRoot);
+            CreateInstallDirectory(versionDirectory);
+            try
             {
-                CompletionPercent = (CurrentFileCount * 100) / FileCount;
-                if (CompletionPercent > LastCompletionPercent)
+                List<Tuple<string, string>> FileCopyManifest = BuildFileCopyManifest(sourcePath, versionDirectory);
+                int FileCount = FileCopyManifest.Count;
+                CopyFiles(FileCopyManifest, ref CurrentCount, delegate (int CurrentFileCount)
                 {
-                    ReportProgress(CompletionPercent);
-                    LastCompletionPercent = CompletionPercent;
-                }
-            }, CancelPending);
-            AllowCancel(false);
-            if (CancelPending())
+                    CompletionPercent = (CurrentFileCount * 100) / FileCount;
+                    if (CompletionPercent > LastCompletionPercent)
+                    {
+                        ReportProgress(CompletionPercent);
+                        LastCompletionPercent = CompletionPercent;
+                    }
+                }, CancelRequested);
+            }
+            catch
             {
+                // A half-copied folder would be listed as an installed version.
+                TryDeleteDirectory(versionDirectory);
+                throw;
+            }
+            AllowCancel(false);
+            if (CancelRequested())
+            {
+                TryDeleteDirectory(versionDirectory);
                 ReportComplete(true, true);
                 return;
             }
 
             //
-            // Step 7 - Invoke the Finish-Install Event
+            // Step 6 - Invoke the Finish-Install Event
             //
             if (VendorCustomizer.Instance != null)
             {
@@ -482,49 +1053,56 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 8 - Create the BASETOOLS_MINGW_PATH Environment Variable
-            //
-            SetBaseToolsMingwPathEnvironmentVariable(installPath);
-
-            //
-            // Step 9 - Create Programs and Features uninstall links
+            // Step 7 - Install the shared files
             //
             InstallLogger.Log(string.Format("Completing Install..."));
-            string VendorPluginPath = string.Empty;
-            if (VendorCustomizer.Instance != null)
+            InstallSharedFiles(installRoot, packageDirectory, migratedVersion != null);
+
+            //
+            // Step 8 - Choose the system default version
+            //
+            string defaultVersion = DefaultVersionChoice;
+            if (string.IsNullOrEmpty(defaultVersion) || !IsInstalledVersion(installRoot, defaultVersion) || olderVersions.Contains(defaultVersion))
             {
-                VendorPluginPath = Path.Combine(installPath, Path.GetFileName(VendorCustomizer.VendorPluginPath));
+                defaultVersion = ChooseDefaultAutomatically(installRoot, toolchainVersion);
             }
-            string UninstallerPath = Path.Combine(installPath, Path.GetFileName(WindowsHelpers.GetApplicationPath()));
-            if (File.Exists(UninstallerPath))
-            {
-                File.Delete(UninstallerPath);
-            }
-            CopyFile(WindowsHelpers.GetApplicationPath(), UninstallerPath);
-            if (VendorCustomizer.Instance != null)
-            {
-                if (File.Exists(VendorPluginPath))
-                {
-                    File.Delete(VendorPluginPath);
-                }
-                CopyFile(VendorCustomizer.VendorPluginPath, VendorPluginPath);
-            }
-            RegistryKey edkMingwUninstallKey = winUninstallRegistryKey.OpenSubKey(InstallerStrings.ProductCode, true);
-            if (edkMingwUninstallKey == null)
-            {
-                edkMingwUninstallKey = winUninstallRegistryKey.CreateSubKey(InstallerStrings.ProductCode);
-            }
-            edkMingwUninstallKey.SetValue("DisplayName", InstallerStrings.UninstallDisplayName);
-            edkMingwUninstallKey.SetValue("UninstallString", string.Format("\"{0}\" /Uninstall", UninstallerPath));
-            edkMingwUninstallKey.SetValue("DisplayIcon", UninstallerPath);
-            edkMingwUninstallKey.SetValue("Publisher", InstallerStrings.UninstallPublisher);
-            edkMingwUninstallKey.SetValue("DisplayVersion", InstallerStrings.UninstallDisplayVersion);
-            edkMingwUninstallKey.SetValue("NoModify", 1);
-            edkMingwUninstallKey.SetValue("NoRepair", 1);
-            edkMingwUninstallKey.SetValue("EstimatedSize", InstallerStrings.UninstallEstimatedSize);
+            SetSystemDefault(Path.Combine(installRoot, defaultVersion));
+
+            //
+            // Step 9 - Remove the older versions of this release series
+            //
+            UninstallOlderVersions(installRoot, olderVersions, toolchainVersion);
+
+            //
+            // Step 10 - Create Programs and Features uninstall links
+            //
+            RegisterInstalledVersions(installRoot, toolchainVersion);
+            EdkClangLayout.BroadcastEnvironmentChange();
 
             InstallLogger.Log("Installation Successful");
             ReportComplete(true, false);
+        }
+
+        //
+        // After the last version is uninstalled the uninstaller deletes itself and the installation directory,
+        // if nothing else is in it. It cannot do that while it is running, so a helper does it after it exits.
+        //
+        public static void StartSelfCleanupIfLastVersionRemoved()
+        {
+            if (!RemovedLastVersion)
+            {
+                return;
+            }
+            string applicationPath = WindowsHelpers.GetApplicationPath();
+            string root = Path.GetDirectoryName(applicationPath);
+            StringBuilder command = new StringBuilder("/c choice /d y /t 3 > nul");
+            command.AppendFormat(" & del /F /Q \"{0}\"", applicationPath);
+            if (VendorCustomizer.Instance != null)
+            {
+                command.AppendFormat(" & del /F /Q \"{0}\"", Path.Combine(root, Path.GetFileName(VendorCustomizer.VendorPluginPath)));
+            }
+            command.AppendFormat(" & rmdir \"{0}\"", root);
+            SilentProcess.StartConsoleProcessSilently("cmd.exe", command.ToString());
         }
 
         public void PerformUninstall(Action<bool, bool> ReportComplete, Action<int> ReportProgress, Action<bool> AllowCancel, Func<bool> CancelPending)
@@ -535,14 +1113,15 @@ namespace TianoCore.EdkMingwInstaller
             {
                 VendorCustomizer.Instance.WriteToInstallLog = new Action<string>(InstallLogger.Log);
             }
-            string installPath = Path.GetDirectoryName(WindowsHelpers.GetApplicationPath());
+            string installRoot = Path.GetDirectoryName(WindowsHelpers.GetApplicationPath());
+            RemovedLastVersion = false;
 
             //
-            // Step 1 - Invoke the Pre-Install Event
+            // Step 1 - Invoke the Pre-Uninstall Event
             //
             if (VendorCustomizer.Instance != null)
             {
-                installPath = VendorCustomizer.Instance?.PreUninstallEvent(installPath, ReportFailure);
+                installRoot = VendorCustomizer.Instance?.PreUninstallEvent(installRoot, ReportFailure);
             }
             if (FailureReported)
             {
@@ -557,42 +1136,61 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 2 - Delete the files
+            // Step 2 - Determine which version to remove.
             //
-            InstallLogger.Log(string.Format("Deleting files..."));
-            DirectoryInfo directoryInfo = new DirectoryInfo(installPath);
-            directoryInfo.Attributes &= ~FileAttributes.ReadOnly;
-            directoryInfo.Refresh();
-            foreach (DirectoryInfo dir in directoryInfo.EnumerateDirectories())
+            string version = UninstallVersion;
+            if (version == null)
             {
-                DeleteDirectory(dir.FullName);
-            }
-            string AppPath = WindowsHelpers.GetApplicationPath();
-            foreach (FileInfo file in directoryInfo.EnumerateFiles())
-            {
-                if (!WindowsHelpers.IsSameFile(file.FullName, AppPath))
+                List<InstalledVersion> installed = EdkClangLayout.EnumerateInstalledVersions(installRoot);
+                if (installed.Count > 1)
                 {
-                    if (VendorCustomizer.Instance != null)
-                    {
-                        if (!WindowsHelpers.IsSameFile(file.FullName, VendorCustomizer.VendorPluginPath))
-                        {
-                            file.Delete();
-                        }
-                    }
-                    else
-                    {
-                        file.Delete();
-                    }
+                    throw new InvalidOperationException(string.Format(
+                        "More than one version is installed ({0}). Run the uninstaller with /Version <version>.",
+                        string.Join(", ", installed.Select(v => v.Name))));
+                }
+                if (installed.Count == 1)
+                {
+                    version = installed[0].Name;
                 }
             }
+            else if (!EdkClangLayout.IsVersionName(version))
+            {
+                throw new ArgumentException(string.Format("'{0}' is not a version number such as 20.1.8.", version));
+            }
 
             //
-            // Step 3 - Delete the BASETOOLS_MINGW_PATH Environment Variable
+            // Step 3 - Delete the files of that version
             //
-            DeleteBaseToolsMingwPathEnvironmentVariable();
+            string versionDirectory = version == null ? null : Path.Combine(installRoot, version);
+            if (versionDirectory != null && Directory.Exists(versionDirectory))
+            {
+                InstallLogger.Log(string.Format("Deleting files in {0}...", versionDirectory));
+                DeleteDirectory(versionDirectory);
+            }
 
             //
-            // Step 4 - Invoke the Finish Uninstall Event
+            // Step 4 - Point all instances of BASETOOLS_MINGW_PATH that selected the removed
+            // version to the newest version that remains, or remove it if no version is left.
+            //
+            List<InstalledVersion> remaining = EdkClangLayout.EnumerateInstalledVersions(installRoot)
+                .Where(v => v.IsComplete && v.Name != version)
+                .ToList();
+            InstalledVersion fallback = remaining.OrderByDescending(v => v.Version).FirstOrDefault();
+            RetargetDefaults(delegate (string value)
+            {
+                if (versionDirectory != null && EdkClangLayout.IsSameOrUnder(value, versionDirectory))
+                {
+                    return fallback != null ? fallback.FullPath : string.Empty;
+                }
+                if (fallback == null && EdkClangLayout.IsSameOrUnder(value, installRoot))
+                {
+                    return string.Empty;
+                }
+                return null;
+            });
+
+            //
+            // Step 5 - Invoke the Finish Uninstall Event
             //
             if (VendorCustomizer.Instance != null)
             {
@@ -605,16 +1203,41 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 5 - Delete Programs and Feature uninstall link
+            // Step 6 - Delete the Programs and Features uninstall link for the version that was removed
             //
-            RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            RegistryKey winUninstallRegistryKey = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", true);
-            RegistryKey edkMingwUninstallKey = winUninstallRegistryKey.OpenSubKey(InstallerStrings.ProductCode, true);
-            if (edkMingwUninstallKey != null)
+            using (RegistryKey uninstall = OpenUninstallKey())
             {
-                edkMingwUninstallKey.Close();
-                winUninstallRegistryKey.DeleteSubKey(InstallerStrings.ProductCode);
+                if (version != null)
+                {
+                    uninstall.DeleteSubKeyTree(VersionProductCode(version), false);
+                }
+                if (remaining.Count == 0)
+                {
+                    uninstall.DeleteSubKeyTree(InstallerStrings.ProductCode, false);
+                }
             }
+
+            //
+            // Step 7 - If this is the last version, remove the installer's state.
+            //
+            if (remaining.Count == 0)
+            {
+                using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+                {
+                    hklm.DeleteSubKeyTree(InstallerStrings.StateRegistryKeyPath, false);
+                    try
+                    {
+                        hklm.DeleteSubKey(@"SOFTWARE\TianoCore\EdkClangMingw", false);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Another product variant still has its state there.
+                    }
+                    DeleteRegistryKeyIfEmpty(hklm, @"SOFTWARE\TianoCore");
+                }
+                RemovedLastVersion = true;
+            }
+            EdkClangLayout.BroadcastEnvironmentChange();
 
             InstallLogger.Log("Uninstall Complete");
             ReportComplete(true, false);

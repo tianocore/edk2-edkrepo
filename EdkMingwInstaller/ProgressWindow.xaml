@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="Edk2Clang Installer" Height="370" Width="503" MinHeight="370" MinWidth="503" ResizeMode="CanMinimize" Background="{DynamicResource ApplicationBackgroundBrush}" Icon="SetupIcon.ico" WindowStartupLocation="CenterScreen"
+        Title="Edk2Clang Installer" Height="370" Width="503" MinHeight="370" MinWidth="503" ResizeMode="CanResize" Background="{DynamicResource ApplicationBackgroundBrush}" Icon="SetupIcon.ico" WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True" WindowBackdropType="None"
         SourceInitialized="Window_SourceInitialized" ContentRendered="Window_ContentRendered">
     <!--
@@ -52,7 +52,7 @@
                 <ui:Button x:Name="ActionButton" Content="Cancel" Width="104" Click="ActionButton_Click" IsCancel="True"/>
             </StackPanel>
         </Grid>
-        <ui:TitleBar Title="" Height="40" Background="Transparent" VerticalAlignment="Top" ShowMaximize="False" ShowClose="False"/>
+        <ui:TitleBar Title="" Height="40" Background="Transparent" VerticalAlignment="Top" ShowClose="False"/>
     </Grid>
 </ui:FluentWindow>
 

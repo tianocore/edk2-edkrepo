@@ -89,6 +89,13 @@ namespace TianoCore.EdkMingwInstaller
         }
 
         public bool PassiveMode { get; set; }
+
+        // The system default chosen on the options page, null lets the installer decide.
+        public string SelectedDefaultVersion { get; set; }
+
+        // Older versions with the same major number are removed unless the user choose to keep them.
+        public bool RemoveOlderSameMajorVersions { get; set; } = true;
+
         public bool UninstallMode
         {
             get
@@ -104,7 +111,9 @@ namespace TianoCore.EdkMingwInstaller
                     {
                         uninstallMode = true;
                     }
-                    InstallingLabel.Text = string.Format("Uninstalling {0}", ProductName);
+                    string uninstallingVersion = InstallWorker.UninstallVersion;
+                    InstallingLabel.Text = string.Format("Uninstalling {0}",
+                        uninstallingVersion == null ? ProductName : InstallerStrings.VersionDisplayName(uninstallingVersion));
                 }
                 else
                 {
@@ -194,10 +203,7 @@ namespace TianoCore.EdkMingwInstaller
         {
             if(UninstallMode && InstallDone)
             {
-                SilentProcess.StartConsoleProcessSilently(
-                    "cmd.exe",
-                    string.Format("/c choice /d y /t 3 > nul & rmdir /S /Q \"{0}\"",
-                    System.IO.Path.GetDirectoryName(WindowsHelpers.GetApplicationPath())));
+                InstallWorker.StartSelfCleanupIfLastVersionRemoved();
             }
             AllowClose = true;
             Close();
@@ -343,7 +349,7 @@ namespace TianoCore.EdkMingwInstaller
                 {
                     uninstall = uninstallMode;
                 }
-                InstallWorker.SilentMode = false;
+                InstallWorker.SilentMode = PassiveMode;
                 InstallWorker installWorker = new InstallWorker();
                 if (uninstall)
                 {
@@ -351,6 +357,8 @@ namespace TianoCore.EdkMingwInstaller
                 }
                 else
                 {
+                    installWorker.DefaultVersionChoice = SelectedDefaultVersion;
+                    installWorker.RemoveOlderSameMajorVersions = RemoveOlderSameMajorVersions;
                     installWorker.PerformInstall(WorkerThreadComplete, WorkerThreadProgress, WorkerThreadAllowCancel, WorkerThreadCancelPending);
                 }
             }

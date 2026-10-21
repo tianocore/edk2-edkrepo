@@ -3,7 +3,7 @@
 ## @file
 # set_version.py
 #
-# Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -15,25 +15,43 @@ import io
 #import shutil
 import time
 import re
+import subprocess
 from subprocess import call, check_call
 
 
 assembly_file_version_data = re.compile(r"\s*\[\s*assembly:\s*AssemblyFileVersion\s*\(\"([\d.]+)\"\)\s*\]")
+assembly_informational_version_data = re.compile(r"\s*\[\s*assembly:\s*AssemblyInformationalVersion\s*\(\"([\d.]+)\"\)\s*\]")
+clang_version_data = re.compile(r"clang version (\d+\.\d+\.\d+)")
 
-def get_current_version_number():
+def get_clang_version(clang_path):
+    """Returns the version that the packaged clang.exe reports, such as 22.1.8."""
+    output = subprocess.run([clang_path, "--version"], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, universal_newlines=True, check=True).stdout
+    match = clang_version_data.search(output)
+    if not match:
+        raise ValueError("could not parse the output of '{} --version'".format(clang_path))
+    return match.group(1)
+
+def get_current_version_number(clang_path):
+    """Returns (version, engine_version, llvm_version).
+
+    version         - LLVM version + build number; names the setup .exe and the SFX stub.
+    engine_version  - installer engine version + build number; stamped as AssemblyFileVersion so the
+                      installer can tell whether the uninstaller already on disk is newer.
+    llvm_version    - the toolchain version reported by clang_path; stamped as
+                      AssemblyInformationalVersion and used as the install folder name.
+    """
     cfg_path = os.path.join(os.path.dirname(__file__), "version_numbers.ini")
     config = configparser.ConfigParser()
     config.read(cfg_path)
-    initial_version = config['edkclang']['version']
-    if "BUILD_NUMBER" in os.environ:
-        version = "{}.{}".format(initial_version, os.environ["BUILD_NUMBER"])
-        package_version = initial_version
-    else:
-        version = "{}.0".format(initial_version)
-        package_version = initial_version
-    return (version, package_version)
+    llvm_version = get_clang_version(clang_path)
+    engine_version = config['installer']['version']
+    build_number = os.environ.get("BUILD_NUMBER", "0")
+    return ("{}.{}".format(llvm_version, build_number),
+            "{}.{}".format(engine_version, build_number),
+            llvm_version)
 
-def set_version_number_assembly_info(version):
+def set_version_number_assembly_info(engine_version, llvm_version):
     assembly_info_files = []
     for root, _, filenames in os.walk(".."):
         for filename in filenames:
@@ -44,9 +62,10 @@ def set_version_number_assembly_info(version):
         with open(file_path, "r") as f:
             lines = f.readlines()
         for line in lines:
-            data = assembly_file_version_data.match(line.rstrip())
-            if data:
-                newFile.append("[assembly: AssemblyFileVersion(\"{}\")]\n".format(version))
+            if assembly_file_version_data.match(line.rstrip()):
+                newFile.append("[assembly: AssemblyFileVersion(\"{}\")]\n".format(engine_version))
+            elif assembly_informational_version_data.match(line.rstrip()):
+                newFile.append("[assembly: AssemblyInformationalVersion(\"{}\")]\n".format(llvm_version))
             else:
                 newFile.append("{}\n".format(line.rstrip()))
         with open(file_path, "w") as f:
@@ -83,12 +102,21 @@ def _copy_file(source, destination):
     check_call("copy /B /Y \"{}\" \"{}\"".format(source, destination), shell=True)
 
 def main():
+    if len(sys.argv) != 2:
+        print("Usage: set_version.py <path to the packaged clang.exe>")
+        return 1
     print("Building Python packages and generating new version number...")
-    (version, package_version) = get_current_version_number()
-    set_version_number_assembly_info(version)
+    try:
+        (version, engine_version, llvm_version) = get_current_version_number(sys.argv[1])
+    except (OSError, subprocess.CalledProcessError, ValueError) as e:
+        print("ERROR: could not get the clang version: {}".format(e))
+        return 1
+    print("Packaged clang is version {}".format(llvm_version))
+    set_version_number_assembly_info(engine_version, llvm_version)
     make_selfextract_version_script(version)
     print("Version number generated and set successfully")
     create_final_copy_script(version)
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

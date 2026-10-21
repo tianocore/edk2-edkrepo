@@ -2,7 +2,7 @@
   InstallerStrings.cs
 
 @copyright
-  Copyright 2025 Intel Corporation. All rights reserved.<BR>
+  Copyright 2025 - 2026 Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 @par Specification Reference:
@@ -13,6 +13,27 @@ namespace TianoCore.EdkMingwInstaller
 {
     public class InstallerStrings
     {
+        public static string ToolsDirectoryName
+        {
+            get
+            {
+                return TianoCore.EdkClang.EdkClangLayout.ToolsDirectoryName;
+            }
+        }
+
+        public static string VersionDisplayName(string toolchainVersion)
+        {
+            return string.Format("{0} {1}", UninstallDisplayName, toolchainVersion);
+        }
+
+        public static string StateRegistryKeyPath
+        {
+            get
+            {
+                return @"SOFTWARE\TianoCore\EdkClangMingw\" + ProductCode;
+            }
+        }
+
         public static string ProductName
         {
             get
@@ -149,8 +170,7 @@ namespace TianoCore.EdkMingwInstaller
                 }
                 else
                 {
-                    return System.Diagnostics.FileVersionInfo.GetVersionInfo(
-                        System.Reflection.Assembly.GetExecutingAssembly().Location).FileVersion.ToString();
+                    return InstallWorker.ToolchainVersion;
                 }
             }
         }
