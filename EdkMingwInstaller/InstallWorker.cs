@@ -1172,26 +1172,7 @@ namespace TianoCore.EdkMingwInstaller
             RemovedLastVersion = false;
 
             //
-            // Step 1 - Invoke the Pre-Uninstall Event
-            //
-            if (VendorCustomizer.Instance != null)
-            {
-                installRoot = VendorCustomizer.Instance?.PreUninstallEvent(installRoot, ReportFailure);
-            }
-            if (FailureReported)
-            {
-                ReportComplete(false, false);
-                return;
-            }
-            AllowCancel(false);
-            if (CancelPending())
-            {
-                ReportComplete(true, true);
-                return;
-            }
-
-            //
-            // Step 2 - Determine which version to remove.
+            // Step 1 - Determine which version to remove.
             //
             string version = UninstallVersion;
             if (version == null)
@@ -1211,6 +1192,25 @@ namespace TianoCore.EdkMingwInstaller
             else if (!EdkClangLayout.IsVersionName(version))
             {
                 throw new ArgumentException(string.Format("'{0}' is not a version number such as 20.1.8.", version));
+            }
+
+            //
+            // Step 2 - Invoke the Pre-Uninstall Event
+            //
+            if (VendorCustomizer.Instance != null)
+            {
+                installRoot = VendorCustomizer.Instance?.PreUninstallEvent(installRoot, version ?? string.Empty, ReportFailure);
+            }
+            if (FailureReported)
+            {
+                ReportComplete(false, false);
+                return;
+            }
+            AllowCancel(false);
+            if (CancelPending())
+            {
+                ReportComplete(true, true);
+                return;
             }
 
             //
@@ -1249,7 +1249,7 @@ namespace TianoCore.EdkMingwInstaller
             //
             if (VendorCustomizer.Instance != null)
             {
-                VendorCustomizer.Instance?.FinishUninstallEvent(ReportFailure);
+                VendorCustomizer.Instance?.FinishUninstallEvent(version ?? string.Empty, ReportFailure);
             }
             if (FailureReported)
             {

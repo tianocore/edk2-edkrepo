@@ -293,7 +293,9 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
-        public Func<string, Action, string> PreUninstallEvent
+        // Receives the installation directory and the version being uninstalled,
+        // and returns the installation directory.
+        public Func<string, string, Action, string> PreUninstallEvent
         {
             get
             {
@@ -304,7 +306,8 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
-        public Action<Action> FinishUninstallEvent
+        // Receives the version being uninstalled.
+        public Action<string, Action> FinishUninstallEvent
         {
             get
             {
