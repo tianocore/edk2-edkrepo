@@ -174,20 +174,5 @@ namespace TianoCore.EdkMingwInstaller
                 }
             }
         }
-
-        public static int UninstallEstimatedSize
-        {
-            get
-            {
-                if (VendorCustomizer.Instance != null)
-                {
-                    return VendorCustomizer.Instance.UninstallEstimatedSize;
-                }
-                else
-                {
-                    return 0x1B80FE;
-                }
-            }
-        }
     }
 }

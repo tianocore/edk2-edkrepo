@@ -821,9 +821,30 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
+        private static int? GetEstimatedSizeInKilobytes(string versionDirectory)
+        {
+            if (VendorCustomizer.Instance != null)
+            {
+                return VendorCustomizer.Instance.UninstallEstimatedSize;
+            }
+            try
+            {
+                long bytes = new DirectoryInfo(versionDirectory)
+                    .EnumerateFiles("*", SearchOption.AllDirectories)
+                    .Sum(file => file.Length);
+                return (int)Math.Min(int.MaxValue, (bytes + 1023) / 1024);
+            }
+            catch (Exception e)
+            {
+                InstallLogger.Log(string.Format("Could not measure {0}: {1}", versionDirectory, e.Message));
+                return null;
+            }
+        }
+
         private static void WriteVersionUninstallKey(string root, string version, string displayVersion)
         {
             string uninstallerPath = Path.Combine(root, Path.GetFileName(WindowsHelpers.GetApplicationPath()));
+            int? estimatedSize = GetEstimatedSizeInKilobytes(Path.Combine(root, version));
             using (RegistryKey uninstall = OpenUninstallKey())
             using (RegistryKey key = uninstall.CreateSubKey(VersionProductCode(version)))
             {
@@ -834,7 +855,10 @@ namespace TianoCore.EdkMingwInstaller
                 key.SetValue("DisplayVersion", displayVersion);
                 key.SetValue("NoModify", 1);
                 key.SetValue("NoRepair", 1);
-                key.SetValue("EstimatedSize", InstallerStrings.UninstallEstimatedSize);
+                if (estimatedSize.HasValue)
+                {
+                    key.SetValue("EstimatedSize", estimatedSize.Value, RegistryValueKind.DWord);
+                }
                 key.SetValue("EdkClangBaseProductCode", InstallerStrings.ProductCode);
                 key.SetValue("EdkClangToolchainVersion", version);
             }
