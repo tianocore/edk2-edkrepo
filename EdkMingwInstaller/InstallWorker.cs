@@ -616,6 +616,19 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
+        private static readonly string[] ToolFileNames = { "edkclang-core.exe", "edkclang.cmd" };
+
+        private static void VerifyPackage(string packageDirectory)
+        {
+            foreach (string name in ToolFileNames)
+            {
+                if (!File.Exists(Path.Combine(packageDirectory, name)))
+                {
+                    throw new FileNotFoundException(string.Format("The installer package is incomplete: {0} is missing.", name), name);
+                }
+            }
+        }
+
         private static bool IsInstalledVersion(string root, string version)
         {
             return EdkClangLayout.IsVersionName(version) && File.Exists(Path.Combine(root, version, "bin", "clang.exe"));
@@ -762,12 +775,13 @@ namespace TianoCore.EdkMingwInstaller
         }
 
         //
-        // The uninstaller and the vendor plugin are shared by every installed version.
+        // The uninstaller, the vendor plugin and the edkclang command are shared by every installed version.
         // They are only written when the engine on disk is older than the one packaged in the self-extracting
         // archive, so an older installer won't replace a newer uninstaller.
         //
         private void InstallSharedFiles(string root, string packageDirectory, bool forceRefresh)
         {
+            string toolsDirectory = Path.Combine(root, InstallerStrings.ToolsDirectoryName);
             string applicationPath = WindowsHelpers.GetApplicationPath();
             string uninstallerPath = Path.Combine(root, Path.GetFileName(applicationPath));
             string vendorPluginPath = VendorCustomizer.Instance != null
@@ -780,7 +794,8 @@ namespace TianoCore.EdkMingwInstaller
                 onDisk == null ||
                 onDisk < packaged ||
                 !File.Exists(uninstallerPath) ||
-                (vendorPluginPath != null && !File.Exists(vendorPluginPath));
+                (vendorPluginPath != null && !File.Exists(vendorPluginPath)) ||
+                ToolFileNames.Any(name => !File.Exists(Path.Combine(toolsDirectory, name)));
             if (!refresh)
             {
                 InstallLogger.Log(string.Format("The installed shared tools (v{0}) are up to date.", onDisk));
@@ -792,6 +807,11 @@ namespace TianoCore.EdkMingwInstaller
             if (vendorPluginPath != null)
             {
                 CopyFile(VendorCustomizer.VendorPluginPath, vendorPluginPath);
+            }
+            CreateInstallDirectory(toolsDirectory);
+            foreach (string name in ToolFileNames)
+            {
+                CopyFile(Path.Combine(packageDirectory, name), Path.Combine(toolsDirectory, name));
             }
 
             using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
@@ -912,7 +932,12 @@ namespace TianoCore.EdkMingwInstaller
             string sourcePath = Path.Combine(packageDirectory, InstallerStrings.SourceDirectory);
 
             //
-            // Step 1 - Invoke the Pre-Install Event
+            // Step 1 - Make sure the package is complete
+            //
+            VerifyPackage(packageDirectory);
+
+            //
+            // Step 2 - Invoke the Pre-Install Event
             //
             if (VendorCustomizer.Instance != null)
             {
@@ -930,7 +955,7 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 2 - If an older installer put clang directly in the installation directory, move it into a
+            // Step 3 - If an older installer put clang directly in the installation directory, move it into a
             // versioned folder so side-by-side clang installs are possible. Once it is moved, only the new
             // uninstaller can remove it, so cancelling is not allowed from here on.
             //
@@ -951,7 +976,7 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 3 - If this version's folder already exists, replace it.
+            // Step 4 - If this version's folder already exists, replace it.
             //
             string versionDirectory = Path.Combine(installRoot, toolchainVersion);
             if (Directory.Exists(versionDirectory))
@@ -985,7 +1010,7 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 4 - Invoke the Pre-Copy Event
+            // Step 5 - Invoke the Pre-Copy Event
             //
             if (CancelRequested())
             {
@@ -1003,7 +1028,7 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 5 - Copy the files
+            // Step 6 - Copy the files
             //
             int CompletionPercent = 0;
             int LastCompletionPercent = 0;
@@ -1040,7 +1065,7 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 6 - Invoke the Finish-Install Event
+            // Step 7 - Invoke the Finish-Install Event
             //
             if (VendorCustomizer.Instance != null)
             {
@@ -1053,13 +1078,18 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 7 - Install the shared files
+            // Step 8 - Install the shared files, and put the edkclang command on the system PATH
             //
             InstallLogger.Log(string.Format("Completing Install..."));
             InstallSharedFiles(installRoot, packageDirectory, migratedVersion != null);
+            string toolsDirectory = Path.Combine(installRoot, InstallerStrings.ToolsDirectoryName);
+            if (EdkClangLayout.AddToMachinePath(toolsDirectory))
+            {
+                InstallLogger.Log(string.Format("Added {0} to the system PATH.", toolsDirectory));
+            }
 
             //
-            // Step 8 - Choose the system default version
+            // Step 9 - Choose the system default version
             //
             string defaultVersion = DefaultVersionChoice;
             if (string.IsNullOrEmpty(defaultVersion) || !IsInstalledVersion(installRoot, defaultVersion) || olderVersions.Contains(defaultVersion))
@@ -1069,12 +1099,12 @@ namespace TianoCore.EdkMingwInstaller
             SetSystemDefault(Path.Combine(installRoot, defaultVersion));
 
             //
-            // Step 9 - Remove the older versions of this release series
+            // Step 10 - Remove the older versions of this release series
             //
             UninstallOlderVersions(installRoot, olderVersions, toolchainVersion);
 
             //
-            // Step 10 - Create Programs and Features uninstall links
+            // Step 11 - Create Programs and Features uninstall links
             //
             RegisterInstalledVersions(installRoot, toolchainVersion);
             EdkClangLayout.BroadcastEnvironmentChange();
@@ -1218,10 +1248,20 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 7 - If this is the last version, remove the installer's state.
+            // Step 7 - If this is the last version, remove what is shared: the edkclang command,
+            // its PATH entry and the installer's state.
             //
             if (remaining.Count == 0)
             {
+                string toolsDirectory = Path.Combine(installRoot, InstallerStrings.ToolsDirectoryName);
+                if (Directory.Exists(toolsDirectory))
+                {
+                    DeleteDirectory(toolsDirectory);
+                }
+                if (EdkClangLayout.RemoveFromMachinePath(toolsDirectory))
+                {
+                    InstallLogger.Log(string.Format("Removed {0} from the system PATH.", toolsDirectory));
+                }
                 using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
                 {
                     hklm.DeleteSubKeyTree(InstallerStrings.StateRegistryKeyPath, false);

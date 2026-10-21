@@ -200,6 +200,18 @@ if errorlevel 1 (
   goto End
 )
 
+copy /B /Y ..\EdkClangCommand\bin\Release\edkclang-core.exe ..\dist\self_extract
+if errorlevel 1 (
+  set SCRIPT_ERROR=1
+  goto End
+)
+
+copy /B /Y ..\EdkClangCommand\edkclang.cmd ..\dist\self_extract
+if errorlevel 1 (
+  set SCRIPT_ERROR=1
+  goto End
+)
+
 copy /B /Y ..\lib\WPF-UI\THIRD-PARTY-NOTICES.txt ..\dist\self_extract
 if errorlevel 1 (
   set SCRIPT_ERROR=1

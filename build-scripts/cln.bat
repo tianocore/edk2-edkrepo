@@ -2,7 +2,7 @@
 REM @file
 REM cln.bat
 REM
-REM Copyright (c) 2025, Intel Corporation. All rights reserved.<BR>
+REM Copyright (c) 2025 - 2026, Intel Corporation. All rights reserved.<BR>
 REM SPDX-License-Identifier: BSD-2-Clause-Patent
 REM
 
@@ -25,6 +25,14 @@ if exist ..\.git (
 )
 
 pushd ..\EdkMingwInstaller
+rmdir /S /Q bin
+rmdir /S /Q obj
+if %IS_GIT_REPO% NEQ 0 (
+  git checkout Properties/AssemblyInfo.cs
+)
+popd
+
+pushd ..\EdkClangCommand
 rmdir /S /Q bin
 rmdir /S /Q obj
 if %IS_GIT_REPO% NEQ 0 (

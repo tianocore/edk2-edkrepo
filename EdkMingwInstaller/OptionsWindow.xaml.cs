@@ -118,7 +118,7 @@ namespace TianoCore.EdkMingwInstaller
                 items[0];
             VersionComboBox.IsEnabled = items.Count > 1;
             HintText.Text = items.Count > 1
-                ? "You can change the default later by editing the system BASETOOLS_MINGW_PATH environment variable."
+                ? "You can switch versions later with the edkclang command."
                 : string.Format("Only {0} will be installed, so it is the default.", items[0].Version);
         }
 
