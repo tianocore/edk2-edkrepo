@@ -65,6 +65,9 @@
     <None Include="edkclang.cmd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="edkclang.sh">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--
@@ -73,6 +76,6 @@
   -->
   <Target Name="CopyToInstallerOutput" AfterTargets="Build">
     <MakeDir Directories="..\EdkMingwInstaller\bin\$(Configuration)" />
-    <Copy SourceFiles="$(OutDir)edkclang-core.exe;$(OutDir)edkclang.cmd" DestinationFolder="..\EdkMingwInstaller\bin\$(Configuration)" />
+    <Copy SourceFiles="$(OutDir)edkclang-core.exe;$(OutDir)edkclang.cmd;$(OutDir)edkclang.sh" DestinationFolder="..\EdkMingwInstaller\bin\$(Configuration)" />
   </Target>
 </Project>

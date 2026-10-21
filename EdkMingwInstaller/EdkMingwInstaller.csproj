@@ -146,6 +146,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="GitBashIntegration.cs" />
     <Compile Include="InstallLogger.cs" />
     <Compile Include="..\Common\EdkClangLayout.cs">
       <Link>Common\EdkClangLayout.cs</Link>

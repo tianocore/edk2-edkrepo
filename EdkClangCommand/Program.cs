@@ -683,7 +683,7 @@ namespace TianoCore.EdkClang
             {
                 return EmitForCmd(root, versionDir) ? 0 : 1;
             }
-            stderr.WriteLine("edkclang: shell was not changed. Run 'edkclang' from cmd.exe or PowerShell.");
+            stderr.WriteLine("edkclang: shell was not changed. Run 'edkclang' from cmd.exe, PowerShell, or Git Bash.");
             return 0;
         }
 

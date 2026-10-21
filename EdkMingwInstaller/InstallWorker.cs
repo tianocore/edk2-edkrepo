@@ -620,7 +620,7 @@ namespace TianoCore.EdkMingwInstaller
 
         private static void VerifyPackage(string packageDirectory)
         {
-            foreach (string name in ToolFileNames)
+            foreach (string name in ToolFileNames.Concat(new[] { GitBashIntegration.ScriptName }))
             {
                 if (!File.Exists(Path.Combine(packageDirectory, name)))
                 {
@@ -1087,6 +1087,7 @@ namespace TianoCore.EdkMingwInstaller
             {
                 InstallLogger.Log(string.Format("Added {0} to the system PATH.", toolsDirectory));
             }
+            GitBashIntegration.Install(packageDirectory);
 
             //
             // Step 9 - Choose the system default version
@@ -1262,6 +1263,7 @@ namespace TianoCore.EdkMingwInstaller
                 {
                     InstallLogger.Log(string.Format("Removed {0} from the system PATH.", toolsDirectory));
                 }
+                GitBashIntegration.Remove();
                 using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
                 {
                     hklm.DeleteSubKeyTree(InstallerStrings.StateRegistryKeyPath, false);
