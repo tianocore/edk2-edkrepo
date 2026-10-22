@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="48" height="48" viewBox="0 0 48 48">
+  <title>EDK II Clang Settings</title>
+  <!-- Simplified for 16, 20 and 24 px. -->
+  <defs>
+    <linearGradient id="gearFill" x1="-3.21" y1="8.29" x2="51.21" y2="39.71" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A3B1C5"/>
+      <stop offset="1" stop-color="#56657D"/>
+    </linearGradient>
+    <linearGradient id="recessFill" x1="10.99" y1="16.49" x2="37.01" y2="31.51" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4B5970"/>
+      <stop offset="1" stop-color="#283140"/>
+    </linearGradient>
+    <linearGradient id="spokeLight" x1="10.99" y1="16.49" x2="37.01" y2="31.51" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF8838"/>
+      <stop offset="1" stop-color="#F45F00"/>
+    </linearGradient>
+    <filter id="ambientBlur" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="0.5"/>
+    </filter>
+    <filter id="keyBlur" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="1"/>
+    </filter>
+    <clipPath id="hub">
+      <circle cx="24" cy="24" r="13"/>
+    </clipPath>
+    <path id="gear" d="M18.12 6.67A1 1 0 0 0 18.75 6.02L19.83 2.53A2 2 0 0 1 21.52 1.13A23 23 0 0 1 26.48 1.13A2 2 0 0 1 28.17 2.53L29.25 6.02A1 1 0 0 0 29.88 6.67A18.3 18.3 0 0 1 32.09 7.59A1 1 0 0 0 33 7.57L36.23 5.87A2 2 0 0 1 38.42 6.08A23 23 0 0 1 41.92 9.58A2 2 0 0 1 42.13 11.77L40.43 15A1 1 0 0 0 40.41 15.91A18.3 18.3 0 0 1 41.33 18.12A1 1 0 0 0 41.98 18.75L45.47 19.83A2 2 0 0 1 46.87 21.52A23 23 0 0 1 46.87 26.48A2 2 0 0 1 45.47 28.17L41.98 29.25A1 1 0 0 0 41.33 29.88A18.3 18.3 0 0 1 40.41 32.09A1 1 0 0 0 40.43 33L42.13 36.23A2 2 0 0 1 41.92 38.42A23 23 0 0 1 38.42 41.92A2 2 0 0 1 36.23 42.13L33 40.43A1 1 0 0 0 32.09 40.41A18.3 18.3 0 0 1 29.88 41.33A1 1 0 0 0 29.25 41.98L28.17 45.47A2 2 0 0 1 26.48 46.87A23 23 0 0 1 21.52 46.87A2 2 0 0 1 19.83 45.47L18.75 41.98A1 1 0 0 0 18.12 41.33A18.3 18.3 0 0 1 15.91 40.41A1 1 0 0 0 15 40.43L11.77 42.13A2 2 0 0 1 9.58 41.92A23 23 0 0 1 6.08 38.42A2 2 0 0 1 5.87 36.23L7.57 33A1 1 0 0 0 7.59 32.09A18.3 18.3 0 0 1 6.67 29.88A1 1 0 0 0 6.02 29.25L2.53 28.17A2 2 0 0 1 1.13 26.48A23 23 0 0 1 1.13 21.52A2 2 0 0 1 2.53 19.83L6.02 18.75A1 1 0 0 0 6.67 18.12A18.3 18.3 0 0 1 7.59 15.91A1 1 0 0 0 7.57 15L5.87 11.77A2 2 0 0 1 6.08 9.58A23 23 0 0 1 9.58 6.08A2 2 0 0 1 11.77 5.87L15 7.57A1 1 0 0 0 15.91 7.59A18.3 18.3 0 0 1 18.12 6.67ZM35 24A11 11 0 1 0 13 24A11 11 0 1 0 35 24Z"/>
+    <g id="spokes">
+      <rect x="21" y="10" width="6" height="28"/>
+      <rect x="21" y="10" width="6" height="28" transform="rotate(60 24 24)"/>
+      <rect x="21" y="10" width="6" height="28" transform="rotate(-60 24 24)"/>
+    </g>
+  </defs>
+  <g id="center" clip-path="url(#hub)">
+    <circle id="recess" cx="24" cy="24" r="13" fill="url(#recessFill)"/>
+    <g id="spokeShadow">
+      <use xlink:href="#spokes" opacity="0.25" filter="url(#ambientBlur)"/>
+      <use xlink:href="#spokes" opacity="0.2" filter="url(#keyBlur)" transform="translate(0 0.75)"/>
+    </g>
+    <use xlink:href="#spokes" fill="url(#spokeLight)"/>
+    <g id="gearShadow">
+      <use xlink:href="#gear" opacity="0.25" filter="url(#ambientBlur)"/>
+      <use xlink:href="#gear" opacity="0.2" filter="url(#keyBlur)" transform="translate(0 0.75)"/>
+    </g>
+  </g>
+  <use id="rim" xlink:href="#gear" fill="url(#gearFill)"/>
+</svg>

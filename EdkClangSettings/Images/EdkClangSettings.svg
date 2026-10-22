@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="48" height="48" viewBox="0 0 48 48">
+  <title>EDK II Clang Settings</title>
+  <!-- For 32 px and larger. The spokes are the TianoCore asterisk, mirrored so it is lit from the top-left. -->
+  <defs>
+    <linearGradient id="gearFill" x1="-2.03" y1="8.97" x2="50.03" y2="39.03" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A3B1C5"/>
+      <stop offset="1" stop-color="#56657D"/>
+    </linearGradient>
+    <linearGradient id="recessFill" x1="9.8" y1="15.8" x2="38.2" y2="32.2" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4B5970"/>
+      <stop offset="1" stop-color="#283140"/>
+    </linearGradient>
+    <linearGradient id="spokeLight" x1="9.8" y1="15.8" x2="38.2" y2="32.2" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF8838"/>
+      <stop offset="1" stop-color="#F45F00"/>
+    </linearGradient>
+    <linearGradient id="spokeDark" x1="9.8" y1="15.8" x2="38.2" y2="32.2" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#DE5C00"/>
+      <stop offset="1" stop-color="#B84900"/>
+    </linearGradient>
+    <filter id="ambientBlur" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="0.5"/>
+    </filter>
+    <filter id="keyBlur" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="1"/>
+    </filter>
+    <clipPath id="hub">
+      <circle cx="24" cy="24" r="14"/>
+    </clipPath>
+    <path id="gear" d="M19 6.71A1 1 0 0 0 19.67 6.07L20.59 3.41A2 2 0 0 1 22.33 2.06A22 22 0 0 1 25.67 2.06A2 2 0 0 1 27.41 3.41L28.33 6.07A1 1 0 0 0 29 6.71A18 18 0 0 1 32.69 8.24A1 1 0 0 0 33.62 8.26L36.15 7.03A2 2 0 0 1 38.33 7.31A22 22 0 0 1 40.69 9.67A2 2 0 0 1 40.97 11.85L39.74 14.38A1 1 0 0 0 39.76 15.31A18 18 0 0 1 41.29 19A1 1 0 0 0 41.93 19.67L44.59 20.59A2 2 0 0 1 45.94 22.33A22 22 0 0 1 45.94 25.67A2 2 0 0 1 44.59 27.41L41.93 28.33A1 1 0 0 0 41.29 29A18 18 0 0 1 39.76 32.69A1 1 0 0 0 39.74 33.62L40.97 36.15A2 2 0 0 1 40.69 38.33A22 22 0 0 1 38.33 40.69A2 2 0 0 1 36.15 40.97L33.62 39.74A1 1 0 0 0 32.69 39.76A18 18 0 0 1 29 41.29A1 1 0 0 0 28.33 41.93L27.41 44.59A2 2 0 0 1 25.67 45.94A22 22 0 0 1 22.33 45.94A2 2 0 0 1 20.59 44.59L19.67 41.93A1 1 0 0 0 19 41.29A18 18 0 0 1 15.31 39.76A1 1 0 0 0 14.38 39.74L11.85 40.97A2 2 0 0 1 9.67 40.69A22 22 0 0 1 7.31 38.33A2 2 0 0 1 7.03 36.15L8.26 33.62A1 1 0 0 0 8.24 32.69A18 18 0 0 1 6.71 29A1 1 0 0 0 6.07 28.33L3.41 27.41A2 2 0 0 1 2.06 25.67A22 22 0 0 1 2.06 22.33A2 2 0 0 1 3.41 20.59L6.07 19.67A1 1 0 0 0 6.71 19A18 18 0 0 1 8.24 15.31A1 1 0 0 0 8.26 14.38L7.03 11.85A2 2 0 0 1 7.31 9.67A22 22 0 0 1 9.67 7.31A2 2 0 0 1 11.85 7.03L14.38 8.26A1 1 0 0 0 15.31 8.24A18 18 0 0 1 19 6.71ZM36 24A12 12 0 1 0 12 24A12 12 0 1 0 36 24Z"/>
+    <path id="spokes" d="M20.26 24C14.17 20.63 4.92 15.81 4.92 15.81C4.92 15.81 4.26 14.5 5.09 13.08C5.91 11.65 7.37 11.57 7.37 11.57C7.37 11.57 16.17 17.17 22.13 20.76C22 13.81 21.56 3.38 21.56 3.38C21.56 3.38 22.35 2.16 24 2.16C25.65 2.16 26.44 3.38 26.44 3.38C26.44 3.38 26 13.81 25.87 20.76C31.83 17.17 40.63 11.57 40.63 11.57C40.63 11.57 42.09 11.65 42.91 13.08C43.74 14.5 43.08 15.81 43.08 15.81C43.08 15.81 33.83 20.63 27.74 24C33.83 27.37 43.08 32.19 43.08 32.19C43.08 32.19 43.73 33.5 42.91 34.92C42.1 36.34 40.63 36.43 40.63 36.43C40.63 36.43 31.83 30.83 25.87 27.24C26 34.19 26.44 44.62 26.44 44.62C26.44 44.62 25.64 45.84 24 45.84C22.36 45.84 21.56 44.62 21.56 44.62C21.56 44.62 22 34.19 22.13 27.24C16.17 30.83 7.37 36.43 7.37 36.43C7.37 36.43 5.9 36.34 5.09 34.92C4.27 33.5 4.92 32.19 4.92 32.19C4.92 32.19 14.17 27.37 20.26 24Z"/>
+  </defs>
+  <g id="center" clip-path="url(#hub)">
+    <circle id="recess" cx="24" cy="24" r="14" fill="url(#recessFill)"/>
+    <g id="spokeShadow">
+      <use xlink:href="#spokes" opacity="0.25" filter="url(#ambientBlur)"/>
+      <use xlink:href="#spokes" opacity="0.2" filter="url(#keyBlur)" transform="translate(0 0.75)"/>
+    </g>
+    <use xlink:href="#spokes" fill="url(#spokeLight)"/>
+    <path id="facets" d="M25.84 25.06L42.91 34.92C42.1 36.34 40.63 36.43 40.63 36.43C40.63 36.43 31.83 30.83 25.87 27.24C26 34.19 26.44 44.62 26.44 44.62C26.44 44.62 25.64 45.84 24 45.84L24 26.12L24 24L25.84 25.06ZM22.16 25.06C22.16 25.73 22.15 26.46 22.13 27.23C22.13 27.23 22.13 27.23 22.13 27.24C16.17 30.83 7.37 36.43 7.37 36.43C7.37 36.43 5.9 36.34 5.09 34.92L22.16 25.06ZM22.16 22.94C21.58 23.27 20.95 23.62 20.27 24C20.27 24 20.26 24 20.26 24C14.17 20.63 4.92 15.81 4.92 15.81C4.92 15.81 4.26 14.5 5.09 13.08L22.16 22.94ZM25.84 22.94L42.91 13.08C43.74 14.5 43.08 15.81 43.08 15.81C43.08 15.81 33.83 20.63 27.74 24C27.74 24 27.73 24 27.73 24C27.05 23.62 26.42 23.27 25.84 22.94ZM24 21.88L24 2.16C25.65 2.16 26.44 3.38 26.44 3.38C26.44 3.38 26 13.81 25.87 20.76C25.87 20.76 25.86 20.77 25.86 20.77C25.2 21.17 24.58 21.54 24 21.88Z" fill="url(#spokeDark)"/>
+    <g id="gearShadow">
+      <use xlink:href="#gear" opacity="0.25" filter="url(#ambientBlur)"/>
+      <use xlink:href="#gear" opacity="0.2" filter="url(#keyBlur)" transform="translate(0 0.75)"/>
+    </g>
+  </g>
+  <use id="rim" xlink:href="#gear" fill="url(#gearFill)"/>
+</svg>

@@ -1,0 +1,125 @@
+﻿<ui:FluentWindow x:Class="TianoCore.EdkClangSettings.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="EDK II Clang Settings" Height="580" Width="620" MinHeight="460" MinWidth="560"
+        Icon="Images/EdkClangSettings.ico" WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource ApplicationBackgroundBrush}"
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="None"
+        SourceInitialized="Window_SourceInitialized" Loaded="Window_Loaded">
+    <!--
+    @file
+      MainWindow.xaml
+
+    @copyright
+      Copyright 2026 Intel Corporation. All rights reserved.<BR>
+      SPDX-License-Identifier: BSD-2-Clause-Patent
+    -->
+    <Grid>
+        <Grid x:Name="RootGrid" Margin="24,44,24,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ui:InfoBar x:Name="StatusInfoBar" Grid.Row="0" IsOpen="False" IsClosable="True" Margin="0,0,0,12"/>
+
+            <Border x:Name="DefaultsCard" Grid.Row="1" Padding="16" Margin="0,0,0,16" CornerRadius="4" BorderThickness="1"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                <StackPanel>
+                    <TextBlock Text="Default version" FontWeight="SemiBold"/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="New terminals use the default version. To change only the current terminal, run edkclang &lt;version&gt;."/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="170"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Current user" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="UserCombo" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" DisplayMemberPath="Label"
+                                  SelectionChanged="Combo_SelectionChanged"/>
+                        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,8,0"
+                                    ToolTip="Changing the system default needs administrator approval.">
+                            <Image x:Name="ShieldImage" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <TextBlock Text="All users" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ComboBox x:Name="SystemCombo" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" DisplayMemberPath="Label" Margin="0,8,0,0"
+                                  SelectionChanged="Combo_SelectionChanged"/>
+                    </Grid>
+                    <ui:Button x:Name="ApplyButton" Appearance="Primary" MinWidth="96" HorizontalAlignment="Right"
+                               Margin="0,12,0,0" IsEnabled="False" Click="ApplyButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Image x:Name="ApplyShield" Width="16" Height="16" Margin="0,0,6,0" Visibility="Collapsed"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <TextBlock Text="Apply" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ui:Button>
+                    <TextBlock x:Name="DefaultsNote" TextWrapping="Wrap" Margin="0,12,0,0" Visibility="Collapsed"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <Grid Grid.Row="2" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Versions" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="FeedText" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+                <ui:Button x:Name="RefreshButton" Grid.Column="1" Content="Retry" Visibility="Collapsed" Click="RefreshButton_Click"/>
+            </Grid>
+
+            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="VersionsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="12,8" Margin="0,0,0,6" CornerRadius="4" BorderThickness="1"
+                                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Version}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Detail}" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <ui:Button Grid.Column="1" Content="{Binding ButtonText}" MinWidth="96" Margin="12,0,0,0"
+                                               Click="RowButton_Click"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <Grid x:Name="ProgressPanel" Grid.Row="4" Margin="0,12,0,0" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock x:Name="ProgressText" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                    <ProgressBar x:Name="DownloadProgress" Height="4" Minimum="0" Maximum="100"/>
+                </StackPanel>
+                <ui:Button x:Name="CancelDownloadButton" Grid.Column="1" Content="Cancel" Width="80" Margin="12,0,0,0"
+                           Click="CancelDownloadButton_Click"/>
+            </Grid>
+        </Grid>
+        <ui:TitleBar Title="EDK II Clang Settings" Height="40" Background="Transparent" VerticalAlignment="Top"/>
+    </Grid>
+</ui:FluentWindow>
