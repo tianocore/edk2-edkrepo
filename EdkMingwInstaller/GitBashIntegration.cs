@@ -97,7 +97,7 @@ namespace TianoCore.EdkMingwInstaller
 
                 string scriptPath = Path.Combine(profileDirectory, ScriptName);
                 WriteUnixFile(scriptPath, File.ReadAllText(Path.Combine(packageDirectory, ScriptName)));
-                InstallLogger.Log(string.Format("Installed the edkclang command for Git Bash at {0}.", scriptPath));
+                InstallLogger.Log(string.Format("Installed Git Bash Integration at {0}.", scriptPath));
             }
             catch (Exception e)
             {

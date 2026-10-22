@@ -1099,7 +1099,6 @@ namespace TianoCore.EdkMingwInstaller
             //
             // Step 8 - Install the shared files, and put the edkclang command on the system PATH
             //
-            InstallLogger.Log(string.Format("Completing Install..."));
             InstallSharedFiles(installRoot, packageDirectory, migratedVersion != null);
             string toolsDirectory = Path.Combine(installRoot, InstallerStrings.ToolsDirectoryName);
             if (EdkClangLayout.AddToMachinePath(toolsDirectory))
