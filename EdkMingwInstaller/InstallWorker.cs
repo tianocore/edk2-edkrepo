@@ -611,16 +611,94 @@ namespace TianoCore.EdkMingwInstaller
             }
         }
 
-        private static readonly string[] ToolFileNames = { "edkclang-core.exe", "edkclang.cmd" };
+        private const string SettingsProcessName = "EdkClangSettings";
+        private const string SettingsFileName = SettingsProcessName + ".exe";
+
+        private static readonly string[] ToolFileNames = { "edkclang-core.exe", "edkclang.cmd", SettingsFileName };
+
+        // The package has a tools folder that is copied as is to the tools folder of the installation directory.
+        private static string PackageToolsDirectory(string packageDirectory)
+        {
+            return Path.Combine(packageDirectory, InstallerStrings.ToolsDirectoryName);
+        }
 
         private static void VerifyPackage(string packageDirectory)
         {
-            foreach (string name in ToolFileNames.Concat(new[] { GitBashIntegration.ScriptName }))
+            IEnumerable<string> required = ToolFileNames
+                .Select(name => Path.Combine(InstallerStrings.ToolsDirectoryName, name))
+                .Concat(new[] { GitBashIntegration.ScriptName });
+            foreach (string name in required)
             {
                 if (!File.Exists(Path.Combine(packageDirectory, name)))
                 {
                     throw new FileNotFoundException(string.Format("The installer package is incomplete: {0} is missing.", name), name);
                 }
+            }
+        }
+
+        //
+        // The Settings program is in the tools folder, so it must be closed before the files there are replaced or deleted.
+        //
+        private static void CloseRunningSettings(string toolsDirectory)
+        {
+            foreach (Process process in Process.GetProcessesByName(SettingsProcessName))
+            {
+                using (process)
+                {
+                    try
+                    {
+                        if (!EdkClangLayout.IsSameOrUnder(process.MainModule.FileName, toolsDirectory))
+                        {
+                            continue;
+                        }
+                        InstallLogger.Log("Closing EDK II Clang Settings...");
+                        if (!process.CloseMainWindow() || !process.WaitForExit(5000))
+                        {
+                            process.Kill();
+                            process.WaitForExit(5000);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        InstallLogger.Log(string.Format("Could not close EDK II Clang Settings: {0}", e.Message));
+                    }
+                }
+            }
+        }
+
+        private static string SettingsShortcutPath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
+                InstallerStrings.SettingsAppName + ".lnk");
+        }
+
+        // A missing shortcut does not stop anything from working, so a failure is only logged.
+        private static void CreateSettingsShortcut(string toolsDirectory)
+        {
+            try
+            {
+                ShellLink.Create(
+                    SettingsShortcutPath(),
+                    Path.Combine(toolsDirectory, SettingsFileName),
+                    toolsDirectory,
+                    InstallerStrings.SettingsAppName);
+            }
+            catch (Exception e)
+            {
+                InstallLogger.Log(string.Format("Could not create the Start menu shortcut: {0}", e.Message));
+            }
+        }
+
+        private static void DeleteSettingsShortcut()
+        {
+            try
+            {
+                File.Delete(SettingsShortcutPath());
+            }
+            catch (Exception e)
+            {
+                InstallLogger.Log(string.Format("Could not delete the Start menu shortcut: {0}", e.Message));
             }
         }
 
@@ -770,9 +848,9 @@ namespace TianoCore.EdkMingwInstaller
         }
 
         //
-        // The uninstaller, the vendor plugin and the edkclang command are shared by every installed version.
-        // They are only written when the engine on disk is older than the one packaged in the self-extracting
-        // archive, so an older installer won't replace a newer uninstaller.
+        // The uninstaller, the vendor plugin and the tools (the edkclang command and Settings) are shared by every
+        // installed version. They are only written when the engine on disk is older than the one packaged in the
+        // self-extracting archive, so an older installer won't replace a newer uninstaller.
         //
         private void InstallSharedFiles(string root, string packageDirectory, bool forceRefresh)
         {
@@ -783,6 +861,7 @@ namespace TianoCore.EdkMingwInstaller
                 ? Path.Combine(root, Path.GetFileName(VendorCustomizer.VendorPluginPath))
                 : null;
 
+            string packageTools = PackageToolsDirectory(packageDirectory);
             Version onDisk = ReadInstalledEngineVersion();
             Version packaged = EngineVersion;
             bool refresh = forceRefresh ||
@@ -790,7 +869,7 @@ namespace TianoCore.EdkMingwInstaller
                 onDisk < packaged ||
                 !File.Exists(uninstallerPath) ||
                 (vendorPluginPath != null && !File.Exists(vendorPluginPath)) ||
-                ToolFileNames.Any(name => !File.Exists(Path.Combine(toolsDirectory, name)));
+                Directory.EnumerateFiles(packageTools).Any(file => !File.Exists(Path.Combine(toolsDirectory, Path.GetFileName(file))));
             if (!refresh)
             {
                 InstallLogger.Log(string.Format("The installed shared tools (v{0}) are up to date.", onDisk));
@@ -803,10 +882,11 @@ namespace TianoCore.EdkMingwInstaller
             {
                 CopyFile(VendorCustomizer.VendorPluginPath, vendorPluginPath);
             }
+            CloseRunningSettings(toolsDirectory);
             CreateInstallDirectory(toolsDirectory);
-            foreach (string name in ToolFileNames)
+            foreach (string file in Directory.EnumerateFiles(packageTools))
             {
-                CopyFile(Path.Combine(packageDirectory, name), Path.Combine(toolsDirectory, name));
+                CopyFile(file, Path.Combine(toolsDirectory, Path.GetFileName(file)));
             }
 
             using (RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
@@ -1105,6 +1185,7 @@ namespace TianoCore.EdkMingwInstaller
             {
                 InstallLogger.Log(string.Format("Added {0} to the system PATH.", toolsDirectory));
             }
+            CreateSettingsShortcut(toolsDirectory);
             GitBashIntegration.Install(packageDirectory);
 
             //
@@ -1268,16 +1349,18 @@ namespace TianoCore.EdkMingwInstaller
             }
 
             //
-            // Step 7 - If this is the last version, remove what is shared: the edkclang command,
-            // its PATH entry and the installer's state.
+            // Step 7 - If this is the last version, remove what is shared: the edkclang command, Settings and its
+            // Start menu shortcut, the PATH entry and the installer's state.
             //
             if (remaining.Count == 0)
             {
                 string toolsDirectory = Path.Combine(installRoot, InstallerStrings.ToolsDirectoryName);
+                CloseRunningSettings(toolsDirectory);
                 if (Directory.Exists(toolsDirectory))
                 {
                     DeleteDirectory(toolsDirectory);
                 }
+                DeleteSettingsShortcut();
                 if (EdkClangLayout.RemoveFromMachinePath(toolsDirectory))
                 {
                     InstallLogger.Log(string.Format("Removed {0} from the system PATH.", toolsDirectory));

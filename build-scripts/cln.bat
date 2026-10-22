@@ -40,6 +40,14 @@ if %IS_GIT_REPO% NEQ 0 (
 )
 popd
 
+pushd ..\EdkClangSettings
+rmdir /S /Q bin
+rmdir /S /Q obj
+if %IS_GIT_REPO% NEQ 0 (
+  git checkout Properties/AssemblyInfo.cs
+)
+popd
+
 if exist ..\dist (
   pushd ..\dist
   del /F EdkClangSetup*.exe

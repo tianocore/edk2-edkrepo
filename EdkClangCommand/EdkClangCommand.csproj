@@ -73,9 +73,11 @@
   <!--
     Development convenience: puts the loose files next to the installer exe, where the installer
     looks for them. build_installer.bat packages them into the self-extracting installer.
+    The package tools folder mirrors the tools folder that the installer creates in the installation directory.
   -->
   <Target Name="CopyToInstallerOutput" AfterTargets="Build">
-    <MakeDir Directories="..\EdkMingwInstaller\bin\$(Configuration)" />
-    <Copy SourceFiles="$(OutDir)edkclang-core.exe;$(OutDir)edkclang.cmd;$(OutDir)edkclang.sh" DestinationFolder="..\EdkMingwInstaller\bin\$(Configuration)" />
+    <MakeDir Directories="..\EdkMingwInstaller\bin\$(Configuration)\tools" />
+    <Copy SourceFiles="$(OutDir)edkclang-core.exe;$(OutDir)edkclang.cmd" DestinationFolder="..\EdkMingwInstaller\bin\$(Configuration)\tools" />
+    <Copy SourceFiles="$(OutDir)edkclang.sh" DestinationFolder="..\EdkMingwInstaller\bin\$(Configuration)" />
   </Target>
 </Project>

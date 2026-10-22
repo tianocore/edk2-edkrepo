@@ -26,6 +26,15 @@ namespace TianoCore.EdkMingwInstaller
             return string.Format("{0} {1}", UninstallDisplayName, toolchainVersion);
         }
 
+        // The name of the Settings program in the Start menu.
+        public static string SettingsAppName
+        {
+            get
+            {
+                return "EDK II Clang Settings";
+            }
+        }
+
         public static string StateRegistryKeyPath
         {
             get

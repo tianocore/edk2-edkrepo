@@ -164,6 +164,7 @@
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="SilentInstallHandler.cs" />
+    <Compile Include="ShellLink.cs" />
     <Compile Include="SilentProcess.cs" />
     <Compile Include="TianoCoreBranding.xaml.cs">
       <DependentUpon>TianoCoreBranding.xaml</DependentUpon>

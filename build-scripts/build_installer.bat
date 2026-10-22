@@ -200,13 +200,33 @@ if errorlevel 1 (
   goto End
 )
 
-copy /B /Y ..\EdkClangCommand\bin\Release\edkclang-core.exe ..\dist\self_extract
+REM
+REM The tools folder in the package is copied to the tools folder of the installation directory.
+REM EdkMingwInstaller.exe is in the root because the DLLs that EdkClangSettings.exe uses
+REM should not be found by EdkMingwInstaller.exe, which has its own copies embedded.
+REM
+mkdir ..\dist\self_extract\tools
+copy /B /Y ..\EdkClangCommand\bin\Release\edkclang-core.exe ..\dist\self_extract\tools
 if errorlevel 1 (
   set SCRIPT_ERROR=1
   goto End
 )
 
-copy /B /Y ..\EdkClangCommand\edkclang.cmd ..\dist\self_extract
+copy /B /Y ..\EdkClangCommand\edkclang.cmd ..\dist\self_extract\tools
+if errorlevel 1 (
+  set SCRIPT_ERROR=1
+  goto End
+)
+
+for %%F in (EdkClangSettings.exe EdkClangSettings.exe.config Wpf.Ui.dll Wpf.Ui.Abstractions.dll System.Memory.dll System.Buffers.dll System.Numerics.Vectors.dll System.Runtime.CompilerServices.Unsafe.dll System.ValueTuple.dll) do (
+  copy /B /Y ..\EdkClangSettings\bin\Release\%%F ..\dist\self_extract\tools
+  if errorlevel 1 (
+    set SCRIPT_ERROR=1
+    goto End
+  )
+)
+
+copy /B /Y ..\lib\WPF-UI\THIRD-PARTY-NOTICES.txt ..\dist\self_extract\tools
 if errorlevel 1 (
   set SCRIPT_ERROR=1
   goto End
