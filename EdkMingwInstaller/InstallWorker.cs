@@ -1145,13 +1145,14 @@ namespace TianoCore.EdkMingwInstaller
             }
             string applicationPath = WindowsHelpers.GetApplicationPath();
             string root = Path.GetDirectoryName(applicationPath);
-            StringBuilder command = new StringBuilder("/c choice /d y /t 3 > nul");
+            StringBuilder command = new StringBuilder("/c cd /d \"%SystemRoot%\" & choice /d y /t 3 > nul");
             command.AppendFormat(" & del /F /Q \"{0}\"", applicationPath);
             if (VendorCustomizer.Instance != null)
             {
                 command.AppendFormat(" & del /F /Q \"{0}\"", Path.Combine(root, Path.GetFileName(VendorCustomizer.VendorPluginPath)));
             }
             command.AppendFormat(" & rmdir \"{0}\"", root);
+            command.AppendFormat(" & if exist \"{0}\" (choice /d y /t 5 > nul & rmdir \"{0}\")", root);
             SilentProcess.StartConsoleProcessSilently("cmd.exe", command.ToString());
         }
 
