@@ -258,12 +258,7 @@ namespace TianoCore.EdkMingwInstaller
                 return new List<string>();
             }
             return GetVersionsAfterInstall(root)
-                .Where(name =>
-                {
-                    Version version = Version.Parse(name);
-                    return version.Major == newest.Major &&
-                        (version.Minor < newest.Minor || (version.Minor == newest.Minor && version.Build < newest.Build));
-                })
+                .Where(name => EdkClangLayout.IsOlderSameMajor(Version.Parse(name), newest))
                 .ToList();
         }
 

@@ -150,6 +150,13 @@ namespace TianoCore.EdkClang
             return true;
         }
 
+        // True if installed has the same major number as candidate and a lower minor or patch number.
+        public static bool IsOlderSameMajor(Version installed, Version candidate)
+        {
+            return installed.Major == candidate.Major &&
+                (installed.Minor < candidate.Minor || (installed.Minor == candidate.Minor && installed.Build < candidate.Build));
+        }
+
         public static InstalledVersion FindNewestComplete(IEnumerable<InstalledVersion> versions, string excludeName)
         {
             return versions
