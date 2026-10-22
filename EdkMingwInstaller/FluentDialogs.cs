@@ -52,5 +52,39 @@ namespace TianoCore.EdkMingwInstaller
                 return result == Wpf.Ui.Controls.MessageBoxResult.Primary;
             });
         }
+
+        public enum Choice
+        {
+            Primary,
+            Secondary,
+            Cancel
+        }
+
+        // Same threading rules as AskYesNo. Closing the dialog returns Choice.Cancel.
+        public static Choice AskThreeWay(string title, string message, string primaryText, string secondaryText, string cancelText)
+        {
+            return Application.Current.Dispatcher.Invoke(delegate
+            {
+                Wpf.Ui.Controls.MessageBox messageBox = new Wpf.Ui.Controls.MessageBox
+                {
+                    Title = title,
+                    Content = message,
+                    PrimaryButtonText = primaryText,
+                    SecondaryButtonText = secondaryText,
+                    CloseButtonText = cancelText,
+                    Topmost = true,
+                };
+                Wpf.Ui.Controls.MessageBoxResult result = messageBox.ShowDialogAsync().GetAwaiter().GetResult();
+                switch (result)
+                {
+                    case Wpf.Ui.Controls.MessageBoxResult.Primary:
+                        return Choice.Primary;
+                    case Wpf.Ui.Controls.MessageBoxResult.Secondary:
+                        return Choice.Secondary;
+                    default:
+                        return Choice.Cancel;
+                }
+            });
+        }
     }
 }
