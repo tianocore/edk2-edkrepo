@@ -358,7 +358,7 @@ PowerShell and the exit code can still be checked.
 
 ### Prerequisites
 
-- Visual Studio 2015, 2017, 2019, or 2022 with the .NET desktop development workload.
+- Visual Studio 2015, 2017, 2019, 2022, or 2026 with the .NET desktop development workload.
 - Python 3, available through the `py` launcher.
 
 ### Making a new snapshot
