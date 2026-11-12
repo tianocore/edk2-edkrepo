@@ -1,11 +1,65 @@
 import sys
 import os
+import subprocess
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 from edkrepo_manifest_parser.edk_manifest import RepoSource, ManifestXml
+from edkrepo.common import common_repo_functions
 from edkrepo.common.clone_utilities import generate_clone_order, calculate_source_manifest_repo_directory
+
+@pytest.mark.parametrize('return_codes, destination_state, expected_attempts, expected_error', [
+    ([0], 'absent', 1, None),
+    ([128, 0], 'absent', 2, None),
+    ([128, 128, 0], 'empty', 3, None),
+    ([128, 128, 128], 'absent', 3, common_repo_functions.EdkrepoNotFoundException),
+    ([128, 128, 128], 'empty', 3, common_repo_functions.EdkrepoNotFoundException),
+    ([128], 'nonempty', 1, common_repo_functions.EdkrepoNotFoundException),
+    ([128], 'file', 1, common_repo_functions.EdkrepoNotFoundException),
+    ([KeyboardInterrupt()], 'absent', 1, KeyboardInterrupt),
+])
+def test_clone_single_repository_retries(tmp_path, return_codes, destination_state, expected_attempts, expected_error):
+    source = SimpleNamespace(root='repo', remote_url='https://example.com/repo.git',
+                             branch='main', commit=None, tag=None, patch_set=None)
+    destination = tmp_path / source.root
+    if destination_state in ('empty', 'nonempty'):
+        destination.mkdir()
+    if destination_state == 'nonempty':
+        (destination / 'existing.txt').write_text('preserve me')
+    elif destination_state == 'file':
+        destination.write_text('preserve me')
+    results = iter(return_codes)
+
+    def run_clone(command, **kwargs):
+        return_code = next(results)
+        if isinstance(return_code, BaseException):
+            raise return_code
+        if return_code == 0:
+            destination.mkdir(exist_ok=True)
+        return subprocess.CompletedProcess(command, return_code, stdout='')
+
+    with patch.object(common_repo_functions.subprocess, 'run', side_effect=run_clone) as run, \
+         patch.object(common_repo_functions.time, 'sleep') as sleep, \
+         patch.object(common_repo_functions, 'Repo') as repo, \
+         patch.object(common_repo_functions.ui_functions, 'print_info_msg'):
+        if expected_error:
+            with pytest.raises(expected_error):
+                common_repo_functions.clone_single_repository(None, source, str(tmp_path), None)
+            repo.assert_not_called()
+        else:
+            common_repo_functions.clone_single_repository(None, source, str(tmp_path), None)
+            repo.assert_called_once_with(str(destination))
+        assert run.call_count == expected_attempts
+        assert sleep.call_count == expected_attempts - 1
+        assert all(call.args == (5,) for call in sleep.call_args_list)
+        assert all(call == run.call_args_list[0] for call in run.call_args_list)
+    if destination_state == 'nonempty':
+        assert (destination / 'existing.txt').read_text() == 'preserve me'
+    elif destination_state == 'file':
+        assert destination.read_text() == 'preserve me'
 
 class TestGenerateCloneOrder:
 

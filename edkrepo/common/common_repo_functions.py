@@ -107,10 +107,20 @@ def clone_single_repository(manifest, repo_to_clone, workspace_dir, global_manif
         ui_functions.print_info_msg('Cloning {} Repository from: {}'.format(repo_to_clone.root, str(repo_to_clone.remote_url)), header=False)
 
     clone_cmd = clone_utils.generate_clone_cmd(repo_to_clone, workspace_dir, args, cache_path)
-    clone_cmd_output = subprocess.run(clone_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
-    if not os.path.isdir(os.path.join(workspace_dir, repo_to_clone.root)):
+    local_repo_path = os.path.join(workspace_dir, repo_to_clone.root)
+    for attempt in range(3):
+        clone_cmd_output = subprocess.run(clone_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
+        if clone_cmd_output.returncode == 0:
+            break
+        if attempt == 2 or (os.path.lexists(local_repo_path) and
+                            (not os.path.isdir(local_repo_path) or os.listdir(local_repo_path))):
+            break
+        ui_functions.print_info_msg('Clone failed for {}. Retrying in 5 seconds (attempt {}/3).'.format(
+            repo_to_clone.root, attempt + 2), header=False)
+        time.sleep(5)
+    if clone_cmd_output.returncode != 0 or not os.path.isdir(local_repo_path):
         raise EdkrepoNotFoundException(CLONE_FAIL.format(repo_to_clone.root, clone_cmd_output))
-    repo = Repo(os.path.join(workspace_dir, repo_to_clone.root))
+    repo = Repo(local_repo_path)
 
     if repo_to_clone.patch_set:
         create_local_branch(repo_to_clone.patch_set, patchset, global_manifest_path, manifest, repo)
