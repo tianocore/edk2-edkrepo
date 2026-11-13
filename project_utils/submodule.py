@@ -10,6 +10,7 @@ import argparse
 import git
 import os
 import sys
+import time
 import traceback
 
 from edkrepo_manifest_parser.edk_manifest import ManifestXml
@@ -61,6 +62,18 @@ def _deinit(repo, submodules=None, verbose=False):
     return
 
 
+def _update_with_retry(repo, cmd):
+    for attempt in range(3):
+        try:
+            return repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
+        except git.GitCommandError:
+            if attempt == 2:
+                raise
+            ui_functions.print_info_msg('Submodule update failed. Retrying in 5 seconds (attempt {}/3).'.format(
+                attempt + 2), header=False)
+            time.sleep(5)
+
+
 def _update(repo, submodules=None, verbose=False, recursive=False):
     """
     Performs the update of submodules.  This includes the sync and update operations.
@@ -95,7 +108,7 @@ def _update(repo, submodules=None, verbose=False, recursive=False):
             cmd.append('--recursive')
         if submodule_filter != None:
             cmd.append(submodule_filter)
-        output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
+        output_data = _update_with_retry(repo, cmd)
         ui_functions.display_git_output(output_data, verbose)
     else:
         for sub in submodules:
@@ -115,7 +128,7 @@ def _update(repo, submodules=None, verbose=False, recursive=False):
             cmd.extend(['--', sub.path])
             if submodule_filter != None:
                 cmd.append(submodule_filter)
-            output_data = repo.git.execute(cmd, with_extended_output=True, with_stdout=True)
+            output_data = _update_with_retry(repo, cmd)
             ui_functions.display_git_output(output_data, verbose)
     return
 
