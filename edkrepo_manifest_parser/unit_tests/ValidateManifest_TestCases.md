@@ -147,6 +147,14 @@ Tests `validate_manifestfiles` which validates every manifest file in a provided
 - **Description**: Called with a list containing two manifest filepaths.
 - **Expected Outcome**: Returns a dict with two entries; `_collect_file_validation_results` is called once per filepath with the correct argument.
 
+### TestTryParseManifestXmlLegacyFunction
+Tests the module-level `_try_parse_manifest_xml`, kept for backward compatibility and forwarding to `ValidateManifest._try_parse_manifest_xml`.
+
+#### 1. Module-Level Function Delegates to Method
+- **Test Name**: `test_module_level_try_parse_manifest_xml_delegates_to_method`
+- **Description**: The module-level `_try_parse_manifest_xml` is called with a manifest path while `ValidateManifest._try_parse_manifest_xml` is mocked.
+- **Expected Outcome**: The method is called once with the same path and its return value is returned.
+
 ### TestValidateManifestRepo
 Tests `validate_manifestrepo` which validates all manifest files referenced by `CiIndex.xml`.
 

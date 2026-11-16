@@ -8,7 +8,7 @@
 #
 
 import importlib
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from edkrepo_manifest_parser.unit_test_bases import base_tests as bt
 
@@ -69,3 +69,12 @@ class TestValidateManifest(bt.BaseTestValidateManifest):
         mock_collect_file_results.assert_any_call(bt.MANIFEST_FILE_PATH)
         mock_collect_file_results.assert_any_call(bt.MANIFEST_PATH_2)
         assert result == {bt.MANIFEST_FILE_PATH: results_a, bt.MANIFEST_PATH_2: results_b}
+
+    def test_module_level_try_parse_manifest_xml_delegates_to_method(self):
+        """When the pre-refactor module-level _try_parse_manifest_xml is called, it must return the result of ValidateManifest._try_parse_manifest_xml for the same path."""
+        validation_mod = importlib.import_module(self.__class__.validation_module)
+        with patch.object(validation_mod.ValidateManifest, '_try_parse_manifest_xml') as mock_method:
+            result = validation_mod._try_parse_manifest_xml(bt.MANIFEST_PATH)
+
+        mock_method.assert_called_once_with(bt.MANIFEST_PATH)
+        assert result is mock_method.return_value
