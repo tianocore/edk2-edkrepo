@@ -7,6 +7,7 @@
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
+import ntpath
 import os
 
 def write_git_exclude(repo_path, exclude_pattern):
@@ -23,17 +24,14 @@ def write_git_exclude(repo_path, exclude_pattern):
 def generate_exclude_pattern(parent_repo_path, nested_repo_path):
     '''Generates a git/info/exclude entry for the nested repository.
      \ are replaced with / to align with .gitignore syntax. '''
-    parent_repo_path = os.path.normpath(parent_repo_path)
-    nested_repo_path =  os.path.normpath(nested_repo_path)
-    common_path = os.path.commonpath([parent_repo_path, nested_repo_path])
+    path_module = ntpath if ntpath.splitdrive(parent_repo_path)[0] or ntpath.splitdrive(nested_repo_path)[0] else os.path
+    parent_repo_path = path_module.normpath(parent_repo_path)
+    nested_repo_path = path_module.normpath(nested_repo_path)
+    common_path = path_module.commonpath([parent_repo_path, nested_repo_path])
     # / as the common prefix is valid but not meaningful in this context
     # Corner cases such as different casing (in Case Sensitive filesystems), the presence of redundant separators, etc... result
     # in os.path.commonpath not raising a value error. Manual verification raises the expected ValueError to catch these.
-    if common_path is os.path.sep or not (parent_repo_path.startswith(common_path) and nested_repo_path.startswith(common_path)):
+    if common_path == path_module.sep or not (parent_repo_path.startswith(common_path) and nested_repo_path.startswith(common_path)):
         raise ValueError
-    relative_path = os.path.relpath(nested_repo_path, common_path).replace("\\", "/")
+    relative_path = path_module.relpath(nested_repo_path, common_path).replace("\\", "/")
     return '{}/'.format(relative_path)
-
-
-
-
